@@ -1,0 +1,133 @@
+//! Character sprite component for visual novel scenes
+//!
+//! Displays character sprites at different positions on screen.
+
+use dioxus::prelude::*;
+
+use crate::infrastructure::websocket::{CharacterData, CharacterPosition};
+
+/// Props for the CharacterSprite component
+#[derive(Props, Clone, PartialEq)]
+pub struct CharacterSpriteProps {
+    /// Character data including position and sprite asset
+    pub character: CharacterData,
+    /// Optional click handler
+    #[props(default)]
+    pub on_click: Option<EventHandler<String>>,
+}
+
+/// Character sprite component - displays a character at their position
+///
+/// Uses `.sprite-left`, `.sprite-center`, `.sprite-right` Tailwind classes.
+/// Characters who are speaking are highlighted with brightness and scale.
+#[component]
+pub fn CharacterSprite(props: CharacterSpriteProps) -> Element {
+    // Don't render off-screen characters
+    if props.character.position == CharacterPosition::OffScreen {
+        return rsx! {};
+    }
+
+    let position_class = match props.character.position {
+        CharacterPosition::Left => "sprite-left",
+        CharacterPosition::Center => "sprite-center",
+        CharacterPosition::Right => "sprite-right",
+        CharacterPosition::OffScreen => return rsx! {},
+    };
+
+    // Speaking characters get highlighted
+    let speaking_style = if props.character.is_speaking {
+        "filter: brightness(1.1) drop-shadow(0 0 10px rgba(212, 175, 55, 0.5)); transform: scale(1.02);"
+    } else {
+        "filter: brightness(0.85);"
+    };
+
+    let character_id = props.character.id.clone();
+    let character_name = props.character.name.clone();
+    let has_click = props.on_click.is_some();
+    let cursor_style = if has_click { "pointer" } else { "default" };
+    let full_style = format!("{} transition: filter 0.3s, transform 0.3s; cursor: {};", speaking_style, cursor_style);
+
+    rsx! {
+        div {
+            class: "character-sprite {position_class}",
+            style: "{full_style}",
+            onclick: move |_| {
+                if let Some(ref handler) = props.on_click {
+                    handler.call(character_id.clone());
+                }
+            },
+
+            if let Some(ref sprite_url) = props.character.sprite_asset {
+                img {
+                    src: "{sprite_url}",
+                    alt: "{character_name}",
+                    style: "max-height: 400px; object-fit: contain; pointer-events: none;",
+                }
+            } else {
+                // Placeholder sprite when no image is available
+                PlaceholderSprite {
+                    name: props.character.name.clone(),
+                    is_speaking: props.character.is_speaking,
+                }
+            }
+        }
+    }
+}
+
+/// Placeholder sprite for characters without images
+#[component]
+fn PlaceholderSprite(name: String, is_speaking: bool) -> Element {
+    let border_color = if is_speaking {
+        "border-color: #d4af37;"
+    } else {
+        "border-color: #374151;"
+    };
+
+    rsx! {
+        div {
+            style: "width: 180px; height: 280px; background: rgba(255,255,255,0.1); border-radius: 0.5rem; border: 2px solid; {border_color} display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;",
+
+            // Character silhouette icon
+            div {
+                style: "font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;",
+                "👤"
+            }
+
+            // Character name
+            div {
+                style: "font-size: 0.875rem; text-align: center; padding: 0 0.5rem;",
+                "{name}"
+            }
+        }
+    }
+}
+
+/// Character layer component - container for all character sprites
+///
+/// Provides proper z-indexing and positioning context for sprites.
+#[derive(Props, Clone, PartialEq)]
+pub struct CharacterLayerProps {
+    /// Characters to display
+    pub characters: Vec<CharacterData>,
+    /// Optional click handler for characters
+    #[props(default)]
+    pub on_character_click: Option<EventHandler<String>>,
+}
+
+#[component]
+pub fn CharacterLayer(props: CharacterLayerProps) -> Element {
+    rsx! {
+        div {
+            class: "character-layer",
+            style: "position: absolute; inset: 0; pointer-events: none; z-index: 1;",
+
+            for character in props.characters.iter() {
+                CharacterSprite {
+                    key: "{character.id}",
+                    character: character.clone(),
+                    on_click: props.on_character_click.clone(),
+                }
+            }
+        }
+    }
+}

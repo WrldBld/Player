@@ -1,0 +1,528 @@
+//! Session service for managing Engine WebSocket connection
+//!
+//! This service handles:
+//! - Connecting to the Engine WebSocket server
+//! - Sending JoinSession messages
+//! - Processing server messages and updating application state
+//!
+//! Platform-specific implementations for desktop (async) and WASM (sync callbacks).
+
+use std::sync::Arc;
+
+use anyhow::Result;
+
+use crate::infrastructure::asset_loader::WorldSnapshot;
+use crate::infrastructure::websocket::{
+    ConnectionState, EngineClient, ParticipantRole, ServerMessage,
+};
+use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
+
+/// Default WebSocket URL for the Engine server
+pub const DEFAULT_ENGINE_URL: &str = "ws://localhost:3000/ws";
+
+/// Convert internal ConnectionState to presentation ConnectionStatus
+pub fn connection_state_to_status(state: ConnectionState) -> ConnectionStatus {
+    match state {
+        ConnectionState::Disconnected => ConnectionStatus::Disconnected,
+        ConnectionState::Connecting => ConnectionStatus::Connecting,
+        ConnectionState::Connected => ConnectionStatus::Connected,
+        ConnectionState::Reconnecting => ConnectionStatus::Reconnecting,
+        ConnectionState::Failed => ConnectionStatus::Failed,
+    }
+}
+
+// ============================================================================
+// Desktop (Tokio) Implementation
+// ============================================================================
+
+#[cfg(not(target_arch = "wasm32"))]
+mod desktop {
+    use super::*;
+    use dioxus::prelude::WritableExt;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tokio::sync::mpsc;
+
+    /// Events sent from WebSocket thread to UI
+    #[derive(Debug, Clone)]
+    pub enum SessionEvent {
+        /// Connection state changed
+        StateChanged(ConnectionState),
+        /// Server message received
+        MessageReceived(ServerMessage),
+    }
+
+    /// Session service for managing Engine connection (Desktop)
+    ///
+    /// Uses channels to communicate between the WebSocket thread and UI.
+    pub struct SessionService {
+        client: Arc<EngineClient>,
+        connected: Arc<AtomicBool>,
+    }
+
+    impl SessionService {
+        /// Create a new SessionService with the given WebSocket URL
+        pub fn new(url: impl Into<String>) -> Self {
+            Self {
+                client: Arc::new(EngineClient::new(url)),
+                connected: Arc::new(AtomicBool::new(false)),
+            }
+        }
+
+        /// Create a new SessionService with the default URL
+        pub fn with_default_url() -> Self {
+            Self::new(DEFAULT_ENGINE_URL)
+        }
+
+        /// Get a reference to the underlying client
+        pub fn client(&self) -> &Arc<EngineClient> {
+            &self.client
+        }
+
+        /// Check if currently connected
+        pub fn is_connected(&self) -> bool {
+            self.connected.load(Ordering::SeqCst)
+        }
+
+        /// Connect to the Engine and return a channel for receiving events
+        ///
+        /// This method:
+        /// 1. Creates a channel for events
+        /// 2. Sets up callbacks to send events through the channel
+        /// 3. Initiates the WebSocket connection
+        /// 4. Sends a JoinSession message once connected
+        ///
+        /// The caller should poll the returned receiver to handle events.
+        pub async fn connect(
+            &self,
+            user_id: String,
+            role: ParticipantRole,
+        ) -> Result<mpsc::Receiver<SessionEvent>> {
+            let (tx, rx) = mpsc::channel::<SessionEvent>(64);
+
+            // Set up state change callback
+            {
+                let tx = tx.clone();
+                let connected = Arc::clone(&self.connected);
+                self.client
+                    .set_on_state_change(move |state| {
+                        connected.store(
+                            matches!(state, ConnectionState::Connected),
+                            Ordering::SeqCst,
+                        );
+                        let _ = tx.try_send(SessionEvent::StateChanged(state));
+                    })
+                    .await;
+            }
+
+            // Set up message handler
+            {
+                let tx = tx.clone();
+                self.client
+                    .set_on_message(move |message| {
+                        let _ = tx.try_send(SessionEvent::MessageReceived(message));
+                    })
+                    .await;
+            }
+
+            // Spawn connection task
+            let client = Arc::clone(&self.client);
+            let user_id_clone = user_id.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.connect().await {
+                    tracing::error!("Connection error: {}", e);
+                }
+            });
+
+            // Wait briefly for connection to establish
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+            // Send JoinSession message if connected
+            if self.client.state().await == ConnectionState::Connected {
+                self.client.join_session(&user_id_clone, role).await?;
+                tracing::info!("Sent JoinSession for user: {}", user_id_clone);
+            }
+
+            Ok(rx)
+        }
+
+        /// Disconnect from the Engine
+        pub async fn disconnect(&self) {
+            self.client.disconnect().await;
+            self.connected.store(false, Ordering::SeqCst);
+        }
+
+        /// Send a heartbeat to keep the connection alive
+        pub async fn heartbeat(&self) -> Result<()> {
+            self.client.heartbeat().await
+        }
+    }
+
+    /// Process a session event and update application state
+    pub fn handle_session_event(
+        event: SessionEvent,
+        session_state: &mut SessionState,
+        game_state: &mut GameState,
+        dialogue_state: &mut DialogueState,
+    ) {
+        match event {
+            SessionEvent::StateChanged(state) => {
+                let status = connection_state_to_status(state);
+                session_state.connection_status.set(status);
+
+                if matches!(state, ConnectionState::Disconnected | ConnectionState::Failed) {
+                    session_state.engine_client.set(None);
+                }
+            }
+            SessionEvent::MessageReceived(message) => {
+                handle_server_message(message, session_state, game_state, dialogue_state);
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use desktop::{handle_session_event, SessionEvent, SessionService};
+
+// ============================================================================
+// WASM (Web-sys) Implementation
+// ============================================================================
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use super::*;
+    use dioxus::prelude::WritableExt;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    /// Session service for managing Engine connection (WASM)
+    pub struct SessionService {
+        client: Rc<RefCell<Option<EngineClient>>>,
+        url: String,
+    }
+
+    impl SessionService {
+        /// Create a new SessionService with the given WebSocket URL
+        pub fn new(url: impl Into<String>) -> Self {
+            Self {
+                client: Rc::new(RefCell::new(None)),
+                url: url.into(),
+            }
+        }
+
+        /// Create a new SessionService with the default URL
+        pub fn with_default_url() -> Self {
+            Self::new(DEFAULT_ENGINE_URL)
+        }
+
+        /// Get the configured URL
+        pub fn url(&self) -> &str {
+            &self.url
+        }
+
+        /// Connect to the Engine and set up message handlers
+        ///
+        /// This method:
+        /// 1. Creates the WebSocket client
+        /// 2. Sets up callbacks for connection state changes
+        /// 3. Sets up callbacks for incoming messages
+        /// 4. Initiates the WebSocket connection
+        ///
+        /// The JoinSession message is sent automatically when the connection opens.
+        pub fn connect_and_join(
+            &self,
+            user_id: String,
+            role: ParticipantRole,
+            mut session_state: SessionState,
+            mut game_state: GameState,
+            mut dialogue_state: DialogueState,
+        ) -> Result<()> {
+            // Update session state to connecting
+            session_state.start_connecting(&self.url);
+            session_state.set_user(user_id.clone(), role);
+
+            // Create the client
+            let client = EngineClient::new(&self.url);
+
+            // Set up state change callback
+            {
+                let mut session_state = session_state.clone();
+                let client_ref = Rc::clone(&self.client);
+                let user_id = user_id.clone();
+
+                client.set_on_state_change(move |state| {
+                    let status = connection_state_to_status(state);
+                    session_state.connection_status.set(status);
+
+                    match state {
+                        ConnectionState::Connected => {
+                            // Send JoinSession when connected
+                            if let Some(ref client) = *client_ref.borrow() {
+                                if let Err(e) = client.join_session(&user_id, role) {
+                                    web_sys::console::error_1(
+                                        &format!("Failed to send JoinSession: {}", e).into(),
+                                    );
+                                } else {
+                                    web_sys::console::log_1(
+                                        &format!("Sent JoinSession for user: {}", user_id).into(),
+                                    );
+                                }
+                            }
+                        }
+                        ConnectionState::Disconnected | ConnectionState::Failed => {
+                            session_state.engine_client.set(None);
+                        }
+                        _ => {}
+                    }
+                });
+            }
+
+            // Set up message handler
+            {
+                let mut session_state = session_state.clone();
+                let mut game_state = game_state.clone();
+                let mut dialogue_state = dialogue_state.clone();
+
+                client.set_on_message(move |message| {
+                    handle_server_message(
+                        message,
+                        &mut session_state,
+                        &mut game_state,
+                        &mut dialogue_state,
+                    );
+                });
+            }
+
+            // Store the client
+            *self.client.borrow_mut() = Some(client.clone());
+
+            // Store client reference in session state (wrap in Arc for compatibility)
+            session_state
+                .engine_client
+                .set(Some(Arc::new(client.clone())));
+
+            // Initiate connection
+            client.connect()?;
+
+            Ok(())
+        }
+
+        /// Disconnect from the Engine
+        pub fn disconnect(&self, mut session_state: SessionState) {
+            if let Some(ref client) = *self.client.borrow() {
+                client.disconnect();
+            }
+            *self.client.borrow_mut() = None;
+            session_state.set_disconnected();
+        }
+
+        /// Send a heartbeat to keep the connection alive
+        pub fn heartbeat(&self) -> Result<()> {
+            if let Some(ref client) = *self.client.borrow() {
+                client.heartbeat()
+            } else {
+                Err(anyhow::anyhow!("Not connected"))
+            }
+        }
+
+        /// Check if currently connected
+        pub fn is_connected(&self) -> bool {
+            if let Some(ref client) = *self.client.borrow() {
+                client.state() == ConnectionState::Connected
+            } else {
+                false
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub use wasm::SessionService;
+
+// ============================================================================
+// Shared Message Handler
+// ============================================================================
+
+use dioxus::prelude::WritableExt;
+
+/// Handle incoming server messages and update application state
+fn handle_server_message(
+    message: ServerMessage,
+    session_state: &mut SessionState,
+    game_state: &mut GameState,
+    dialogue_state: &mut DialogueState,
+) {
+    match message {
+        ServerMessage::SessionJoined {
+            session_id,
+            world_snapshot,
+        } => {
+            log_message("SessionJoined received");
+
+            // Update session state
+            session_state.set_session_joined(session_id.clone());
+
+            // Parse and load world snapshot
+            match serde_json::from_value::<WorldSnapshot>(world_snapshot) {
+                Ok(snapshot) => {
+                    game_state.load_world(snapshot);
+                    log_message(&format!("World loaded for session: {}", session_id));
+                }
+                Err(e) => {
+                    log_error(&format!("Failed to parse world snapshot: {}", e));
+                }
+            }
+        }
+
+        ServerMessage::SceneUpdate {
+            scene,
+            characters,
+            interactions,
+        } => {
+            log_message(&format!("SceneUpdate: {}", scene.name));
+            game_state.apply_scene_update(scene, characters, interactions);
+        }
+
+        ServerMessage::DialogueResponse {
+            speaker_id,
+            speaker_name,
+            text,
+            choices,
+        } => {
+            log_message(&format!("DialogueResponse from: {}", speaker_name));
+            dialogue_state.apply_dialogue(speaker_id, speaker_name, text, choices);
+        }
+
+        ServerMessage::LLMProcessing { action_id } => {
+            log_message(&format!("LLM processing action: {}", action_id));
+            // Could show a loading indicator here
+        }
+
+        ServerMessage::ApprovalRequired {
+            request_id,
+            npc_name,
+            proposed_dialogue,
+            internal_reasoning,
+            proposed_tools,
+        } => {
+            log_message(&format!(
+                "Approval required for {} (request: {})",
+                npc_name, request_id
+            ));
+            // DM view would handle this - store in a pending approvals list
+            let _ = (proposed_dialogue, internal_reasoning, proposed_tools);
+        }
+
+        ServerMessage::ResponseApproved {
+            npc_dialogue,
+            executed_tools,
+        } => {
+            log_message(&format!(
+                "Response approved, executed {} tools",
+                executed_tools.len()
+            ));
+            let _ = npc_dialogue;
+        }
+
+        ServerMessage::Error { message, code } => {
+            let error_msg = if let Some(c) = code {
+                format!("Server error [{}]: {}", c, message)
+            } else {
+                format!("Server error: {}", message)
+            };
+            log_error(&error_msg);
+            session_state.error_message.set(Some(error_msg));
+        }
+
+        ServerMessage::Pong => {
+            // Heartbeat response - no action needed
+        }
+
+        // Generation events - these will be handled by GenerationState when integrated
+        ServerMessage::GenerationQueued {
+            batch_id,
+            entity_type,
+            entity_id,
+            asset_type,
+            position,
+        } => {
+            log_message(&format!(
+                "Generation queued: {} {} ({}) at position {}",
+                entity_type, entity_id, asset_type, position
+            ));
+            // TODO: Update GenerationState when passed to this function
+            let _ = batch_id;
+        }
+
+        ServerMessage::GenerationProgress { batch_id, progress } => {
+            log_message(&format!(
+                "Generation progress: {} at {}%",
+                batch_id, progress
+            ));
+        }
+
+        ServerMessage::GenerationComplete {
+            batch_id,
+            asset_count,
+        } => {
+            log_message(&format!(
+                "Generation complete: {} with {} assets",
+                batch_id, asset_count
+            ));
+        }
+
+        ServerMessage::GenerationFailed { batch_id, error } => {
+            log_error(&format!("Generation failed: {} - {}", batch_id, error));
+        }
+    }
+}
+
+// Platform-specific logging helpers
+
+#[cfg(not(target_arch = "wasm32"))]
+fn log_message(msg: &str) {
+    tracing::info!("{}", msg);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn log_error(msg: &str) {
+    tracing::error!("{}", msg);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn log_message(msg: &str) {
+    web_sys::console::log_1(&msg.into());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn log_error(msg: &str) {
+    web_sys::console::error_1(&msg.into());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_connection_state_conversion() {
+        assert_eq!(
+            connection_state_to_status(ConnectionState::Disconnected),
+            ConnectionStatus::Disconnected
+        );
+        assert_eq!(
+            connection_state_to_status(ConnectionState::Connecting),
+            ConnectionStatus::Connecting
+        );
+        assert_eq!(
+            connection_state_to_status(ConnectionState::Connected),
+            ConnectionStatus::Connected
+        );
+        assert_eq!(
+            connection_state_to_status(ConnectionState::Reconnecting),
+            ConnectionStatus::Reconnecting
+        );
+        assert_eq!(
+            connection_state_to_status(ConnectionState::Failed),
+            ConnectionStatus::Failed
+        );
+    }
+}
