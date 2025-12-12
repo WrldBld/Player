@@ -1,0 +1,151 @@
+//! Game Connection Port - Outbound port for Engine WebSocket operations
+//!
+//! This port abstracts WebSocket communication with the Engine backend,
+//! allowing application services to manage real-time game sessions without
+//! depending on concrete WebSocket client implementations.
+
+use anyhow::Result;
+
+/// Connection state for the game session
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionState {
+    /// Not connected to the server
+    Disconnected,
+    /// Attempting to establish connection
+    Connecting,
+    /// Successfully connected
+    Connected,
+    /// Connection lost, attempting to reconnect
+    Reconnecting,
+    /// Connection failed
+    Failed,
+}
+
+/// Role of a participant in the game session
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParticipantRole {
+    /// Game master / Dungeon master
+    DungeonMaster,
+    /// Player character
+    Player,
+    /// Observer only
+    Spectator,
+}
+
+/// Approval decision from the DM
+#[derive(Debug, Clone)]
+pub enum ApprovalDecision {
+    /// Accept the LLM response as-is
+    Accept,
+    /// Accept with modifications
+    AcceptWithModification {
+        modified_dialogue: String,
+        approved_tools: Vec<String>,
+        rejected_tools: Vec<String>,
+    },
+    /// Reject and ask for regeneration
+    Reject { feedback: String },
+    /// DM takes over the response
+    TakeOver { dm_response: String },
+}
+
+/// Directorial context for a scene
+#[derive(Debug, Clone)]
+pub struct DirectorialContext {
+    pub scene_notes: String,
+    pub tone: String,
+    pub npc_motivations: Vec<NpcMotivation>,
+    pub forbidden_topics: Vec<String>,
+}
+
+/// NPC motivation data
+#[derive(Debug, Clone)]
+pub struct NpcMotivation {
+    pub character_id: String,
+    pub mood: String,
+    pub immediate_goal: String,
+    pub secret_agenda: Option<String>,
+}
+
+/// Game Connection Port trait for Engine WebSocket operations
+///
+/// This trait provides a platform-agnostic interface for WebSocket communication
+/// with the Engine. Different platforms (WASM vs native) have different async
+/// models, so this trait is designed to work with both.
+///
+/// # Platform Differences
+///
+/// - **Desktop (tokio)**: Uses async/await with Send + Sync requirements
+/// - **WASM**: Uses callbacks and single-threaded model
+///
+/// The trait provides both sync and async variants where needed.
+pub trait GameConnectionPort: Clone {
+    /// Get the current connection state
+    fn state(&self) -> ConnectionState;
+
+    /// Get the URL this client is configured for
+    fn url(&self) -> &str;
+
+    /// Connect to the Engine server
+    ///
+    /// # Errors
+    /// Returns an error if the connection cannot be established.
+    fn connect(&self) -> Result<()>;
+
+    /// Disconnect from the Engine server
+    fn disconnect(&self);
+
+    /// Join a game session
+    ///
+    /// # Arguments
+    /// * `user_id` - Unique identifier for this user
+    /// * `role` - The role this participant will have in the session
+    fn join_session(&self, user_id: &str, role: ParticipantRole) -> Result<()>;
+
+    /// Send a player action
+    ///
+    /// # Arguments
+    /// * `action_type` - Type of action (e.g., "talk", "examine", "use")
+    /// * `target` - Optional target of the action
+    /// * `dialogue` - Optional dialogue text
+    fn send_action(
+        &self,
+        action_type: &str,
+        target: Option<&str>,
+        dialogue: Option<&str>,
+    ) -> Result<()>;
+
+    /// Request a scene change
+    fn request_scene_change(&self, scene_id: &str) -> Result<()>;
+
+    /// Send directorial context update (DM only)
+    fn send_directorial_update(&self, context: DirectorialContext) -> Result<()>;
+
+    /// Send approval decision (DM only)
+    fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> Result<()>;
+
+    /// Trigger a challenge for a character (DM only)
+    fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> Result<()>;
+
+    /// Submit a challenge roll (Player only)
+    fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> Result<()>;
+
+    /// Send a heartbeat ping
+    fn heartbeat(&self) -> Result<()>;
+
+    /// Register a callback for state changes
+    ///
+    /// The callback will be invoked whenever the connection state changes.
+    fn on_state_change<F>(&self, callback: F)
+    where
+        F: FnMut(ConnectionState) + 'static;
+
+    /// Register a callback for server messages
+    ///
+    /// The callback will be invoked for each message received from the server.
+    /// The raw JSON value allows the presentation layer to handle specific
+    /// message types as needed.
+    fn on_message<F>(&self, callback: F)
+    where
+        F: FnMut(serde_json::Value) + 'static;
+}
