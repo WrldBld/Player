@@ -12,6 +12,7 @@ mod routes;
 
 use dioxus::prelude::*;
 use presentation::state::{DialogueState, GameState, GenerationState, SessionState};
+use presentation::Services;
 use routes::Route;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -48,6 +49,9 @@ fn App() -> Element {
     use_context_provider(SessionState::new);
     use_context_provider(DialogueState::new);
     use_context_provider(GenerationState::new);
+
+    // Provide application services via context
+    use_context_provider(Services::new);
 
     // Non-DM routes show a simple header, DM routes use their own layout
     // Router handles all view switching
