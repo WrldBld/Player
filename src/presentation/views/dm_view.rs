@@ -6,7 +6,7 @@ use crate::infrastructure::asset_loader::{ChallengeData, SkillData};
 use crate::infrastructure::websocket::{ApprovalDecision, ClientMessage};
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
-use crate::presentation::components::settings::{SettingsView, SkillsPanel};
+use crate::presentation::components::settings::SettingsView;
 use crate::presentation::state::{use_game_state, use_session_state, PendingApproval};
 
 /// The active tab/mode in the DM View
@@ -21,8 +21,16 @@ pub enum DMMode {
 /// Props for DMView - receives active mode from parent
 #[derive(Props, Clone, PartialEq)]
 pub struct DMViewProps {
+    /// World ID from the route
+    pub world_id: String,
     /// Currently active DM mode/tab
     pub active_mode: DMMode,
+    /// Optional Creator sub-tab (characters, locations, items, maps)
+    #[props(default)]
+    pub creator_subtab: Option<String>,
+    /// Optional Settings sub-tab (workflows, skills)
+    #[props(default)]
+    pub settings_subtab: Option<String>,
 }
 
 #[component]
@@ -39,8 +47,18 @@ pub fn DMView(props: DMViewProps) -> Element {
 
                 match props.active_mode {
                     DMMode::Director => rsx! { DirectorModeContent {} },
-                    DMMode::Creator => rsx! { CreatorMode {} },
-                    DMMode::Settings => rsx! { SettingsView {} },
+                    DMMode::Creator => rsx! {
+                        CreatorMode {
+                            world_id: props.world_id.clone(),
+                            selected_tab: props.creator_subtab.clone(),
+                        }
+                    },
+                    DMMode::Settings => rsx! {
+                        SettingsView {
+                            world_id: props.world_id.clone(),
+                            selected_tab: props.settings_subtab.clone(),
+                        }
+                    },
                 }
             }
         }
@@ -56,7 +74,6 @@ fn DirectorModeContent() -> Element {
     // Local state for directorial inputs
     let mut scene_notes = use_signal(|| String::new());
     let mut current_tone = use_signal(|| "Serious".to_string());
-    let mut show_skills_panel = use_signal(|| false);
     let mut show_challenge_library = use_signal(|| false);
     let mut show_trigger_challenge = use_signal(|| false);
     let mut skills: Signal<Vec<SkillData>> = use_signal(Vec::new);
@@ -260,11 +277,6 @@ fn DirectorModeContent() -> Element {
 
                     div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
                         button {
-                            onclick: move |_| show_skills_panel.set(true),
-                            style: "padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
-                            "Manage Skills"
-                        }
-                        button {
                             onclick: move |_| show_challenge_library.set(true),
                             style: "padding: 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
                             "Manage Challenges"
@@ -277,38 +289,6 @@ fn DirectorModeContent() -> Element {
                         button { style: "padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;", "View Social Graph" }
                         button { style: "padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;", "View Timeline" }
                         button { style: "padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;", "Start Combat" }
-                    }
-                }
-            }
-
-            // Skills Panel Modal
-            if *show_skills_panel.read() {
-                {
-                    let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-                    if let Some(world_id) = world_id {
-                        rsx! {
-                            SkillsPanel {
-                                world_id: world_id,
-                                on_close: move |_| show_skills_panel.set(false),
-                            }
-                        }
-                    } else {
-                        rsx! {
-                            div {
-                                style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                                onclick: move |_| show_skills_panel.set(false),
-                                div {
-                                    style: "background: #1a1a2e; padding: 2rem; border-radius: 0.5rem; text-align: center;",
-                                    onclick: move |e| e.stop_propagation(),
-                                    p { style: "color: #ef4444;", "No world loaded. Start a session first." }
-                                    button {
-                                        onclick: move |_| show_skills_panel.set(false),
-                                        style: "margin-top: 1rem; padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
-                                        "Close"
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }

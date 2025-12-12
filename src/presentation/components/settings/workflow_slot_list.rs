@@ -5,6 +5,8 @@
 
 use dioxus::prelude::*;
 
+use crate::infrastructure::api::get_engine_url;
+
 /// Props for the WorkflowSlotList component
 #[derive(Props, Clone, PartialEq)]
 pub struct WorkflowSlotListProps {
@@ -16,18 +18,6 @@ pub struct WorkflowSlotListProps {
     pub on_configure: EventHandler<String>,
 }
 
-/// Workflow slot status data
-#[derive(Clone, Debug, PartialEq)]
-pub struct WorkflowSlotStatus {
-    pub slot: String,
-    pub display_name: String,
-    pub category: String,
-    pub default_width: u32,
-    pub default_height: u32,
-    pub configured: bool,
-    pub workflow_name: Option<String>,
-}
-
 /// List of all workflow slots with their configuration status
 #[component]
 pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
@@ -35,15 +25,15 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
     let mut is_loading = use_signal(|| true);
     // Track error state
     let mut error: Signal<Option<String>> = use_signal(|| None);
-    // Store the workflow slots
-    let mut slots: Signal<Vec<WorkflowSlotStatus>> = use_signal(Vec::new);
+    // Store the workflow slot categories (pre-grouped by backend)
+    let mut categories: Signal<Vec<WorkflowSlotCategory>> = use_signal(Vec::new);
 
     // Fetch workflow slots on mount
     use_effect(move || {
         spawn(async move {
             match fetch_workflow_slots().await {
-                Ok(fetched_slots) => {
-                    slots.set(fetched_slots);
+                Ok(response) => {
+                    categories.set(response.categories);
                     is_loading.set(false);
                 }
                 Err(e) => {
@@ -53,26 +43,6 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
             }
         });
     });
-
-    // Group slots by category
-    let character_slots: Vec<_> = slots
-        .read()
-        .iter()
-        .filter(|s| s.category == "Character")
-        .cloned()
-        .collect();
-    let location_slots: Vec<_> = slots
-        .read()
-        .iter()
-        .filter(|s| s.category == "Location")
-        .cloned()
-        .collect();
-    let item_slots: Vec<_> = slots
-        .read()
-        .iter()
-        .filter(|s| s.category == "Item")
-        .cloned()
-        .collect();
 
     rsx! {
         div {
@@ -105,36 +75,36 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
                 } else if let Some(err) = error.read().as_ref() {
                     div {
                         style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
-                        "Error: {err}"
+
+                        p { style: "margin: 0 0 0.5rem 0; font-weight: 600;", "Failed to load workflow slots" }
+                        p { style: "margin: 0;", "{err}" }
+
+                        // Help text
+                        div {
+                            style: "margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; color: #9ca3af;",
+                            p { style: "margin: 0 0 0.25rem 0;", "Troubleshooting:" }
+                            ul { style: "margin: 0; padding-left: 1.25rem;",
+                                li { "Is the Engine server running?" }
+                                li { "Check that it's accessible at: {get_engine_url()}" }
+                            }
+                        }
+                    }
+                } else if categories.read().is_empty() {
+                    div {
+                        style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; color: #6b7280; text-align: center;",
+
+                        div { style: "font-size: 2rem; margin-bottom: 0.5rem;", "⚠️" }
+                        p { style: "margin: 0 0 0.5rem 0; color: #9ca3af;", "No workflow slots available" }
+                        p { style: "margin: 0; font-size: 0.75rem;",
+                            "The Engine returned an empty list."
+                        }
                     }
                 } else {
-                    // Character workflows
-                    if !character_slots.is_empty() {
+                    // Render categories directly from backend response - no filtering needed
+                    for category in categories.read().iter() {
                         CategorySection {
-                            title: "Character Assets",
-                            slots: character_slots,
-                            selected_slot: props.selected_slot.clone(),
-                            on_select: props.on_select.clone(),
-                            on_configure: props.on_configure.clone(),
-                        }
-                    }
-
-                    // Location workflows
-                    if !location_slots.is_empty() {
-                        CategorySection {
-                            title: "Location Assets",
-                            slots: location_slots,
-                            selected_slot: props.selected_slot.clone(),
-                            on_select: props.on_select.clone(),
-                            on_configure: props.on_configure.clone(),
-                        }
-                    }
-
-                    // Item workflows
-                    if !item_slots.is_empty() {
-                        CategorySection {
-                            title: "Item Assets",
-                            slots: item_slots,
+                            title: category.name.clone(),
+                            slots: category.slots.clone(),
                             selected_slot: props.selected_slot.clone(),
                             on_select: props.on_select.clone(),
                             on_configure: props.on_configure.clone(),
@@ -149,7 +119,7 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
 /// Category section with slots
 #[derive(Props, Clone, PartialEq)]
 struct CategorySectionProps {
-    title: &'static str,
+    title: String,
     slots: Vec<WorkflowSlotStatus>,
     selected_slot: Option<String>,
     on_select: EventHandler<String>,
@@ -158,6 +128,10 @@ struct CategorySectionProps {
 
 #[component]
 fn CategorySection(props: CategorySectionProps) -> Element {
+    if props.slots.is_empty() {
+        return rsx! {};
+    }
+
     rsx! {
         div {
             class: "category-section",
@@ -252,10 +226,10 @@ fn SlotCard(props: SlotCardProps) -> Element {
 
                 // Workflow name if configured
                 if props.slot.configured {
-                    if let Some(name) = &props.slot.workflow_name {
+                    if let Some(ref config) = props.slot.config {
                         div {
                             style: "color: #22c55e; font-size: 0.75rem; margin-top: 0.25rem; margin-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
-                            "✓ {name}"
+                            "✓ {config.name}"
                         }
                     }
                 }
@@ -274,10 +248,43 @@ fn SlotCard(props: SlotCardProps) -> Element {
     }
 }
 
+// ============================================================================
+// API Types & Fetch
+// ============================================================================
+
+/// Workflow slot status from API
+#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+pub struct WorkflowSlotStatus {
+    pub slot: String,
+    pub display_name: String,
+    pub default_width: u32,
+    pub default_height: u32,
+    pub configured: bool,
+    pub config: Option<WorkflowConfigBrief>,
+}
+
+/// Brief workflow config info
+#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+pub struct WorkflowConfigBrief {
+    pub name: String,
+}
+
+/// A category of workflow slots
+#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+pub struct WorkflowSlotCategory {
+    pub name: String,
+    pub slots: Vec<WorkflowSlotStatus>,
+}
+
+/// Response from GET /api/workflows
+#[derive(Clone, Debug, serde::Deserialize)]
+pub struct WorkflowSlotsResponse {
+    pub categories: Vec<WorkflowSlotCategory>,
+}
+
 /// Fetch workflow slots from the Engine API
-async fn fetch_workflow_slots() -> Result<Vec<WorkflowSlotStatus>, String> {
-    // Get the server URL from session state or use default
-    let base_url = get_engine_http_url();
+async fn fetch_workflow_slots() -> Result<WorkflowSlotsResponse, String> {
+    let base_url = get_engine_url();
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -309,10 +316,10 @@ async fn fetch_workflow_slots() -> Result<Vec<WorkflowSlotStatus>, String> {
             .await
             .map_err(|e| format!("JSON await failed: {:?}", e))?;
 
-        let slots: Vec<WorkflowSlotStatusResponse> = serde_wasm_bindgen::from_value(json)
+        let response: WorkflowSlotsResponse = serde_wasm_bindgen::from_value(json)
             .map_err(|e| format!("Deserialize error: {:?}", e))?;
 
-        Ok(slots.into_iter().map(|s| s.into()).collect())
+        Ok(response)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -330,48 +337,11 @@ async fn fetch_workflow_slots() -> Result<Vec<WorkflowSlotStatus>, String> {
             return Err(format!("Server error: {}", response.status()));
         }
 
-        let slots: Vec<WorkflowSlotStatusResponse> = response
+        let data: WorkflowSlotsResponse = response
             .json()
             .await
             .map_err(|e| format!("Deserialize error: {}", e))?;
 
-        Ok(slots.into_iter().map(|s| s.into()).collect())
-    }
-}
-
-/// Get the HTTP URL for the Engine API
-fn get_engine_http_url() -> String {
-    // Default to localhost:3000
-    "http://localhost:3000".to_string()
-}
-
-/// Response structure from the API
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowSlotStatusResponse {
-    slot: String,
-    display_name: String,
-    category: String,
-    default_width: u32,
-    default_height: u32,
-    configured: bool,
-    config: Option<WorkflowConfigBrief>,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowConfigBrief {
-    name: String,
-}
-
-impl From<WorkflowSlotStatusResponse> for WorkflowSlotStatus {
-    fn from(resp: WorkflowSlotStatusResponse) -> Self {
-        Self {
-            slot: resp.slot,
-            display_name: resp.display_name,
-            category: resp.category,
-            default_width: resp.default_width,
-            default_height: resp.default_height,
-            configured: resp.configured,
-            workflow_name: resp.config.map(|c| c.name),
-        }
+        Ok(data)
     }
 }

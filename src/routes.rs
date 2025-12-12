@@ -72,8 +72,20 @@ pub enum Route {
     #[route("/worlds")]
     WorldSelectRoute {},
 
+    // DM view with tab parameter - defaults to "director"
     #[route("/worlds/:world_id/dm")]
     DMViewRoute { world_id: String },
+
+    #[route("/worlds/:world_id/dm/:tab")]
+    DMViewTabRoute { world_id: String, tab: String },
+
+    // Creator mode sub-tabs
+    #[route("/worlds/:world_id/dm/creator/:subtab")]
+    DMCreatorSubTabRoute { world_id: String, subtab: String },
+
+    // Settings sub-tabs
+    #[route("/worlds/:world_id/dm/settings/:subtab")]
+    DMSettingsSubTabRoute { world_id: String, subtab: String },
 
     #[route("/worlds/:world_id/play")]
     PCViewRoute { world_id: String },
@@ -140,38 +152,73 @@ pub fn WorldSelectRoute() -> Element {
         set_page_title("Select World");
     });
 
-    // Get selected role from context (TODO: implement context storage)
-    let role = crate::UserRole::Player;
+    // Load selected role from localStorage
+    let role = load_role_from_storage();
 
     rsx! {
         crate::presentation::views::world_select::WorldSelectView {
             role: role,
-            on_world_selected: move |world_id: String| {
-                // Save last accessed world
-                storage::save(storage::STORAGE_KEY_LAST_WORLD, &world_id);
+            on_world_selected: {
+                let role = role;
+                move |world_id: String| {
+                    // Save last accessed world
+                    storage::save(storage::STORAGE_KEY_LAST_WORLD, &world_id);
 
-                // Initiate connection to the Engine
-                let server_url = DEFAULT_ENGINE_URL.to_string();
-                let user_id = format!("user-{}", uuid::Uuid::new_v4());
-                let participant_role = ParticipantRole::Player;
+                    // Map UserRole to ParticipantRole
+                    let participant_role = match role {
+                        crate::UserRole::DungeonMaster => ParticipantRole::DungeonMaster,
+                        crate::UserRole::Player => ParticipantRole::Player,
+                        crate::UserRole::Spectator => ParticipantRole::Spectator,
+                    };
 
-                initiate_connection(
-                    server_url,
-                    user_id,
-                    participant_role,
-                    session_state.clone(),
-                    game_state.clone(),
-                    dialogue_state.clone(),
-                );
+                    // Initiate connection to the Engine
+                    let server_url = DEFAULT_ENGINE_URL.to_string();
+                    let user_id = format!("user-{}", uuid::Uuid::new_v4());
 
-                // Navigate to the appropriate view based on role
-                navigator.push(Route::PCViewRoute { world_id });
+                    initiate_connection(
+                        server_url,
+                        user_id,
+                        participant_role,
+                        session_state.clone(),
+                        game_state.clone(),
+                        dialogue_state.clone(),
+                    );
+
+                    // Navigate to the appropriate view based on role
+                    match role {
+                        crate::UserRole::DungeonMaster => {
+                            navigator.push(Route::DMViewRoute { world_id });
+                        }
+                        crate::UserRole::Player => {
+                            navigator.push(Route::PCViewRoute { world_id });
+                        }
+                        crate::UserRole::Spectator => {
+                            navigator.push(Route::SpectatorViewRoute { world_id });
+                        }
+                    }
+                }
             },
             on_back: move |_| {
                 navigator.push(Route::RoleSelectRoute {});
             },
         }
     }
+}
+
+/// Load user role from localStorage, defaults to Player
+fn load_role_from_storage() -> crate::UserRole {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(role_str) = storage::load(storage::STORAGE_KEY_ROLE) {
+            match role_str.as_str() {
+                "DungeonMaster" => return crate::UserRole::DungeonMaster,
+                "Player" => return crate::UserRole::Player,
+                "Spectator" => return crate::UserRole::Spectator,
+                _ => {}
+            }
+        }
+    }
+    crate::UserRole::Player
 }
 
 #[component]
@@ -198,23 +245,142 @@ pub fn PCViewRoute(world_id: String) -> Element {
     }
 }
 
+/// DMViewRoute - redirects to default tab (director)
 #[component]
 pub fn DMViewRoute(world_id: String) -> Element {
+    let navigator = use_navigator();
+
+    // Redirect to director tab by default
+    use_effect(move || {
+        navigator.replace(Route::DMViewTabRoute {
+            world_id: world_id.clone(),
+            tab: "director".to_string()
+        });
+    });
+
+    // Show nothing while redirecting
+    rsx! {}
+}
+
+/// DMViewTabRoute - DM view with specific tab
+#[component]
+pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
+    let navigator = use_navigator();
+
+    // If "creator" tab, redirect to creator subtab route
+    if tab == "creator" {
+        use_effect(move || {
+            navigator.replace(Route::DMCreatorSubTabRoute {
+                world_id: world_id.clone(),
+                subtab: "characters".to_string(),
+            });
+        });
+        return rsx! {};
+    }
+
+    // If "settings" tab, redirect to settings subtab route
+    if tab == "settings" {
+        use_effect(move || {
+            navigator.replace(Route::DMSettingsSubTabRoute {
+                world_id: world_id.clone(),
+                subtab: "workflows".to_string(),
+            });
+        });
+        return rsx! {};
+    }
+
+    // Parse tab from URL, default to Director if invalid
+    let dm_mode = match tab.as_str() {
+        "director" => DMMode::Director,
+        _ => DMMode::Director,
+    };
+
+    // Set page title based on tab
+    let title = match dm_mode {
+        DMMode::Director => "Director",
+        DMMode::Creator => "Creator",
+        DMMode::Settings => "Settings",
+    };
+
+    use_effect(move || {
+        set_page_title(title);
+    });
+
+    rsx! {
+        DMViewLayout {
+            world_id: world_id,
+            dm_mode: dm_mode,
+            creator_subtab: None,
+            settings_subtab: None,
+        }
+    }
+}
+
+/// DMCreatorSubTabRoute - Creator mode with specific sub-tab
+#[component]
+pub fn DMCreatorSubTabRoute(world_id: String, subtab: String) -> Element {
+    // Set page title based on subtab
+    let title = match subtab.as_str() {
+        "characters" => "Creator - Characters",
+        "locations" => "Creator - Locations",
+        "items" => "Creator - Items",
+        "maps" => "Creator - Maps",
+        _ => "Creator",
+    };
+
+    use_effect(move || {
+        set_page_title(title);
+    });
+
+    rsx! {
+        DMViewLayout {
+            world_id: world_id,
+            dm_mode: DMMode::Creator,
+            creator_subtab: Some(subtab),
+            settings_subtab: None,
+        }
+    }
+}
+
+/// DMSettingsSubTabRoute - Settings with specific sub-tab
+#[component]
+pub fn DMSettingsSubTabRoute(world_id: String, subtab: String) -> Element {
+    // Set page title based on subtab
+    let title = match subtab.as_str() {
+        "workflows" => "Settings - Workflows",
+        "skills" => "Settings - Skills",
+        _ => "Settings",
+    };
+
+    use_effect(move || {
+        set_page_title(title);
+    });
+
+    rsx! {
+        DMViewLayout {
+            world_id: world_id,
+            dm_mode: DMMode::Settings,
+            creator_subtab: None,
+            settings_subtab: Some(subtab),
+        }
+    }
+}
+
+/// Shared DM View layout component
+#[derive(Props, Clone, PartialEq)]
+struct DMViewLayoutProps {
+    world_id: String,
+    dm_mode: DMMode,
+    creator_subtab: Option<String>,
+    settings_subtab: Option<String>,
+}
+
+#[component]
+fn DMViewLayout(props: DMViewLayoutProps) -> Element {
     let navigator = use_navigator();
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
-
-    // Set page title for this view
-    use_effect(move || {
-        set_page_title("Dungeon Master");
-    });
-
-    // Track DM mode state
-    let mut dm_mode = use_signal(|| DMMode::Director);
-
-    // Build the layout with header and DM view
-    let current_dm_mode = *dm_mode.read();
 
     rsx! {
         div {
@@ -223,11 +389,9 @@ pub fn DMViewRoute(world_id: String) -> Element {
 
             // Header with DM tabs
             DMViewHeader {
+                world_id: props.world_id.clone(),
                 connection_status: *session_state.connection_status.read(),
-                dm_mode: current_dm_mode,
-                on_dm_mode_change: move |mode: DMMode| {
-                    dm_mode.set(mode);
-                },
+                dm_mode: props.dm_mode,
                 on_back: {
                     let session_state = session_state.clone();
                     let game_state = game_state.clone();
@@ -246,7 +410,10 @@ pub fn DMViewRoute(world_id: String) -> Element {
                 style: "flex: 1; overflow: hidden; position: relative; z-index: 1;",
 
                 crate::presentation::views::dm_view::DMView {
-                    active_mode: current_dm_mode,
+                    world_id: props.world_id.clone(),
+                    active_mode: props.dm_mode,
+                    creator_subtab: props.creator_subtab.clone(),
+                    settings_subtab: props.settings_subtab.clone(),
                 }
             }
 
@@ -323,9 +490,9 @@ pub fn NotFoundRoute(route: Vec<String>) -> Element {
 /// Header component for DM View (separate from main App header)
 #[derive(Props, Clone, PartialEq)]
 struct DMViewHeaderProps {
+    world_id: String,
     connection_status: ConnectionStatus,
     dm_mode: DMMode,
-    on_dm_mode_change: EventHandler<DMMode>,
     on_back: EventHandler<()>,
 }
 
@@ -348,30 +515,27 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
                     "WrldBldr"
                 }
 
-                // DM tabs
+                // DM tabs - use router Links for navigation
                 div {
                     style: "display: flex; gap: 0.25rem; position: relative; z-index: 102;",
 
-                    DMHeaderTab {
+                    DMHeaderTabLink {
                         label: "Director",
+                        tab: "director",
+                        world_id: props.world_id.clone(),
                         active: props.dm_mode == DMMode::Director,
-                        on_click: move |_| {
-                            props.on_dm_mode_change.call(DMMode::Director);
-                        },
                     }
-                    DMHeaderTab {
+                    DMHeaderTabLink {
                         label: "Creator",
+                        tab: "creator",
+                        world_id: props.world_id.clone(),
                         active: props.dm_mode == DMMode::Creator,
-                        on_click: move |_| {
-                            props.on_dm_mode_change.call(DMMode::Creator);
-                        },
                     }
-                    DMHeaderTab {
+                    DMHeaderTabLink {
                         label: "Settings",
+                        tab: "settings",
+                        world_id: props.world_id.clone(),
                         active: props.dm_mode == DMMode::Settings,
-                        on_click: move |_| {
-                            props.on_dm_mode_change.call(DMMode::Settings);
-                        },
                     }
                 }
             }
@@ -408,20 +572,20 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
     }
 }
 
-/// Header tab button for DM View
+/// Header tab link for DM View - uses router navigation
 #[component]
-fn DMHeaderTab(label: &'static str, active: bool, on_click: EventHandler<()>) -> Element {
+fn DMHeaderTabLink(label: &'static str, tab: &'static str, world_id: String, active: bool) -> Element {
     let bg_color = if active { "#3b82f6" } else { "transparent" };
     let text_color = if active { "white" } else { "#9ca3af" };
 
     rsx! {
-        button {
-            onclick: move |e| {
-                e.stop_propagation();
-                on_click.call(());
+        Link {
+            to: Route::DMViewTabRoute {
+                world_id: world_id,
+                tab: tab.to_string(),
             },
             style: format!(
-                "padding: 0.4rem 0.75rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; position: relative; z-index: 103; pointer-events: auto;",
+                "padding: 0.4rem 0.75rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; position: relative; z-index: 103; pointer-events: auto; text-decoration: none;",
                 bg_color,
                 text_color,
                 if active { "500" } else { "400" }

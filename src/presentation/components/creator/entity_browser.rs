@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 
 use super::EntityTypeTab;
-use crate::presentation::state::GameState;
+use crate::routes::Route;
 
 /// Entity data structures
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -23,8 +23,8 @@ pub struct EntityLocation {
 /// Props for the EntityBrowser component
 #[component]
 pub fn EntityBrowser(
+    world_id: String,
     selected_type: EntityTypeTab,
-    on_type_change: EventHandler<EntityTypeTab>,
     selected_id: Option<String>,
     on_select: EventHandler<String>,
 ) -> Element {
@@ -33,30 +33,30 @@ pub fn EntityBrowser(
             class: "entity-browser",
             style: "flex: 1; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
 
-            // Tab buttons for entity types
+            // Tab buttons for entity types - uses router Links
             div {
                 class: "browser-tabs",
                 style: "display: flex; border-bottom: 1px solid #374151;",
 
-                EntityTypeTabButton {
+                EntityTypeTabLink {
+                    world_id: world_id.clone(),
                     tab: EntityTypeTab::Characters,
                     active: selected_type == EntityTypeTab::Characters,
-                    on_click: move |_| on_type_change.call(EntityTypeTab::Characters),
                 }
-                EntityTypeTabButton {
+                EntityTypeTabLink {
+                    world_id: world_id.clone(),
                     tab: EntityTypeTab::Locations,
                     active: selected_type == EntityTypeTab::Locations,
-                    on_click: move |_| on_type_change.call(EntityTypeTab::Locations),
                 }
-                EntityTypeTabButton {
+                EntityTypeTabLink {
+                    world_id: world_id.clone(),
                     tab: EntityTypeTab::Items,
                     active: selected_type == EntityTypeTab::Items,
-                    on_click: move |_| on_type_change.call(EntityTypeTab::Items),
                 }
-                EntityTypeTabButton {
+                EntityTypeTabLink {
+                    world_id: world_id.clone(),
                     tab: EntityTypeTab::Maps,
                     active: selected_type == EntityTypeTab::Maps,
-                    on_click: move |_| on_type_change.call(EntityTypeTab::Maps),
                 }
             }
 
@@ -80,12 +80,14 @@ pub fn EntityBrowser(
                 match selected_type {
                     EntityTypeTab::Characters => rsx! {
                         CharacterList {
+                            world_id: world_id.clone(),
                             selected_id: selected_id.clone(),
                             on_select: move |id| on_select.call(id),
                         }
                     },
                     EntityTypeTab::Locations => rsx! {
                         LocationList {
+                            world_id: world_id.clone(),
                             selected_id: selected_id.clone(),
                             on_select: move |id| on_select.call(id),
                         }
@@ -118,8 +120,9 @@ pub fn EntityBrowser(
     }
 }
 
+/// Tab link that uses router navigation
 #[component]
-fn EntityTypeTabButton(tab: EntityTypeTab, active: bool, on_click: EventHandler<()>) -> Element {
+fn EntityTypeTabLink(world_id: String, tab: EntityTypeTab, active: bool) -> Element {
     let bg = if active { "#3b82f6" } else { "transparent" };
     let short_label = match tab {
         EntityTypeTab::Characters => "Char",
@@ -127,12 +130,21 @@ fn EntityTypeTabButton(tab: EntityTypeTab, active: bool, on_click: EventHandler<
         EntityTypeTab::Items => "Item",
         EntityTypeTab::Maps => "Map",
     };
+    let subtab = match tab {
+        EntityTypeTab::Characters => "characters",
+        EntityTypeTab::Locations => "locations",
+        EntityTypeTab::Items => "items",
+        EntityTypeTab::Maps => "maps",
+    };
 
     rsx! {
-        button {
-            onclick: move |_| on_click.call(()),
+        Link {
+            to: Route::DMCreatorSubTabRoute {
+                world_id: world_id,
+                subtab: subtab.to_string(),
+            },
             style: format!(
-                "flex: 1; padding: 0.5rem 0.25rem; background: {}; color: white; border: none; cursor: pointer; font-size: 0.75rem;",
+                "flex: 1; padding: 0.5rem 0.25rem; background: {}; color: white; border: none; cursor: pointer; font-size: 0.75rem; text-decoration: none; text-align: center;",
                 bg
             ),
             "{short_label}"
@@ -142,33 +154,26 @@ fn EntityTypeTabButton(tab: EntityTypeTab, active: bool, on_click: EventHandler<
 
 /// Character list with API data
 #[component]
-fn CharacterList(selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
-    let game_state = use_context::<GameState>();
-
+fn CharacterList(world_id: String, selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
     // Track loading and error states
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut characters: Signal<Vec<EntityCharacter>> = use_signal(Vec::new);
 
-    // Fetch characters on mount
+    // Fetch characters on mount using world_id from props
+    let world_id_for_fetch = world_id.clone();
     use_effect(move || {
+        let world_id = world_id_for_fetch.clone();
         spawn(async move {
-            let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-            if let Some(world_id) = world_id {
-                match fetch_characters(&world_id).await {
-                    Ok(fetched) => {
-                        characters.set(fetched);
-                        is_loading.set(false);
-                    }
-                    Err(e) => {
-                        error.set(Some(e));
-                        is_loading.set(false);
-                    }
+            match fetch_characters(&world_id).await {
+                Ok(fetched) => {
+                    characters.set(fetched);
+                    is_loading.set(false);
                 }
-            } else {
-                error.set(Some("No world loaded".to_string()));
-                is_loading.set(false);
+                Err(e) => {
+                    error.set(Some(e));
+                    is_loading.set(false);
+                }
             }
         });
     });
@@ -214,33 +219,26 @@ fn CharacterList(selected_id: Option<String>, on_select: EventHandler<String>) -
 
 /// Location list with API data
 #[component]
-fn LocationList(selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
-    let game_state = use_context::<GameState>();
-
+fn LocationList(world_id: String, selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
     // Track loading and error states
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut locations: Signal<Vec<EntityLocation>> = use_signal(Vec::new);
 
-    // Fetch locations on mount
+    // Fetch locations on mount using world_id from props
+    let world_id_for_fetch = world_id.clone();
     use_effect(move || {
+        let world_id = world_id_for_fetch.clone();
         spawn(async move {
-            let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-            if let Some(world_id) = world_id {
-                match fetch_locations(&world_id).await {
-                    Ok(fetched) => {
-                        locations.set(fetched);
-                        is_loading.set(false);
-                    }
-                    Err(e) => {
-                        error.set(Some(e));
-                        is_loading.set(false);
-                    }
+            match fetch_locations(&world_id).await {
+                Ok(fetched) => {
+                    locations.set(fetched);
+                    is_loading.set(false);
                 }
-            } else {
-                error.set(Some("No world loaded".to_string()));
-                is_loading.set(false);
+                Err(e) => {
+                    error.set(Some(e));
+                    is_loading.set(false);
+                }
             }
         });
     });

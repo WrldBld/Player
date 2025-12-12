@@ -20,12 +20,30 @@ pub use suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType}
 pub use sheet_field_input::{CharacterSheetForm, SheetFieldInput, SheetSectionInput};
 
 use dioxus::prelude::*;
+use crate::routes::Route;
+
+/// Props for CreatorMode
+#[derive(Props, Clone, PartialEq)]
+pub struct CreatorModeProps {
+    /// World ID from the route
+    pub world_id: String,
+    /// Currently selected tab from route (characters, locations, items, maps)
+    #[props(default)]
+    pub selected_tab: Option<String>,
+}
 
 /// The main Creator Mode container component
 #[component]
-pub fn CreatorMode() -> Element {
-    // Track which entity type is selected in the browser
-    let mut selected_entity_type = use_signal(|| EntityTypeTab::Characters);
+pub fn CreatorMode(props: CreatorModeProps) -> Element {
+    // Parse selected tab from URL, default to Characters
+    let selected_entity_type = match props.selected_tab.as_deref() {
+        Some("characters") | None => EntityTypeTab::Characters,
+        Some("locations") => EntityTypeTab::Locations,
+        Some("items") => EntityTypeTab::Items,
+        Some("maps") => EntityTypeTab::Maps,
+        _ => EntityTypeTab::Characters,
+    };
+
     // Track the currently selected entity ID for editing
     let mut selected_entity_id: Signal<Option<String>> = use_signal(|| None);
 
@@ -39,10 +57,10 @@ pub fn CreatorMode() -> Element {
                 class: "left-panel",
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
 
-                // Entity browser (tree view)
+                // Entity browser (tree view) - now uses router for tab changes
                 EntityBrowser {
-                    selected_type: *selected_entity_type.read(),
-                    on_type_change: move |t| selected_entity_type.set(t),
+                    world_id: props.world_id.clone(),
+                    selected_type: selected_entity_type,
                     selected_id: selected_entity_id.read().clone(),
                     on_select: move |id| selected_entity_id.set(Some(id)),
                 }
@@ -56,7 +74,7 @@ pub fn CreatorMode() -> Element {
                 class: "editor-panel",
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
 
-                match (*selected_entity_type.read(), selected_entity_id.read().clone()) {
+                match (selected_entity_type, selected_entity_id.read().clone()) {
                     (EntityTypeTab::Characters, Some(id)) => rsx! {
                         CharacterForm {
                             character_id: id,

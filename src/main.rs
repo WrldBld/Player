@@ -51,8 +51,12 @@ fn App() -> Element {
 
     // Non-DM routes show a simple header, DM routes use their own layout
     // Router handles all view switching
+    // Wrapper provides full viewport height for child views using height: 100%
     rsx! {
-        Router::<Route> {}
+        div {
+            style: "width: 100vw; height: 100vh; overflow: hidden;",
+            Router::<Route> {}
+        }
     }
 }
 
