@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::infrastructure::asset_loader::{ChallengeData, SkillData};
+use crate::infrastructure::http_client::HttpClient;
 use crate::infrastructure::websocket::{ApprovalDecision, ClientMessage};
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
@@ -860,82 +861,12 @@ fn NPCToggle(name: &'static str, active: bool) -> Element {
 
 /// Fetch skills for a world from the Engine API
 async fn fetch_skills(world_id: &str) -> Result<Vec<SkillData>, String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let url = format!("/api/worlds/{}/skills", world_id);
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            response
-                .json::<Vec<SkillData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("http://localhost:3000/api/worlds/{}/skills", world_id);
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            response
-                .json::<Vec<SkillData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    let path = format!("/api/worlds/{}/skills", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Fetch challenges for a world from the Engine API
 async fn fetch_challenges(world_id: &str) -> Result<Vec<ChallengeData>, String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let url = format!("/api/worlds/{}/challenges", world_id);
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            response
-                .json::<Vec<ChallengeData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("http://localhost:3000/api/worlds/{}/challenges", world_id);
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            response
-                .json::<Vec<ChallengeData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    let path = format!("/api/worlds/{}/challenges", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }

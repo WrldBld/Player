@@ -2,6 +2,8 @@
 
 use dioxus::prelude::*;
 
+use crate::infrastructure::http_client::HttpClient;
+
 /// Asset types that can be generated
 const ASSET_TYPES: &[(&str, &str)] = &[
     ("portrait", "Portrait"),
@@ -414,63 +416,14 @@ pub struct GenerateRequest {
 
 /// Fetch assets from the Engine API
 async fn fetch_assets(entity_type: &str, entity_id: &str) -> Result<Vec<Asset>, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!(
-        "{}/api/{}/{}/gallery",
-        base_url, entity_type, entity_id
-    );
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        #[derive(serde::Deserialize)]
-        struct GalleryResponse {
-            assets: Vec<Asset>,
-        }
-
-        let data: GalleryResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.assets)
+    #[derive(serde::Deserialize)]
+    struct GalleryResponse {
+        assets: Vec<Asset>,
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        #[derive(serde::Deserialize)]
-        struct GalleryResponse {
-            assets: Vec<Asset>,
-        }
-
-        let data: GalleryResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.assets)
-    }
+    let path = format!("/api/{}/{}/gallery", entity_type, entity_id);
+    let data: GalleryResponse = HttpClient::get(&path).await.map_err(|e| e.to_string())?;
+    Ok(data.assets)
 }
 
 /// Activate an asset
@@ -479,43 +432,8 @@ async fn activate_asset(
     entity_id: &str,
     asset_id: &str,
 ) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!(
-        "{}/api/{}/{}/gallery/{}/activate",
-        base_url, entity_type, entity_id, asset_id
-    );
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::put(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .put(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/{}/{}/gallery/{}/activate", entity_type, entity_id, asset_id);
+    HttpClient::put_empty(&path).await.map_err(|e| e.to_string())
 }
 
 /// Delete an asset
@@ -524,83 +442,11 @@ async fn delete_asset(
     entity_id: &str,
     asset_id: &str,
 ) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!(
-        "{}/api/{}/{}/gallery/{}",
-        base_url, entity_type, entity_id, asset_id
-    );
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::delete(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .delete(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/{}/{}/gallery/{}", entity_type, entity_id, asset_id);
+    HttpClient::delete(&path).await.map_err(|e| e.to_string())
 }
 
 /// Queue asset generation
 async fn queue_generation(req: &GenerateRequest) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/assets/generate", base_url);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::post(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&req).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .post(&url)
-            .json(&req)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
+    HttpClient::post_no_response("/api/assets/generate", req).await.map_err(|e| e.to_string())
 }

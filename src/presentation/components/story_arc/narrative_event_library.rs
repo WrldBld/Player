@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::infrastructure::asset_loader::NarrativeEventData;
+use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::NarrativeEventCard;
 
 #[derive(Props, Clone, PartialEq)]
@@ -240,89 +241,16 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 }
 
 async fn fetch_narrative_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/narrative-events", base_url, world_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            response
-                .json::<Vec<NarrativeEventData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            response
-                .json::<Vec<NarrativeEventData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    let path = format!("/api/worlds/{}/narrative-events", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 async fn toggle_favorite(event_id: &str) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/narrative-events/{}/favorite", base_url, event_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::post(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.post(&url).send().await.map_err(|e| format!("Request failed: {}", e))?;
-        if response.status().is_success() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
-    }
+    let path = format!("/api/narrative-events/{}/favorite", event_id);
+    HttpClient::post_empty(&path).await.map_err(|e| e.to_string())
 }
 
 async fn set_active(event_id: &str, active: bool) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/narrative-events/{}/active", base_url, event_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::put(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&active).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.put(&url).json(&active).send().await.map_err(|e| format!("Request failed: {}", e))?;
-        if response.status().is_success() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
-    }
+    let path = format!("/api/narrative-events/{}/active", event_id);
+    HttpClient::put_no_response(&path, &active).await.map_err(|e| e.to_string())
 }

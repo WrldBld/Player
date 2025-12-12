@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::infrastructure::asset_loader::{StoryEventData, StoryEventTypeData};
+use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::{
     TimelineEventCard, TimelineFilters, AddDmMarkerModal,
 };
@@ -436,85 +437,21 @@ struct PaginatedStoryEventsResponse {
 
 /// Fetch story events from the Engine API
 async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<Vec<StoryEventData>, String> {
-    let base_url = "http://localhost:3000";
-    let url = if let Some(sid) = session_id {
-        format!("{}/api/worlds/{}/story-events?session_id={}", base_url, world_id, sid)
+    let path = if let Some(sid) = session_id {
+        format!("/api/worlds/{}/story-events?session_id={}", world_id, sid)
     } else {
-        format!("{}/api/worlds/{}/story-events", base_url, world_id)
+        format!("/api/worlds/{}/story-events", world_id)
     };
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            let paginated: PaginatedStoryEventsResponse = response
-                .json()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))?;
-            Ok(paginated.events)
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            let paginated: PaginatedStoryEventsResponse = response
-                .json()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))?;
-            Ok(paginated.events)
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    let paginated: PaginatedStoryEventsResponse = HttpClient::get(&path)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(paginated.events)
 }
 
 /// Toggle event visibility
 async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), String> {
     let _ = world_id; // Unused but kept for API consistency
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/story-events/{}/visibility", base_url, event_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::put(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            Ok(())
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .put(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    let path = format!("/api/story-events/{}/visibility", event_id);
+    HttpClient::put_empty(&path).await.map_err(|e| e.to_string())
 }

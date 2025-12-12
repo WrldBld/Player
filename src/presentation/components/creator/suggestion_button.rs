@@ -5,6 +5,8 @@
 
 use dioxus::prelude::*;
 
+use crate::infrastructure::http_client::HttpClient;
+
 /// Types of suggestions that can be requested
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SuggestionType {
@@ -203,6 +205,11 @@ async fn fetch_suggestions_from_api(
         additional_context: Option<String>,
     }
 
+    #[derive(serde::Deserialize)]
+    struct SuggestionResponse {
+        suggestions: Vec<String>,
+    }
+
     let body = RequestBody {
         entity_type: context.entity_type.clone(),
         entity_name: context.entity_name.clone(),
@@ -211,66 +218,11 @@ async fn fetch_suggestions_from_api(
         additional_context: context.additional_context.clone(),
     };
 
-    // For now, use a hardcoded base URL
-    // TODO: Get this from session state or config
-    let base_url = "http://localhost:3000";
-    let url = format!("{}{}", base_url, suggestion_type.endpoint());
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::post(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&body).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        #[derive(serde::Deserialize)]
-        struct SuggestionResponse {
-            suggestions: Vec<String>,
-        }
-
-        let data: SuggestionResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.suggestions)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        #[derive(serde::Deserialize)]
-        struct SuggestionResponse {
-            suggestions: Vec<String>,
-        }
-
-        let data: SuggestionResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.suggestions)
-    }
+    let path = suggestion_type.endpoint();
+    let data: SuggestionResponse = HttpClient::post(path, &body)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(data.suggestions)
 }
 
 /// Compact suggestion button for inline use (smaller, icon-style)

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use crate::infrastructure::asset_loader::{
     ChallengeData, ChallengeType, ChallengeDifficulty, SkillData,
 };
+use crate::infrastructure::http_client::HttpClient;
 
 /// Props for ChallengeLibrary
 #[derive(Props, Clone, PartialEq)]
@@ -1088,248 +1089,37 @@ impl DefaultChallenge for Option<ChallengeData> {
 }
 
 // ============================================================================
-// API Configuration
+// API Functions
 // ============================================================================
 
 use crate::infrastructure::asset_loader::ChallengeOutcomes;
 
-const API_BASE_URL: &str = "http://localhost:3000";
-
-// ============================================================================
-// API Functions
-// ============================================================================
-
 async fn fetch_challenges(world_id: &str) -> Result<Vec<ChallengeData>, String> {
-    let url = format!("/api/worlds/{}/challenges", world_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<Vec<ChallengeData>>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .get(&format!("{}{}", API_BASE_URL, url))
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<Vec<ChallengeData>>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
+    let path = format!("/api/worlds/{}/challenges", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 async fn create_challenge(challenge: &ChallengeData) -> Result<ChallengeData, String> {
-    let url = format!("/api/worlds/{}/challenges", challenge.world_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::post(&url)
-            .json(challenge)
-            .map_err(|e| format!("Serialize error: {}", e))?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<ChallengeData>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .post(&format!("{}{}", API_BASE_URL, url))
-            .json(challenge)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<ChallengeData>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
+    let path = format!("/api/worlds/{}/challenges", challenge.world_id);
+    HttpClient::post(&path, challenge).await.map_err(|e| e.to_string())
 }
 
 async fn update_challenge(challenge: &ChallengeData) -> Result<ChallengeData, String> {
-    let url = format!("/api/challenges/{}", challenge.id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::put(&url)
-            .json(challenge)
-            .map_err(|e| format!("Serialize error: {}", e))?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<ChallengeData>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .put(&format!("{}{}", API_BASE_URL, url))
-            .json(challenge)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<ChallengeData>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
+    let path = format!("/api/challenges/{}", challenge.id);
+    HttpClient::put(&path, challenge).await.map_err(|e| e.to_string())
 }
 
 async fn delete_challenge(challenge_id: &str) -> Result<(), String> {
-    let url = format!("/api/challenges/{}", challenge_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::delete(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .delete(&format!("{}{}", API_BASE_URL, url))
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/challenges/{}", challenge_id);
+    HttpClient::delete(&path).await.map_err(|e| e.to_string())
 }
 
 async fn toggle_challenge_favorite(challenge_id: &str) -> Result<bool, String> {
-    let url = format!("/api/challenges/{}/favorite", challenge_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::put(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<bool>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .put(&format!("{}{}", API_BASE_URL, url))
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        resp.json::<bool>()
-            .await
-            .map_err(|e| format!("Parse error: {}", e))
-    }
+    let path = format!("/api/challenges/{}/favorite", challenge_id);
+    HttpClient::put_empty_with_response(&path).await.map_err(|e| e.to_string())
 }
 
 async fn set_challenge_active(challenge_id: &str, active: bool) -> Result<(), String> {
-    let url = format!("/api/challenges/{}/active", challenge_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let resp = Request::put(&url)
-            .json(&active)
-            .map_err(|e| format!("Serialize error: {}", e))?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.ok() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let resp = client
-            .put(&format!("{}{}", API_BASE_URL, url))
-            .json(&active)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !resp.status().is_success() {
-            return Err(format!("API error: {}", resp.status()));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/challenges/{}/active", challenge_id);
+    HttpClient::put_no_response(&path, &active).await.map_err(|e| e.to_string())
 }

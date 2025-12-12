@@ -12,6 +12,7 @@ use crate::infrastructure::asset_loader::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
     SuccessComparison, WorldSnapshot,
 };
+use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::state::GameState;
 use crate::UserRole;
 
@@ -765,103 +766,17 @@ fn RuleSystemConfigEditor(
 
 /// Fetch list of worlds from API
 async fn fetch_worlds() -> Result<Vec<WorldSummary>, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds", base_url);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: Vec<WorldSummary> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: Vec<WorldSummary> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data)
-    }
+    HttpClient::get("/api/worlds").await.map_err(|e| e.to_string())
 }
 
 /// Fetch a full world snapshot by ID
 async fn fetch_world_snapshot(world_id: &str) -> Result<WorldSnapshot, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/export/raw", base_url, world_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: WorldSnapshot = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse world data: {}", e))?;
-
-        Ok(data)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: WorldSnapshot = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse world data: {}", e))?;
-
-        Ok(data)
-    }
+    let path = format!("/api/worlds/{}/export/raw", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Fetch a preset configuration from the API
 async fn fetch_preset(variant: &RuleSystemVariant) -> Result<RuleSystemConfig, String> {
-    let base_url = "http://localhost:3000";
     let system_type = match variant {
         RuleSystemVariant::Dnd5e | RuleSystemVariant::Pathfinder2e | RuleSystemVariant::GenericD20 => "D20",
         RuleSystemVariant::CallOfCthulhu7e | RuleSystemVariant::RuneQuest | RuleSystemVariant::GenericD100 => "D100",
@@ -869,49 +784,8 @@ async fn fetch_preset(variant: &RuleSystemVariant) -> Result<RuleSystemConfig, S
         RuleSystemVariant::Custom(_) => "Custom",
     };
     let variant_str = format!("{:?}", variant);
-    let url = format!("{}/api/rule-systems/{}/presets/{}", base_url, system_type, variant_str);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: RuleSystemConfig = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse preset: {}", e))?;
-
-        Ok(data)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: RuleSystemConfig = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse preset: {}", e))?;
-
-        Ok(data)
-    }
+    let path = format!("/api/rule-systems/{}/presets/{}", system_type, variant_str);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Create a new world with full rule system configuration
@@ -920,9 +794,6 @@ async fn create_world(
     description: Option<&str>,
     rule_system: Option<RuleSystemConfig>,
 ) -> Result<String, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds", base_url);
-
     #[derive(Serialize)]
     struct CreateWorldRequest {
         name: String,
@@ -943,49 +814,8 @@ async fn create_world(
         rule_system,
     };
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::post(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&body).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: CreateWorldResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.id)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let data: CreateWorldResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-        Ok(data.id)
-    }
+    let data: CreateWorldResponse = HttpClient::post("/api/worlds", &body)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(data.id)
 }

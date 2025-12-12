@@ -1,7 +1,9 @@
 //! Add DM Marker Modal - Create DM notes/markers on the timeline
 
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+
+use crate::infrastructure::http_client::HttpClient;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct AddDmMarkerModalProps {
@@ -281,44 +283,11 @@ async fn create_dm_marker(
     session_id: Option<&str>,
     request: &CreateDmMarkerRequest,
 ) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = if let Some(sid) = session_id {
-        format!("{}/api/sessions/{}/story-events", base_url, sid)
+    let path = if let Some(sid) = session_id {
+        format!("/api/sessions/{}/story-events", sid)
     } else {
-        format!("{}/api/worlds/{}/story-events", base_url, world_id)
+        format!("/api/worlds/{}/story-events", world_id)
     };
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::post(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(request).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            Ok(())
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .post(&url)
-            .json(request)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(format!("HTTP error: {}", response.status()))
-        }
-    }
+    HttpClient::post_no_response(&path, request).await.map_err(|e| e.to_string())
 }

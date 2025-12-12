@@ -5,6 +5,8 @@
 
 use dioxus::prelude::*;
 
+use crate::infrastructure::http_client::HttpClient;
+
 /// Props for the WorkflowUploadModal component
 #[derive(Props, Clone, PartialEq)]
 pub struct WorkflowUploadModalProps {
@@ -562,78 +564,11 @@ async fn analyze_workflow(json_text: &str) -> Result<WorkflowAnalysisResult, Str
     let workflow_json: serde_json::Value = serde_json::from_str(json_text)
         .map_err(|e| format!("Invalid JSON: {}", e))?;
 
-    let base_url = "http://localhost:3000";
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Headers, Request, RequestInit, Response};
-
-        let headers = Headers::new().map_err(|e| format!("Headers error: {:?}", e))?;
-        headers
-            .set("Content-Type", "application/json")
-            .map_err(|e| format!("Header set error: {:?}", e))?;
-
-        let body = serde_json::json!({ "workflow_json": workflow_json });
-        let body_str = serde_json::to_string(&body).map_err(|e| format!("Serialize error: {}", e))?;
-
-        let opts = RequestInit::new();
-        opts.set_method("POST");
-        opts.set_headers(&headers);
-        opts.set_body(&wasm_bindgen::JsValue::from_str(&body_str));
-
-        let url = format!("{}/api/workflows/analyze", base_url);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value.dyn_into().map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let analysis: AnalyzeWorkflowResponse = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(analysis.into())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/workflows/analyze", base_url);
-
-        let body = serde_json::json!({ "workflow_json": workflow_json });
-
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(format!("Server error: {}", error_text));
-        }
-
-        let analysis: AnalyzeWorkflowResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(analysis.into())
-    }
+    let body = serde_json::json!({ "workflow_json": workflow_json });
+    let analysis: AnalyzeWorkflowResponse = HttpClient::post("/api/workflows/analyze", &body)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(analysis.into())
 }
 
 /// Save workflow configuration via Engine API
@@ -671,63 +606,8 @@ async fn save_workflow_config(
         "locked_inputs": []
     });
 
-    let base_url = "http://localhost:3000";
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Headers, Request, RequestInit, Response};
-
-        let headers = Headers::new().map_err(|e| format!("Headers error: {:?}", e))?;
-        headers
-            .set("Content-Type", "application/json")
-            .map_err(|e| format!("Header set error: {:?}", e))?;
-
-        let body_str = serde_json::to_string(&body).map_err(|e| format!("Serialize error: {}", e))?;
-
-        let opts = RequestInit::new();
-        opts.set_method("POST");
-        opts.set_headers(&headers);
-        opts.set_body(&wasm_bindgen::JsValue::from_str(&body_str));
-
-        let url = format!("{}/api/workflows/{}", base_url, slot);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value.dyn_into().map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/workflows/{}", base_url, slot);
-
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(format!("Server error: {}", error_text));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/workflows/{}", slot);
+    HttpClient::post_no_response(&path, &body).await.map_err(|e| e.to_string())
 }
 
 /// Response from analyze endpoint

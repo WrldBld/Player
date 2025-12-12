@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use super::EntityTypeTab;
+use crate::infrastructure::http_client::HttpClient;
 use crate::routes::Route;
 
 /// Entity data structures
@@ -310,134 +311,12 @@ fn EntityListItem(
 
 /// Fetch characters from the Engine API
 async fn fetch_characters(world_id: &str) -> Result<Vec<EntityCharacter>, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let opts = RequestInit::new();
-        opts.set_method("GET");
-
-        let url = format!("{}/api/worlds/{}/characters", base_url, world_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let characters: Vec<EntityCharacter> = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(characters)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/worlds/{}/characters", base_url, world_id);
-
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let characters: Vec<EntityCharacter> = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(characters)
-    }
+    let path = format!("/api/worlds/{}/characters", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Fetch locations from the Engine API
 async fn fetch_locations(world_id: &str) -> Result<Vec<EntityLocation>, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let opts = RequestInit::new();
-        opts.set_method("GET");
-
-        let url = format!("{}/api/worlds/{}/locations", base_url, world_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let locations: Vec<EntityLocation> = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(locations)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/worlds/{}/locations", base_url, world_id);
-
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let locations: Vec<EntityLocation> = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(locations)
-    }
-}
-
-/// Get the HTTP URL for the Engine API
-fn get_engine_http_url() -> String {
-    // Default to localhost:3000
-    "http://localhost:3000".to_string()
+    let path = format!("/api/worlds/{}/locations", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }

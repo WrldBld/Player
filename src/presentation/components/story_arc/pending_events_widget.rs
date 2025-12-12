@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::infrastructure::asset_loader::NarrativeEventData;
+use crate::infrastructure::http_client::HttpClient;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct PendingEventsWidgetProps {
@@ -163,64 +164,18 @@ fn PendingEventItem(props: PendingEventItemProps) -> Element {
 }
 
 async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/narrative-events/pending", base_url, world_id);
-    let all_url = format!("{}/api/worlds/{}/narrative-events", base_url, world_id);
+    let pending_path = format!("/api/worlds/{}/narrative-events/pending", world_id);
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.ok() {
-            response
-                .json::<Vec<NarrativeEventData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
+    // Try pending endpoint first
+    match HttpClient::get::<Vec<NarrativeEventData>>(&pending_path).await {
+        Ok(events) => Ok(events),
+        Err(_) => {
             // Fall back to fetching all and filtering client-side
-            let response = Request::get(&all_url)
-                .send()
+            let all_path = format!("/api/worlds/{}/narrative-events", world_id);
+            let all: Vec<NarrativeEventData> = HttpClient::get(&all_path)
                 .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            if response.ok() {
-                let all: Vec<NarrativeEventData> = response
-                    .json()
-                    .await
-                    .map_err(|e| format!("Parse error: {}", e))?;
-                Ok(all.into_iter().filter(|e| e.is_active && !e.is_triggered).collect())
-            } else {
-                Err(format!("HTTP error: {}", response.status()))
-            }
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if response.status().is_success() {
-            response
-                .json::<Vec<NarrativeEventData>>()
-                .await
-                .map_err(|e| format!("Parse error: {}", e))
-        } else {
-            // Fall back to fetching all
-            let response = client.get(&all_url).send().await.map_err(|e| format!("Request failed: {}", e))?;
-            if response.status().is_success() {
-                let all: Vec<NarrativeEventData> = response.json().await.map_err(|e| format!("Parse error: {}", e))?;
-                Ok(all.into_iter().filter(|e| e.is_active && !e.is_triggered).collect())
-            } else {
-                Err(format!("HTTP error: {}", response.status()))
-            }
+                .map_err(|e| e.to_string())?;
+            Ok(all.into_iter().filter(|e| e.is_active && !e.is_triggered).collect())
         }
     }
 }

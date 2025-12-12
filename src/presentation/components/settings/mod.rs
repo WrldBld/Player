@@ -187,9 +187,8 @@ struct SkillsManagementTabProps {
 
 #[component]
 fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
-    use crate::infrastructure::api::get_engine_url;
     use crate::infrastructure::asset_loader::{SkillCategory, SkillData};
-    use serde::Serialize;
+    use crate::infrastructure::http_client::HttpClient;
     use std::collections::HashMap;
 
     let mut skills: Signal<Vec<SkillData>> = use_signal(Vec::new);
@@ -429,38 +428,10 @@ fn SkillRowInline(props: SkillRowInlineProps) -> Element {
 
 /// Fetch skills for the tab
 async fn fetch_skills_for_tab(world_id: &str) -> Result<Vec<crate::infrastructure::asset_loader::SkillData>, String> {
-    use crate::infrastructure::api::get_engine_url;
+    use crate::infrastructure::http_client::HttpClient;
 
-    let base_url = get_engine_url();
-    let url = format!("{}/api/worlds/{}/skills", base_url, world_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.get(&url).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
+    let path = format!("/api/worlds/{}/skills", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Empty state panel when no workflow is selected

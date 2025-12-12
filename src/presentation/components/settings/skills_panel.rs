@@ -11,6 +11,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::infrastructure::asset_loader::{SkillCategory, SkillData};
+use crate::infrastructure::http_client::HttpClient;
 
 /// Props for SkillsPanel
 #[derive(Props, Clone, PartialEq)]
@@ -632,36 +633,16 @@ fn EditSkillForm(
 // API Functions
 
 async fn fetch_skills(world_id: &str) -> Result<Vec<SkillData>, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/skills", base_url, world_id);
+    let path = format!("/api/worlds/{}/skills", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
+}
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.get(&url).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
+#[derive(Serialize)]
+struct CreateSkillRequest {
+    name: String,
+    description: String,
+    category: SkillCategory,
+    base_attribute: Option<String>,
 }
 
 async fn create_skill(
@@ -671,54 +652,22 @@ async fn create_skill(
     category: SkillCategory,
     base_attribute: Option<&str>,
 ) -> Result<SkillData, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/skills", base_url, world_id);
-
-    #[derive(Serialize)]
-    struct CreateSkillRequest {
-        name: String,
-        description: String,
-        category: SkillCategory,
-        base_attribute: Option<String>,
-    }
-
+    let path = format!("/api/worlds/{}/skills", world_id);
     let body = CreateSkillRequest {
         name: name.to_string(),
         description: description.to_string(),
         category,
         base_attribute: base_attribute.map(|s| s.to_string()),
     };
+    HttpClient::post(&path, &body).await.map_err(|e| e.to_string())
+}
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::post(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&body).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.post(&url).json(&body).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
+#[derive(Serialize)]
+struct UpdateSkillRequest {
+    name: Option<String>,
+    description: Option<String>,
+    category: Option<SkillCategory>,
+    base_attribute: Option<String>,
 }
 
 async fn update_skill(
@@ -729,128 +678,28 @@ async fn update_skill(
     category: SkillCategory,
     base_attribute: Option<&str>,
 ) -> Result<SkillData, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/skills/{}", base_url, world_id, skill_id);
-
-    #[derive(Serialize)]
-    struct UpdateSkillRequest {
-        name: Option<String>,
-        description: Option<String>,
-        category: Option<SkillCategory>,
-        base_attribute: Option<String>,
-    }
-
+    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
     let body = UpdateSkillRequest {
         name: Some(name.to_string()),
         description: Some(description.to_string()),
         category: Some(category),
         base_attribute: base_attribute.map(|s| s.to_string()),
     };
+    HttpClient::put(&path, &body).await.map_err(|e| e.to_string())
+}
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::put(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&body).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.put(&url).json(&body).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
+#[derive(Serialize)]
+struct UpdateVisibilityRequest {
+    is_hidden: Option<bool>,
 }
 
 async fn update_skill_visibility(world_id: &str, skill_id: &str, is_hidden: bool) -> Result<SkillData, String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/skills/{}", base_url, world_id, skill_id);
-
-    #[derive(Serialize)]
-    struct UpdateVisibilityRequest {
-        is_hidden: Option<bool>,
-    }
-
+    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
     let body = UpdateVisibilityRequest { is_hidden: Some(is_hidden) };
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::put(&url)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_string(&body).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.put(&url).json(&body).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        response.json().await.map_err(|e| format!("Failed to parse: {}", e))
-    }
+    HttpClient::put(&path, &body).await.map_err(|e| e.to_string())
 }
 
 async fn delete_skill(world_id: &str, skill_id: &str) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let url = format!("{}/api/worlds/{}/skills/{}", base_url, world_id, skill_id);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use gloo_net::http::Request;
-
-        let response = Request::delete(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.ok() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let response = client.delete(&url).send().await.map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        Ok(())
-    }
+    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
+    HttpClient::delete(&path).await.map_err(|e| e.to_string())
 }

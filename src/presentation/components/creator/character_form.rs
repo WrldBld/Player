@@ -8,6 +8,7 @@ use super::asset_gallery::AssetGallery;
 use super::sheet_field_input::CharacterSheetForm;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
 use crate::infrastructure::asset_loader::{FieldValue, SheetTemplate};
+use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::state::GameState;
 
 /// Character data structure for API
@@ -506,279 +507,24 @@ fn FormField(label: &'static str, required: bool, children: Element) -> Element 
 
 /// Fetch a single character from the API
 async fn fetch_character(world_id: &str, character_id: &str) -> Result<CharacterData, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let opts = RequestInit::new();
-        opts.set_method("GET");
-
-        let url = format!("{}/api/worlds/{}/characters/{}", base_url, world_id, character_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let character: CharacterData = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(character)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/worlds/{}/characters/{}", base_url, world_id, character_id);
-
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let character: CharacterData = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(character)
-    }
+    let path = format!("/api/worlds/{}/characters/{}", world_id, character_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
 
 /// Save a new character via the API
 async fn save_character(world_id: &str, character: CharacterData) -> Result<CharacterData, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let body = serde_json::to_string(&character)
-            .map_err(|e| format!("JSON serialize error: {}", e))?;
-
-        let mut opts = RequestInit::new();
-        opts.method("POST");
-        let body_js = wasm_bindgen::JsValue::from_str(&body);
-        opts.body(Some(&body_js));
-
-        let url = format!("{}/api/worlds/{}/characters", base_url, world_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        request.headers().set("Content-Type", "application/json")
-            .map_err(|e| format!("Failed to set header: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let saved: CharacterData = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(saved)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/worlds/{}/characters", base_url, world_id);
-
-        let response = client
-            .post(&url)
-            .json(&character)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let saved: CharacterData = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(saved)
-    }
+    let path = format!("/api/worlds/{}/characters", world_id);
+    HttpClient::post(&path, &character).await.map_err(|e| e.to_string())
 }
 
 /// Update an existing character via the API
 async fn update_character(_world_id: &str, character_id: &str, character: CharacterData) -> Result<CharacterData, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let body = serde_json::to_string(&character)
-            .map_err(|e| format!("JSON serialize error: {}", e))?;
-
-        let mut opts = RequestInit::new();
-        opts.method("PUT");
-        let body_js = wasm_bindgen::JsValue::from_str(&body);
-        opts.body(Some(&body_js));
-
-        let url = format!("{}/api/characters/{}", base_url, character_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        request.headers().set("Content-Type", "application/json")
-            .map_err(|e| format!("Failed to set header: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let saved: CharacterData = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(saved)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/characters/{}", base_url, character_id);
-
-        let response = client
-            .put(&url)
-            .json(&character)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let saved: CharacterData = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(saved)
-    }
-}
-
-/// Get the HTTP URL for the Engine API
-fn get_engine_http_url() -> String {
-    "http://localhost:3000".to_string()
+    let path = format!("/api/characters/{}", character_id);
+    HttpClient::put(&path, &character).await.map_err(|e| e.to_string())
 }
 
 /// Fetch the sheet template for a world
 async fn fetch_sheet_template(world_id: &str) -> Result<SheetTemplate, String> {
-    let base_url = get_engine_http_url();
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, Response};
-
-        let opts = RequestInit::new();
-        opts.set_method("GET");
-
-        let url = format!("{}/api/worlds/{}/sheet-template", base_url, world_id);
-        let request = Request::new_with_str_and_init(&url, &opts)
-            .map_err(|e| format!("Failed to create request: {:?}", e))?;
-
-        let window = web_sys::window().ok_or("No window object")?;
-        let resp_value = JsFuture::from(window.fetch_with_request(&request))
-            .await
-            .map_err(|e| format!("Fetch failed: {:?}", e))?;
-
-        let resp: Response = resp_value
-            .dyn_into()
-            .map_err(|_| "Response cast failed")?;
-
-        if !resp.ok() {
-            return Err(format!("Server error: {}", resp.status()));
-        }
-
-        let json = JsFuture::from(resp.json().map_err(|e| format!("JSON parse error: {:?}", e))?)
-            .await
-            .map_err(|e| format!("JSON await failed: {:?}", e))?;
-
-        let template: SheetTemplate = serde_wasm_bindgen::from_value(json)
-            .map_err(|e| format!("Deserialize error: {:?}", e))?;
-
-        Ok(template)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/worlds/{}/sheet-template", base_url, world_id);
-
-        let response = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("Server error: {}", response.status()));
-        }
-
-        let template: SheetTemplate = response
-            .json()
-            .await
-            .map_err(|e| format!("Deserialize error: {}", e))?;
-
-        Ok(template)
-    }
+    let path = format!("/api/worlds/{}/sheet-template", world_id);
+    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }
