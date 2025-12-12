@@ -240,7 +240,8 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 }
 
 async fn fetch_narrative_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let url = format!("/api/worlds/{}/narrative-events", world_id);
+    let base_url = "http://localhost:3000";
+    let url = format!("{}/api/worlds/{}/narrative-events", base_url, world_id);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -262,9 +263,8 @@ async fn fetch_narrative_events(world_id: &str) -> Result<Vec<NarrativeEventData
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .get(&full_url)
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
@@ -281,7 +281,8 @@ async fn fetch_narrative_events(world_id: &str) -> Result<Vec<NarrativeEventData
 }
 
 async fn toggle_favorite(event_id: &str) -> Result<(), String> {
-    let url = format!("/api/narrative-events/{}/favorite", event_id);
+    let base_url = "http://localhost:3000";
+    let url = format!("{}/api/narrative-events/{}/favorite", base_url, event_id);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -296,14 +297,14 @@ async fn toggle_favorite(event_id: &str) -> Result<(), String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
-        let response = client.post(&full_url).send().await.map_err(|e| format!("Request failed: {}", e))?;
+        let response = client.post(&url).send().await.map_err(|e| format!("Request failed: {}", e))?;
         if response.status().is_success() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
     }
 }
 
 async fn set_active(event_id: &str, active: bool) -> Result<(), String> {
-    let url = format!("/api/narrative-events/{}/active", event_id);
+    let base_url = "http://localhost:3000";
+    let url = format!("{}/api/narrative-events/{}/active", base_url, event_id);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -321,8 +322,7 @@ async fn set_active(event_id: &str, active: bool) -> Result<(), String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
-        let response = client.put(&full_url).json(&active).send().await.map_err(|e| format!("Request failed: {}", e))?;
+        let response = client.put(&url).json(&active).send().await.map_err(|e| format!("Request failed: {}", e))?;
         if response.status().is_success() { Ok(()) } else { Err(format!("HTTP error: {}", response.status())) }
     }
 }

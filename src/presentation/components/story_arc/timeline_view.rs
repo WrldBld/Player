@@ -436,10 +436,11 @@ struct PaginatedStoryEventsResponse {
 
 /// Fetch story events from the Engine API
 async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<Vec<StoryEventData>, String> {
+    let base_url = "http://localhost:3000";
     let url = if let Some(sid) = session_id {
-        format!("/api/worlds/{}/story-events?session_id={}", world_id, sid)
+        format!("{}/api/worlds/{}/story-events?session_id={}", base_url, world_id, sid)
     } else {
-        format!("/api/worlds/{}/story-events", world_id)
+        format!("{}/api/worlds/{}/story-events", base_url, world_id)
     };
 
     #[cfg(target_arch = "wasm32")]
@@ -463,9 +464,8 @@ async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .get(&full_url)
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
@@ -484,7 +484,9 @@ async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<
 
 /// Toggle event visibility
 async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), String> {
-    let url = format!("/api/story-events/{}/visibility", event_id);
+    let _ = world_id; // Unused but kept for API consistency
+    let base_url = "http://localhost:3000";
+    let url = format!("{}/api/story-events/{}/visibility", base_url, event_id);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -502,11 +504,9 @@ async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), S
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = world_id; // Unused but kept for API consistency
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .put(&full_url)
+            .put(&url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;

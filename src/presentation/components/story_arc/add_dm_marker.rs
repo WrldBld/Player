@@ -281,10 +281,11 @@ async fn create_dm_marker(
     session_id: Option<&str>,
     request: &CreateDmMarkerRequest,
 ) -> Result<(), String> {
+    let base_url = "http://localhost:3000";
     let url = if let Some(sid) = session_id {
-        format!("/api/sessions/{}/story-events", sid)
+        format!("{}/api/sessions/{}/story-events", base_url, sid)
     } else {
-        format!("/api/worlds/{}/story-events", world_id)
+        format!("{}/api/worlds/{}/story-events", base_url, world_id)
     };
 
     #[cfg(target_arch = "wasm32")]
@@ -307,9 +308,8 @@ async fn create_dm_marker(
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .post(&full_url)
+            .post(&url)
             .json(request)
             .send()
             .await

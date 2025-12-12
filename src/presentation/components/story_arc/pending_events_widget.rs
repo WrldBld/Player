@@ -163,7 +163,9 @@ fn PendingEventItem(props: PendingEventItemProps) -> Element {
 }
 
 async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let url = format!("/api/worlds/{}/narrative-events/pending", world_id);
+    let base_url = "http://localhost:3000";
+    let url = format!("{}/api/worlds/{}/narrative-events/pending", base_url, world_id);
+    let all_url = format!("{}/api/worlds/{}/narrative-events", base_url, world_id);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -180,7 +182,6 @@ async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>,
                 .map_err(|e| format!("Parse error: {}", e))
         } else {
             // Fall back to fetching all and filtering client-side
-            let all_url = format!("/api/worlds/{}/narrative-events", world_id);
             let response = Request::get(&all_url)
                 .send()
                 .await
@@ -200,9 +201,8 @@ async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>,
     #[cfg(not(target_arch = "wasm32"))]
     {
         let client = reqwest::Client::new();
-        let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .get(&full_url)
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
@@ -214,7 +214,6 @@ async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>,
                 .map_err(|e| format!("Parse error: {}", e))
         } else {
             // Fall back to fetching all
-            let all_url = format!("http://localhost:3000/api/worlds/{}/narrative-events", world_id);
             let response = client.get(&all_url).send().await.map_err(|e| format!("Request failed: {}", e))?;
             if response.status().is_success() {
                 let all: Vec<NarrativeEventData> = response.json().await.map_err(|e| format!("Parse error: {}", e))?;
