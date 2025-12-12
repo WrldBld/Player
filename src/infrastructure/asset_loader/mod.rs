@@ -18,4 +18,7 @@ pub use world_snapshot::{
     ChallengeData, ChallengeType, ChallengeDifficulty,
     ChallengeOutcomes, Outcome, OutcomeTrigger,
     TriggerCondition, TriggerType,
+    // Story Arc types (Phase 17)
+    StoryEventData, StoryEventTypeData, MarkerImportance, DmMarkerType,
+    NarrativeEventData, EventChainData, ChainedEventData,
 };

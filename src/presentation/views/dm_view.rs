@@ -7,6 +7,7 @@ use crate::infrastructure::websocket::{ApprovalDecision, ClientMessage};
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
 use crate::presentation::components::settings::SettingsView;
+use crate::presentation::components::story_arc::{TimelineView, NarrativeEventLibrary};
 use crate::presentation::state::{use_game_state, use_session_state, PendingApproval};
 
 /// The active tab/mode in the DM View
@@ -15,6 +16,7 @@ pub enum DMMode {
     #[default]
     Director,
     Creator,
+    StoryArc,
     Settings,
 }
 
@@ -53,6 +55,7 @@ pub fn DMView(props: DMViewProps) -> Element {
                             selected_tab: props.creator_subtab.clone(),
                         }
                     },
+                    DMMode::StoryArc => rsx! { StoryArcContent { world_id: props.world_id.clone() } },
                     DMMode::Settings => rsx! {
                         SettingsView {
                             world_id: props.world_id.clone(),
@@ -61,6 +64,115 @@ pub fn DMView(props: DMViewProps) -> Element {
                     },
                 }
             }
+        }
+    }
+}
+
+/// Story Arc sub-tab within Story Arc mode
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum StoryArcSubTab {
+    #[default]
+    Timeline,
+    NarrativeEvents,
+    EventChains,
+}
+
+/// Story Arc mode content - Timeline, Narrative Events, Event Chains
+#[derive(Props, Clone, PartialEq)]
+struct StoryArcContentProps {
+    world_id: String,
+}
+
+#[component]
+fn StoryArcContent(props: StoryArcContentProps) -> Element {
+    let mut active_tab = use_signal(|| StoryArcSubTab::Timeline);
+
+    rsx! {
+        div {
+            style: "height: 100%; display: flex; flex-direction: column;",
+
+            // Sub-tab navigation
+            div {
+                style: "display: flex; gap: 0; background: #0f0f23; border-bottom: 1px solid #374151;",
+
+                StoryArcTab {
+                    label: "Timeline",
+                    icon: "📜",
+                    is_active: *active_tab.read() == StoryArcSubTab::Timeline,
+                    on_click: move |_| active_tab.set(StoryArcSubTab::Timeline),
+                }
+                StoryArcTab {
+                    label: "Narrative Events",
+                    icon: "⭐",
+                    is_active: *active_tab.read() == StoryArcSubTab::NarrativeEvents,
+                    on_click: move |_| active_tab.set(StoryArcSubTab::NarrativeEvents),
+                }
+                StoryArcTab {
+                    label: "Event Chains",
+                    icon: "🔗",
+                    is_active: *active_tab.read() == StoryArcSubTab::EventChains,
+                    on_click: move |_| active_tab.set(StoryArcSubTab::EventChains),
+                }
+            }
+
+            // Content area
+            div {
+                style: "flex: 1; overflow: hidden;",
+
+                match *active_tab.read() {
+                    StoryArcSubTab::Timeline => rsx! {
+                        TimelineView { world_id: props.world_id.clone() }
+                    },
+                    StoryArcSubTab::NarrativeEvents => rsx! {
+                        NarrativeEventLibrary { world_id: props.world_id.clone() }
+                    },
+                    StoryArcSubTab::EventChains => rsx! {
+                        EventChainsPlaceholder {}
+                    },
+                }
+            }
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct StoryArcTabProps {
+    label: &'static str,
+    icon: &'static str,
+    is_active: bool,
+    on_click: EventHandler<()>,
+}
+
+#[component]
+fn StoryArcTab(props: StoryArcTabProps) -> Element {
+    rsx! {
+        button {
+            onclick: move |_| props.on_click.call(()),
+            style: format!(
+                "padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; transition: all 0.2s; {}",
+                if props.is_active {
+                    "background: #1a1a2e; color: white; border-bottom: 2px solid #8b5cf6;"
+                } else {
+                    "background: transparent; color: #9ca3af; border-bottom: 2px solid transparent;"
+                }
+            ),
+            span { "{props.icon}" }
+            span { "{props.label}" }
+        }
+    }
+}
+
+/// Placeholder for Event Chains (to be implemented in Phase 17G)
+#[component]
+fn EventChainsPlaceholder() -> Element {
+    rsx! {
+        div {
+            style: "height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6b7280; padding: 2rem;",
+
+            div { style: "font-size: 4rem; margin-bottom: 1rem;", "🔗" }
+            h3 { style: "color: white; margin: 0 0 0.5rem 0;", "Event Chains" }
+            p { style: "text-align: center; max-width: 400px;", "Chain narrative events together to create branching storylines. Connect events with conditions and outcomes." }
+            p { style: "font-size: 0.875rem; margin-top: 1rem; color: #9ca3af;", "Coming soon..." }
         }
     }
 }

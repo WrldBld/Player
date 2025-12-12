@@ -292,6 +292,7 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
     // Parse tab from URL, default to Director if invalid
     let dm_mode = match tab.as_str() {
         "director" => DMMode::Director,
+        "story-arc" => DMMode::StoryArc,
         _ => DMMode::Director,
     };
 
@@ -299,6 +300,7 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
     let title = match dm_mode {
         DMMode::Director => "Director",
         DMMode::Creator => "Creator",
+        DMMode::StoryArc => "Story Arc",
         DMMode::Settings => "Settings",
     };
 
@@ -530,6 +532,12 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
                         tab: "creator",
                         world_id: props.world_id.clone(),
                         active: props.dm_mode == DMMode::Creator,
+                    }
+                    DMHeaderTabLink {
+                        label: "Story Arc",
+                        tab: "story-arc",
+                        world_id: props.world_id.clone(),
+                        active: props.dm_mode == DMMode::StoryArc,
                     }
                     DMHeaderTabLink {
                         label: "Settings",

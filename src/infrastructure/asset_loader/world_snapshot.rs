@@ -752,6 +752,204 @@ impl WorldSnapshotLoader {
     }
 }
 
+// =============================================================================
+// Story Event Types (Phase 17)
+// =============================================================================
+
+/// A story event - an immutable record of something that happened during gameplay
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoryEventData {
+    pub id: String,
+    pub world_id: String,
+    pub session_id: String,
+    pub scene_id: Option<String>,
+    pub location_id: Option<String>,
+    pub event_type: StoryEventTypeData,
+    pub timestamp: String,
+    pub game_time: Option<String>,
+    pub summary: String,
+    pub involved_characters: Vec<String>,
+    pub is_hidden: bool,
+    pub tags: Vec<String>,
+    pub triggered_by: Option<String>,
+}
+
+/// Categories of story events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum StoryEventTypeData {
+    LocationChange {
+        from_location: Option<String>,
+        to_location: String,
+        character_id: String,
+        travel_method: Option<String>,
+    },
+    DialogueExchange {
+        npc_id: String,
+        npc_name: String,
+        player_dialogue: String,
+        npc_response: String,
+        topics_discussed: Vec<String>,
+        tone: Option<String>,
+    },
+    CombatEvent {
+        combat_type: String,
+        participants: Vec<String>,
+        enemies: Vec<String>,
+        outcome: Option<String>,
+        location_id: String,
+        rounds: Option<u32>,
+    },
+    ChallengeAttempted {
+        challenge_id: Option<String>,
+        challenge_name: String,
+        character_id: String,
+        skill_used: Option<String>,
+        difficulty: Option<String>,
+        roll_result: Option<i32>,
+        modifier: Option<i32>,
+        outcome: String,
+    },
+    ItemAcquired {
+        item_name: String,
+        item_description: Option<String>,
+        character_id: String,
+        source: String,
+        quantity: u32,
+    },
+    RelationshipChanged {
+        from_character: String,
+        to_character: String,
+        previous_sentiment: Option<f32>,
+        new_sentiment: f32,
+        sentiment_change: f32,
+        reason: String,
+    },
+    SceneTransition {
+        from_scene: Option<String>,
+        to_scene: String,
+        from_scene_name: Option<String>,
+        to_scene_name: String,
+        trigger_reason: String,
+    },
+    InformationRevealed {
+        info_type: String,
+        title: String,
+        content: String,
+        source: Option<String>,
+        importance: String,
+        persist_to_journal: bool,
+    },
+    DmMarker {
+        title: String,
+        note: String,
+        importance: String,
+        marker_type: String,
+    },
+    NarrativeEventTriggered {
+        narrative_event_id: String,
+        narrative_event_name: String,
+        outcome_branch: Option<String>,
+        effects_applied: Vec<String>,
+    },
+    SessionStarted {
+        session_number: u32,
+        session_name: Option<String>,
+        players_present: Vec<String>,
+    },
+    SessionEnded {
+        duration_minutes: u32,
+        summary: String,
+    },
+    Custom {
+        event_subtype: String,
+        title: String,
+        description: String,
+    },
+}
+
+/// DM marker importance levels
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MarkerImportance {
+    Minor,
+    Normal,
+    Major,
+    Critical,
+}
+
+/// DM marker types
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DmMarkerType {
+    Note,
+    PlotPoint,
+    Foreshadowing,
+    SessionBreak,
+    ChapterBreak,
+    Recap,
+    Custom,
+}
+
+// =============================================================================
+// Narrative Event Types (Phase 17)
+// =============================================================================
+
+/// A narrative event - a DM-designed future event with triggers and outcomes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NarrativeEventData {
+    pub id: String,
+    pub world_id: String,
+    pub name: String,
+    pub description: String,
+    pub scene_direction: String,
+    pub suggested_opening: Option<String>,
+    pub trigger_count: u32,
+    pub is_active: bool,
+    pub is_triggered: bool,
+    pub triggered_at: Option<String>,
+    pub selected_outcome: Option<String>,
+    pub is_repeatable: bool,
+    pub delay_turns: u32,
+    pub expires_after_turns: Option<u32>,
+    pub priority: i32,
+    pub is_favorite: bool,
+    pub tags: Vec<String>,
+    pub scene_id: Option<String>,
+    pub location_id: Option<String>,
+    pub act_id: Option<String>,
+    pub chain_id: Option<String>,
+    pub chain_position: Option<u32>,
+    pub outcome_count: usize,
+    pub trigger_condition_count: usize,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Event chain data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventChainData {
+    pub id: String,
+    pub world_id: String,
+    pub name: String,
+    pub description: String,
+    pub status: String,
+    pub events: Vec<ChainedEventData>,
+    pub is_favorite: bool,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A chained event within an event chain
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChainedEventData {
+    pub event_id: String,
+    pub position: u32,
+    pub is_completed: bool,
+    pub completed_at: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

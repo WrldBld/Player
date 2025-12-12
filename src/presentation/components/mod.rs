@@ -6,6 +6,7 @@ pub mod creator;
 pub mod dm_panel;
 pub mod settings;
 pub mod shared;
+pub mod story_arc;
 pub mod tactical;
 pub mod visual_novel;
 
@@ -15,4 +16,8 @@ pub use dm_panel::{
     ApprovalPopup, ChallengeLibrary, ConversationLog, DirectorialNotes, NPCMotivation, ScenePreview, ToneSelector, TriggerChallengeModal,
 };
 pub use settings::{SettingsView, WorkflowSlotList, WorkflowConfigEditor, WorkflowUploadModal};
+pub use story_arc::{
+    TimelineView, TimelineEventCard, TimelineFilters, AddDmMarkerModal,
+    NarrativeEventLibrary, NarrativeEventCard, PendingEventsWidget,
+};
 pub use tactical::ChallengeRollModal;
