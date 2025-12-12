@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::websocket::DialogueChoice;
+use crate::application::dto::DialogueChoice;
 
 /// Props for the ChoiceMenu component
 #[derive(Props, Clone, PartialEq)]

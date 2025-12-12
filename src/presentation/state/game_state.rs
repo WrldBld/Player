@@ -5,8 +5,7 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::infrastructure::asset_loader::WorldSnapshot;
-use crate::infrastructure::websocket::{CharacterData, InteractionData, SceneData};
+use crate::application::dto::{WorldSnapshot, CharacterData, InteractionData, SceneData};
 
 /// Central game state stored as Dioxus signals
 #[derive(Clone)]

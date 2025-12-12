@@ -10,7 +10,8 @@ use dioxus::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
 
-use crate::infrastructure::asset_loader::{SkillCategory, SkillData};
+use crate::application::dto::{SkillCategory, SkillData};
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 
 /// Props for SkillsPanel

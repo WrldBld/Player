@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use super::asset_gallery::AssetGallery;
 use super::sheet_field_input::CharacterSheetForm;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
-use crate::infrastructure::asset_loader::{FieldValue, SheetTemplate};
+use crate::application::dto::{FieldValue, SheetTemplate};
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::state::GameState;
 

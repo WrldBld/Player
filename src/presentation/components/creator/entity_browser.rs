@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use super::EntityTypeTab;
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::routes::Route;
 

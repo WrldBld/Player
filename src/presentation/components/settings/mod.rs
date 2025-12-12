@@ -187,7 +187,8 @@ struct SkillsManagementTabProps {
 
 #[component]
 fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
-    use crate::infrastructure::asset_loader::{SkillCategory, SkillData};
+    use crate::application::dto::{SkillCategory, SkillData};
+    // TODO Phase 7.4: Replace HttpClient with service calls
     use crate::infrastructure::http_client::HttpClient;
     use std::collections::HashMap;
 

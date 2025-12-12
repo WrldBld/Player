@@ -3,7 +3,7 @@
 //! Shows proposed NPC dialogue and actions for DM approval before execution.
 
 use dioxus::prelude::*;
-use crate::infrastructure::websocket::ChallengeSuggestionInfo;
+use crate::application::dto::ChallengeSuggestionInfo;
 
 /// A proposed action/tool call from the LLM
 #[derive(Clone, PartialEq)]

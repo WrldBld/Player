@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::websocket::DialogueChoice;
+use crate::application::dto::DialogueChoice;
 
 use super::choice_menu::{ChoiceMenu, ContinuePrompt};
 

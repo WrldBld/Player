@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::asset_loader::NarrativeEventData;
+use crate::application::dto::NarrativeEventData;
 
 #[derive(Props, Clone)]
 pub struct NarrativeEventCardProps {

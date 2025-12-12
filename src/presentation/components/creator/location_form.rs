@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::asset_gallery::AssetGallery;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::state::GameState;
 

@@ -7,8 +7,7 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 
 use crate::domain::entities::PlayerAction;
-use crate::infrastructure::asset_loader::{FieldValue, SheetTemplate};
-use crate::infrastructure::websocket::InteractionData;
+use crate::application::dto::{FieldValue, SheetTemplate, InteractionData};
 use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
 use crate::presentation::components::tactical::ChallengeRollModal;
@@ -361,7 +360,7 @@ fn send_challenge_roll(
     challenge_id: &str,
     roll: i32,
 ) {
-    use crate::infrastructure::websocket::ClientMessage;
+    use crate::application::dto::ClientMessage;
 
     let client_binding = session_state.engine_client.read();
     if let Some(ref client) = *client_binding {

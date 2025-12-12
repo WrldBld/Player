@@ -2,7 +2,8 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::asset_loader::{StoryEventData, StoryEventTypeData};
+use crate::application::dto::{StoryEventData, StoryEventTypeData};
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::{
     TimelineEventCard, TimelineFilters, AddDmMarkerModal,

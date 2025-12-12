@@ -5,6 +5,7 @@
 
 use dioxus::prelude::*;
 
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 
 /// Types of suggestions that can be requested

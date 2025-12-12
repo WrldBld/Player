@@ -5,10 +5,12 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-// Use port types instead of infrastructure types where possible
+// Use port types and application DTOs instead of infrastructure types
 use crate::application::ports::outbound::ParticipantRole;
-// TODO Phase 7: These infrastructure imports should be abstracted
-use crate::infrastructure::websocket::{EngineClient, ProposedTool, ChallengeSuggestionInfo};
+use crate::application::dto::{ProposedTool, ChallengeSuggestionInfo};
+// NOTE: EngineClient is still needed here for the client reference.
+// This will be fully abstracted when we implement a proper connection service.
+use crate::infrastructure::websocket::EngineClient;
 use crate::presentation::components::tactical::PlayerSkillData;
 use std::time::{SystemTime, UNIX_EPOCH};
 

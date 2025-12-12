@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::websocket::InteractionData;
+use crate::application::dto::InteractionData;
 
 /// Props for the ActionPanel component
 #[derive(Props, Clone, PartialEq)]

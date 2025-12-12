@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::websocket::{CharacterData, CharacterPosition};
+use crate::application::dto::{CharacterData, CharacterPosition};
 
 /// Props for the CharacterSprite component
 #[derive(Props, Clone, PartialEq)]

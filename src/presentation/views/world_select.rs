@@ -8,10 +8,11 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::infrastructure::asset_loader::{
+use crate::application::dto::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
     SuccessComparison, WorldSnapshot,
 };
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::state::GameState;
 use crate::UserRole;

@@ -2,7 +2,8 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::asset_loader::NarrativeEventData;
+use crate::application::dto::NarrativeEventData;
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::NarrativeEventCard;
 

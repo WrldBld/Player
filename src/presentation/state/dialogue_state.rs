@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::websocket::DialogueChoice;
+use crate::application::dto::DialogueChoice;
 
 /// Dialogue state for the visual novel UI
 #[derive(Clone)]

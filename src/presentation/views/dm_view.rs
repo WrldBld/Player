@@ -2,9 +2,9 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::asset_loader::{ChallengeData, SkillData};
+use crate::application::dto::{ChallengeData, SkillData, ApprovalDecision, ClientMessage};
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
-use crate::infrastructure::websocket::{ApprovalDecision, ClientMessage};
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
 use crate::presentation::components::settings::SettingsView;

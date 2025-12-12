@@ -5,6 +5,7 @@
 
 use dioxus::prelude::*;
 
+// TODO Phase 7.4: Replace infrastructure imports with service/config abstractions
 use crate::infrastructure::api::get_engine_url;
 use crate::infrastructure::http_client::HttpClient;
 

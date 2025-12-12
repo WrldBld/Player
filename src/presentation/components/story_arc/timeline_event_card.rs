@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::infrastructure::asset_loader::{StoryEventData, StoryEventTypeData};
+use crate::application::dto::{StoryEventData, StoryEventTypeData};
 use crate::presentation::components::story_arc::timeline_view::get_event_type_icon;
 
 #[derive(Props, Clone)]

@@ -9,9 +9,10 @@
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
-use crate::infrastructure::asset_loader::{
+use crate::application::dto::{
     ChallengeData, ChallengeType, ChallengeDifficulty, SkillData,
 };
+// TODO Phase 7.4: Replace HttpClient with service calls
 use crate::infrastructure::http_client::HttpClient;
 
 /// Props for ChallengeLibrary
@@ -1092,7 +1093,7 @@ impl DefaultChallenge for Option<ChallengeData> {
 // API Functions
 // ============================================================================
 
-use crate::infrastructure::asset_loader::ChallengeOutcomes;
+use crate::application::dto::ChallengeOutcomes;
 
 async fn fetch_challenges(world_id: &str) -> Result<Vec<ChallengeData>, String> {
     let path = format!("/api/worlds/{}/challenges", world_id);
