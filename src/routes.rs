@@ -1,10 +1,63 @@
 //! Application routing - URL-based navigation for all views
+//!
+//! This module handles all routing for the WrldBldr Player application.
+//!
+//! ## Browser History & Deep Linking
+//!
+//! The application uses Dioxus Router which provides automatic browser history support:
+//! - URL updates automatically on navigation (browser address bar updates)
+//! - Back/forward buttons work correctly (router handles state restoration)
+//! - Deep links work: users can share or bookmark direct URLs to specific views
+//! - Missing state redirects: if a user navigates directly to a view without required context,
+//!   the application redirects to the appropriate setup step (MainMenu → RoleSelect → WorldSelect)
+//!
+//! ## Page Titles
+//!
+//! Each route component sets a dynamic page title visible in the browser tab.
+//! This helps users distinguish between different views when multiple tabs are open.
+//!
+//! ## localStorage Persistence
+//!
+//! On web platforms (WASM), the application persists user preferences:
+//! - Server URL: Remembers the last connected server
+//! - Selected Role: Saves the player's role choice
+//! - Last World: Remembers the last world they accessed
+//!
+//! These are loaded on application startup and saved when changed.
 
 use dioxus::prelude::*;
 use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
 use crate::presentation::views::dm_view::DMMode;
 use crate::infrastructure::websocket::ParticipantRole;
+use crate::infrastructure::storage;
 use crate::application::services::{SessionService, DEFAULT_ENGINE_URL};
+
+/// Set the browser page title (WASM only)
+///
+/// Updates the browser tab title with a consistent format.
+/// On web platforms, this helps users distinguish between open tabs.
+/// On desktop platforms, the window title is managed by the OS window manager.
+///
+/// # Arguments
+/// * `title` - The page title to display (will be formatted as "{title} | WrldBldr")
+///
+/// # Example
+/// ```ignore
+/// set_page_title("Main Menu");  // Sets tab title to "Main Menu | WrldBldr"
+/// ```
+#[cfg(target_arch = "wasm32")]
+fn set_page_title(title: &str) {
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            document.set_title(&format!("{} | WrldBldr", title));
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn set_page_title(_title: &str) {
+    // Desktop title is set by window manager
+}
 
 /// Application routes - each URL maps to a view
 #[derive(Clone, Routable, Debug, PartialEq)]
@@ -38,9 +91,16 @@ pub enum Route {
 pub fn MainMenuRoute() -> Element {
     let navigator = use_navigator();
 
+    // Set page title for this view
+    use_effect(|| {
+        set_page_title("Main Menu");
+    });
+
     rsx! {
         crate::presentation::views::main_menu::MainMenu {
-            on_connect: move |_server_url: String| {
+            on_connect: move |server_url: String| {
+                // Save server URL preference
+                storage::save(storage::STORAGE_KEY_SERVER_URL, &server_url);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -51,11 +111,17 @@ pub fn MainMenuRoute() -> Element {
 pub fn RoleSelectRoute() -> Element {
     let navigator = use_navigator();
 
+    // Set page title for this view
+    use_effect(|| {
+        set_page_title("Select Role");
+    });
+
     rsx! {
         crate::presentation::views::role_select::RoleSelect {
             on_select_role: move |role: crate::UserRole| {
-                // Store the selected role in a context or signal for use in WorldSelect
-                // For now, we'll navigate and let WorldSelect handle the role
+                // Save selected role preference
+                let role_str = format!("{:?}", role);
+                storage::save(storage::STORAGE_KEY_ROLE, &role_str);
                 navigator.push(Route::WorldSelectRoute {});
             }
         }
@@ -69,6 +135,11 @@ pub fn WorldSelectRoute() -> Element {
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Set page title for this view
+    use_effect(|| {
+        set_page_title("Select World");
+    });
+
     // Get selected role from context (TODO: implement context storage)
     let role = crate::UserRole::Player;
 
@@ -76,6 +147,9 @@ pub fn WorldSelectRoute() -> Element {
         crate::presentation::views::world_select::WorldSelectView {
             role: role,
             on_world_selected: move |world_id: String| {
+                // Save last accessed world
+                storage::save(storage::STORAGE_KEY_LAST_WORLD, &world_id);
+
                 // Initiate connection to the Engine
                 let server_url = DEFAULT_ENGINE_URL.to_string();
                 let user_id = format!("user-{}", uuid::Uuid::new_v4());
@@ -107,10 +181,17 @@ pub fn PCViewRoute(world_id: String) -> Element {
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Set page title for this view
+    use_effect(move || {
+        set_page_title("Playing");
+    });
+
     rsx! {
         crate::presentation::views::pc_view::PCView {
             on_back: move |_| {
                 handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
+                // Clear world preference when disconnecting
+                storage::remove(storage::STORAGE_KEY_LAST_WORLD);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -123,6 +204,11 @@ pub fn DMViewRoute(world_id: String) -> Element {
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
+
+    // Set page title for this view
+    use_effect(move || {
+        set_page_title("Dungeon Master");
+    });
 
     // Track DM mode state
     let mut dm_mode = use_signal(|| DMMode::Director);
@@ -148,6 +234,8 @@ pub fn DMViewRoute(world_id: String) -> Element {
                     let dialogue_state = dialogue_state.clone();
                     move |_| {
                         handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
+                        // Clear world preference when disconnecting
+                        storage::remove(storage::STORAGE_KEY_LAST_WORLD);
                         navigator.push(Route::RoleSelectRoute {});
                     }
                 },
@@ -182,10 +270,17 @@ pub fn SpectatorViewRoute(world_id: String) -> Element {
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Set page title for this view
+    use_effect(move || {
+        set_page_title("Watching");
+    });
+
     rsx! {
         crate::presentation::views::spectator_view::SpectatorView {
             on_back: move |_| {
                 handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
+                // Clear world preference when disconnecting
+                storage::remove(storage::STORAGE_KEY_LAST_WORLD);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -195,6 +290,11 @@ pub fn SpectatorViewRoute(world_id: String) -> Element {
 #[component]
 pub fn NotFoundRoute(route: Vec<String>) -> Element {
     let navigator = use_navigator();
+
+    // Set page title for this view
+    use_effect(|| {
+        set_page_title("Page Not Found");
+    });
 
     rsx! {
         div {
