@@ -26,6 +26,9 @@ pub struct ActionPanelProps {
     /// Handler for log button
     #[props(default)]
     pub on_log: Option<EventHandler<()>>,
+    /// Whether all action buttons should be disabled (e.g., while waiting for response)
+    #[props(default = false)]
+    pub disabled: bool,
 }
 
 /// Action panel - displays system buttons and scene interactions
@@ -48,6 +51,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                     label: "Inventory",
                     icon: "bag",
                     on_click: handler.clone(),
+                    disabled: props.disabled,
                 }
             }
 
@@ -56,6 +60,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                     label: "Character",
                     icon: "person",
                     on_click: handler.clone(),
+                    disabled: props.disabled,
                 }
             }
 
@@ -64,6 +69,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                     label: "Map",
                     icon: "map",
                     on_click: handler.clone(),
+                    disabled: props.disabled,
                 }
             }
 
@@ -72,6 +78,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                     label: "Log",
                     icon: "scroll",
                     on_click: handler.clone(),
+                    disabled: props.disabled,
                 }
             }
 
@@ -89,6 +96,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                     key: "{interaction.id}",
                     interaction: interaction.clone(),
                     on_click: props.on_interaction.clone(),
+                    disabled: props.disabled,
                 }
             }
         }
@@ -104,6 +112,9 @@ pub struct SystemButtonProps {
     pub icon: &'static str,
     /// Click handler
     pub on_click: EventHandler<()>,
+    /// Whether button is disabled
+    #[props(default = false)]
+    pub disabled: bool,
 }
 
 /// System button (inventory, character, etc.)
@@ -117,11 +128,19 @@ pub fn SystemButton(props: SystemButtonProps) -> Element {
         _ => "⚙️",
     };
 
+    let opacity = if props.disabled { "0.5" } else { "1.0" };
+    let cursor = if props.disabled { "not-allowed" } else { "pointer" };
+
     rsx! {
         button {
             class: "btn btn-secondary",
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem;",
-            onclick: move |_| props.on_click.call(()),
+            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; opacity: {opacity}; cursor: {cursor};",
+            disabled: props.disabled,
+            onclick: move |_| {
+                if !props.disabled {
+                    props.on_click.call(())
+                }
+            },
 
             span { "{icon_char}" }
             span { "{props.label}" }
@@ -136,6 +155,9 @@ pub struct InteractionButtonProps {
     pub interaction: InteractionData,
     /// Click handler
     pub on_click: EventHandler<InteractionData>,
+    /// Whether button is disabled
+    #[props(default = false)]
+    pub disabled: bool,
 }
 
 /// Scene interaction button
@@ -144,11 +166,19 @@ pub fn InteractionButton(props: InteractionButtonProps) -> Element {
     let icon = get_interaction_icon(&props.interaction.interaction_type);
     let interaction = props.interaction.clone();
 
+    let opacity = if props.disabled { "0.5" } else { "1.0" };
+    let cursor = if props.disabled { "not-allowed" } else { "pointer" };
+
     rsx! {
         button {
             class: "btn btn-secondary",
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem;",
-            onclick: move |_| props.on_click.call(interaction.clone()),
+            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; opacity: {opacity}; cursor: {cursor};",
+            disabled: props.disabled,
+            onclick: move |_| {
+                if !props.disabled {
+                    props.on_click.call(interaction.clone())
+                }
+            },
 
             span { "{icon}" }
             span { "{props.interaction.name}" }

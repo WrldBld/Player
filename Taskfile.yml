@@ -95,8 +95,11 @@ tasks:
         cargo run
 
   dev:web:
-    desc: Start full web development environment
+    desc: Start full web development environment (clean rebuild)
     cmds:
+      - rm -rf dist/
+      - rm -rf target/wasm32-unknown-unknown/
+      - mkdir -p target
       - trunk serve
 
   # Code quality tasks

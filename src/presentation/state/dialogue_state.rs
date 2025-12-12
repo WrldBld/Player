@@ -25,6 +25,8 @@ pub struct DialogueState {
     pub custom_input: Signal<String>,
     /// Speaker ID for targeting actions
     pub speaker_id: Signal<Option<String>>,
+    /// Whether LLM is processing (show loading indicator)
+    pub is_llm_processing: Signal<bool>,
 }
 
 impl DialogueState {
@@ -39,6 +41,7 @@ impl DialogueState {
             awaiting_input: Signal::new(false),
             custom_input: Signal::new(String::new()),
             speaker_id: Signal::new(None),
+            is_llm_processing: Signal::new(false),
         }
     }
 
@@ -58,6 +61,7 @@ impl DialogueState {
         self.is_typing.set(true);
         self.awaiting_input.set(false);
         self.custom_input.set(String::new());
+        self.is_llm_processing.set(false); // Clear processing indicator when response arrives
     }
 
     /// Skip to the end of the typewriter animation
@@ -116,6 +120,7 @@ impl DialogueState {
         self.choices.set(Vec::new());
         self.awaiting_input.set(false);
         self.custom_input.set(String::new());
+        self.is_llm_processing.set(false);
     }
 
     /// Check if there's active dialogue to display

@@ -5,3 +5,4 @@ pub mod main_menu;
 pub mod pc_view;
 pub mod role_select;
 pub mod spectator_view;
+pub mod world_select;

@@ -1,13 +1,18 @@
 //! Reusable UI components
 
 pub mod action_panel;
+pub mod character_sheet_viewer;
 pub mod creator;
 pub mod dm_panel;
+pub mod settings;
 pub mod shared;
 pub mod tactical;
 pub mod visual_novel;
 
 pub use action_panel::{ActionPanel, CompactActionPanel};
+pub use character_sheet_viewer::CharacterSheetViewer;
 pub use dm_panel::{
-    ApprovalPopup, ConversationLog, DirectorialNotes, NPCMotivation, ScenePreview, ToneSelector,
+    ApprovalPopup, ChallengeLibrary, ConversationLog, DirectorialNotes, NPCMotivation, ScenePreview, ToneSelector, TriggerChallengeModal,
 };
+pub use settings::{SettingsView, WorkflowSlotList, WorkflowConfigEditor, WorkflowUploadModal};
+pub use tactical::ChallengeRollModal;

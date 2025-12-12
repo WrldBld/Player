@@ -4,10 +4,14 @@
 //! with backdrop, character sprites, dialogue, and choices.
 
 use dioxus::prelude::*;
+use std::collections::HashMap;
 
 use crate::domain::entities::PlayerAction;
+use crate::infrastructure::asset_loader::{FieldValue, SheetTemplate};
 use crate::infrastructure::websocket::InteractionData;
 use crate::presentation::components::action_panel::ActionPanel;
+use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
+use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect};
 
@@ -26,6 +30,12 @@ pub fn PCView(props: PCViewProps) -> Element {
     let mut dialogue_state = use_dialogue_state();
     let session_state = use_session_state();
 
+    // Character sheet viewer state
+    let mut show_character_sheet = use_signal(|| false);
+    let mut character_sheet_template: Signal<Option<SheetTemplate>> = use_signal(|| None);
+    let mut character_sheet_values: Signal<HashMap<String, FieldValue>> = use_signal(HashMap::new);
+    let mut player_character_name = use_signal(|| "Your Character".to_string());
+
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
 
@@ -38,9 +48,13 @@ pub fn PCView(props: PCViewProps) -> Element {
     let is_typing = *dialogue_state.is_typing.read();
     let choices = dialogue_state.choices.read().clone();
     let has_dialogue = dialogue_state.has_dialogue();
+    let is_llm_processing = *dialogue_state.is_llm_processing.read();
 
     // Get interactions from game state
     let interactions = game_state.interactions.read().clone();
+
+    // Get active challenge if any
+    let active_challenge = session_state.active_challenge.read().clone();
 
     // Check if connected
     let is_connected = session_state.connection_status.read().is_connected();
@@ -96,6 +110,7 @@ pub fn PCView(props: PCViewProps) -> Element {
                         speaker_name: speaker_name,
                         dialogue_text: displayed_text,
                         is_typing: is_typing,
+                        is_llm_processing: is_llm_processing,
                         choices: choices,
                         on_choice_selected: {
                             let session_state = session_state.clone();
@@ -123,9 +138,10 @@ pub fn PCView(props: PCViewProps) -> Element {
                 }
             }
 
-            // Action panel with scene interactions
+            // Action panel with scene interactions (disabled while LLM is processing)
             ActionPanel {
                 interactions: interactions,
+                disabled: is_llm_processing,
                 on_interaction: {
                     let session_state = session_state.clone();
                     move |interaction: InteractionData| {
@@ -135,8 +151,19 @@ pub fn PCView(props: PCViewProps) -> Element {
                 on_inventory: Some(EventHandler::new(move |_| {
                     tracing::info!("Open inventory");
                 })),
-                on_character: Some(EventHandler::new(move |_| {
-                    tracing::info!("Open character sheet");
+                on_character: Some(EventHandler::new({
+                    let game_state = game_state.clone();
+                    move |_| {
+                        tracing::info!("Open character sheet");
+                        // TODO: Fetch character data and template from API
+                        // For now, use placeholder data from game state
+                        if let Some(world) = game_state.world.read().as_ref() {
+                            player_character_name.set("Your Character".to_string());
+                            // Character sheet template and values would come from API
+                            // For now just show the modal
+                            show_character_sheet.set(true);
+                        }
+                    }
                 })),
                 on_map: Some(EventHandler::new(move |_| {
                     tracing::info!("Open map");
@@ -144,6 +171,71 @@ pub fn PCView(props: PCViewProps) -> Element {
                 on_log: Some(EventHandler::new(move |_| {
                     tracing::info!("Open log");
                 })),
+            }
+
+            // Character sheet viewer modal
+            if *show_character_sheet.read() {
+                if let Some(template) = character_sheet_template.read().as_ref() {
+                    CharacterSheetViewer {
+                        character_name: player_character_name.read().clone(),
+                        template: template.clone(),
+                        values: character_sheet_values.read().clone(),
+                        on_close: move |_| show_character_sheet.set(false),
+                    }
+                } else {
+                    // No template loaded - show placeholder
+                    div {
+                        class: "character-sheet-overlay",
+                        style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
+                        onclick: move |_| show_character_sheet.set(false),
+
+                        div {
+                            style: "background: #1a1a2e; border-radius: 1rem; padding: 2rem; max-width: 400px; text-align: center;",
+                            onclick: move |e| e.stop_propagation(),
+
+                            h2 {
+                                style: "color: #f3f4f6; margin: 0 0 1rem 0;",
+                                "Character Sheet"
+                            }
+
+                            p {
+                                style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
+                                "No character sheet template available for this world. The DM may need to configure the rule system."
+                            }
+
+                            button {
+                                onclick: move |_| show_character_sheet.set(false),
+                                style: "padding: 0.5rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                                "Close"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Challenge roll modal
+            if let Some(challenge) = active_challenge {
+                ChallengeRollModal {
+                    challenge_id: challenge.challenge_id.clone(),
+                    challenge_name: challenge.challenge_name.clone(),
+                    skill_name: challenge.skill_name.clone(),
+                    difficulty_display: challenge.difficulty_display.clone(),
+                    description: challenge.description.clone(),
+                    character_modifier: challenge.character_modifier,
+                    on_roll: {
+                        let session_state = session_state.clone();
+                        let challenge_id = challenge.challenge_id.clone();
+                        move |roll: i32| {
+                            send_challenge_roll(&session_state, &challenge_id, roll);
+                        }
+                    },
+                    on_close: {
+                        let mut session_state = session_state.clone();
+                        move |_| {
+                            session_state.clear_active_challenge();
+                        }
+                    },
+                }
             }
         }
     }
@@ -261,4 +353,40 @@ fn handle_interaction(
     };
 
     send_player_action(session_state, action);
+}
+
+/// Send a challenge roll via WebSocket
+fn send_challenge_roll(
+    session_state: &crate::presentation::state::SessionState,
+    challenge_id: &str,
+    roll: i32,
+) {
+    use crate::infrastructure::websocket::ClientMessage;
+
+    let client_binding = session_state.engine_client.read();
+    if let Some(ref client) = *client_binding {
+        let message = ClientMessage::ChallengeRoll {
+            challenge_id: challenge_id.to_string(),
+            roll,
+        };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.send(message).await {
+                    tracing::error!("Failed to send challenge roll: {}", e);
+                }
+            });
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Err(e) = client.send(message) {
+                tracing::error!("Failed to send challenge roll: {}", e);
+            }
+        }
+    } else {
+        tracing::warn!("Cannot send challenge roll: not connected to server");
+    }
 }

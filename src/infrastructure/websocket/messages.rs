@@ -30,6 +30,16 @@ pub enum ClientMessage {
         request_id: String,
         decision: ApprovalDecision,
     },
+    /// DM triggers a challenge for a character
+    TriggerChallenge {
+        challenge_id: String,
+        target_character_id: String,
+    },
+    /// Player submits a challenge roll
+    ChallengeRoll {
+        challenge_id: String,
+        roll: i32,
+    },
     /// Heartbeat ping
     Heartbeat,
 }
@@ -67,6 +77,7 @@ pub enum ServerMessage {
         proposed_dialogue: String,
         internal_reasoning: String,
         proposed_tools: Vec<ProposedTool>,
+        challenge_suggestion: Option<ChallengeSuggestionInfo>,
     },
     /// Response was approved and executed
     ResponseApproved {
@@ -80,6 +91,28 @@ pub enum ServerMessage {
     },
     /// Heartbeat response
     Pong,
+
+    /// Challenge prompt sent to player
+    ChallengePrompt {
+        challenge_id: String,
+        challenge_name: String,
+        skill_name: String,
+        difficulty_display: String,
+        description: String,
+        character_modifier: i32,
+    },
+
+    /// Challenge result broadcast to all
+    ChallengeResolved {
+        challenge_id: String,
+        challenge_name: String,
+        character_name: String,
+        roll: i32,
+        modifier: i32,
+        total: i32,
+        outcome: String,  // "success", "failure", "critical_success", etc.
+        outcome_description: String,
+    },
 
     // Generation events (for Creator Mode)
     /// A generation batch has been queued
@@ -202,10 +235,21 @@ pub enum ApprovalDecision {
 }
 
 /// Proposed tool call from LLM
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProposedTool {
     pub id: String,
     pub name: String,
     pub description: String,
     pub arguments: serde_json::Value,
+}
+
+/// Challenge suggestion from Engine based on action context
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChallengeSuggestionInfo {
+    pub challenge_id: String,
+    pub challenge_name: String,
+    pub skill_name: String,
+    pub difficulty_display: String,
+    pub confidence: String,
+    pub reasoning: String,
 }

@@ -9,6 +9,7 @@ pub mod location_form;
 pub mod asset_gallery;
 pub mod generation_queue;
 pub mod suggestion_button;
+pub mod sheet_field_input;
 
 pub use entity_browser::EntityBrowser;
 pub use character_form::CharacterForm;
@@ -16,6 +17,7 @@ pub use location_form::LocationForm;
 pub use asset_gallery::AssetGallery;
 pub use generation_queue::GenerationQueuePanel;
 pub use suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
+pub use sheet_field_input::{CharacterSheetForm, SheetFieldInput, SheetSectionInput};
 
 use dioxus::prelude::*;
 

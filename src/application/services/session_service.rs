@@ -8,6 +8,7 @@
 //! Platform-specific implementations for desktop (async) and WASM (sync callbacks).
 
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
@@ -15,7 +16,10 @@ use crate::infrastructure::asset_loader::WorldSnapshot;
 use crate::infrastructure::websocket::{
     ConnectionState, EngineClient, ParticipantRole, ServerMessage,
 };
-use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
+use crate::presentation::state::{
+    ConnectionStatus, DialogueState, GameState, PendingApproval, SessionState,
+    session_state::{ChallengePromptData, ChallengeResultData},
+};
 
 /// Default WebSocket URL for the Engine server
 pub const DEFAULT_ENGINE_URL: &str = "ws://localhost:3000/ws";
@@ -342,7 +346,7 @@ pub use wasm::SessionService;
 // Shared Message Handler
 // ============================================================================
 
-use dioxus::prelude::WritableExt;
+use dioxus::prelude::{WritableExt, ReadableExt};
 
 /// Handle incoming server messages and update application state
 fn handle_server_message(
@@ -361,11 +365,23 @@ fn handle_server_message(
             // Update session state
             session_state.set_session_joined(session_id.clone());
 
+            // Add log entry
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Joined session: {}", session_id),
+                true,
+            );
+
             // Parse and load world snapshot
             match serde_json::from_value::<WorldSnapshot>(world_snapshot) {
                 Ok(snapshot) => {
                     game_state.load_world(snapshot);
                     log_message(&format!("World loaded for session: {}", session_id));
+                    session_state.add_log_entry(
+                        "System".to_string(),
+                        "World data loaded".to_string(),
+                        true,
+                    );
                 }
                 Err(e) => {
                     log_error(&format!("Failed to parse world snapshot: {}", e));
@@ -389,12 +405,20 @@ fn handle_server_message(
             choices,
         } => {
             log_message(&format!("DialogueResponse from: {}", speaker_name));
+            // Add to conversation log for DM view
+            session_state.add_log_entry(speaker_name.clone(), text.clone(), false);
             dialogue_state.apply_dialogue(speaker_id, speaker_name, text, choices);
         }
 
         ServerMessage::LLMProcessing { action_id } => {
             log_message(&format!("LLM processing action: {}", action_id));
-            // Could show a loading indicator here
+            // Show "NPC is thinking..." indicator
+            dialogue_state.is_llm_processing.set(true);
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Processing action: {}", action_id),
+                true,
+            );
         }
 
         ServerMessage::ApprovalRequired {
@@ -403,13 +427,21 @@ fn handle_server_message(
             proposed_dialogue,
             internal_reasoning,
             proposed_tools,
+            challenge_suggestion,
         } => {
             log_message(&format!(
                 "Approval required for {} (request: {})",
                 npc_name, request_id
             ));
-            // DM view would handle this - store in a pending approvals list
-            let _ = (proposed_dialogue, internal_reasoning, proposed_tools);
+            // Add to pending approvals for DM view
+            session_state.add_pending_approval(PendingApproval {
+                request_id,
+                npc_name,
+                proposed_dialogue,
+                internal_reasoning,
+                proposed_tools,
+                challenge_suggestion,
+            });
         }
 
         ServerMessage::ResponseApproved {
@@ -472,6 +504,66 @@ fn handle_server_message(
 
         ServerMessage::GenerationFailed { batch_id, error } => {
             log_error(&format!("Generation failed: {} - {}", batch_id, error));
+        }
+
+        ServerMessage::ChallengePrompt {
+            challenge_id,
+            challenge_name,
+            skill_name,
+            difficulty_display,
+            description,
+            character_modifier,
+        } => {
+            log_message(&format!("Challenge prompt received: {}", challenge_name));
+            // Set the active challenge for the player to respond to
+            let challenge = ChallengePromptData {
+                challenge_id,
+                challenge_name,
+                skill_name,
+                difficulty_display,
+                description,
+                character_modifier,
+            };
+            session_state.set_active_challenge(challenge);
+        }
+
+        ServerMessage::ChallengeResolved {
+            challenge_id,
+            challenge_name,
+            character_name,
+            roll,
+            modifier,
+            total,
+            outcome,
+            outcome_description,
+        } => {
+            log_message(&format!(
+                "Challenge resolved: {} - {} (result: {})",
+                challenge_name, character_name, outcome
+            ));
+            // Clear active challenge if it matches
+            let active = session_state.active_challenge.read().clone();
+            if let Some(active_challenge) = active {
+                if active_challenge.challenge_id == challenge_id {
+                    session_state.clear_active_challenge();
+                }
+            }
+            // Add to challenge results
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let result = ChallengeResultData {
+                challenge_name,
+                character_name,
+                roll,
+                modifier,
+                total,
+                outcome,
+                outcome_description,
+                timestamp,
+            };
+            session_state.add_challenge_result(result);
         }
     }
 }

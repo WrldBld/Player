@@ -6,7 +6,7 @@
 use dioxus::prelude::*;
 
 /// Types of suggestions that can be requested
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SuggestionType {
     CharacterName,
     CharacterDescription,
@@ -82,12 +82,25 @@ pub fn SuggestionButton(
             error.set(None);
             suggestions.set(Vec::new());
 
+            #[cfg(target_arch = "wasm32")]
+            web_sys::console::log_1(&format!("Fetching suggestions for {:?}", suggestion_type).into());
+
             match fetch_suggestions_from_api(suggestion_type, &context).await {
                 Ok(results) => {
-                    suggestions.set(results);
-                    show_dropdown.set(true);
+                    #[cfg(target_arch = "wasm32")]
+                    web_sys::console::log_1(&format!("Got {} suggestions: {:?}", results.len(), results).into());
+
+                    if results.is_empty() {
+                        error.set(Some("No suggestions returned".to_string()));
+                    } else {
+                        suggestions.set(results);
+                        show_dropdown.set(true);
+                    }
                 }
                 Err(e) => {
+                    #[cfg(target_arch = "wasm32")]
+                    web_sys::console::log_1(&format!("Suggestion error: {}", e).into());
+
                     error.set(Some(e));
                 }
             }
@@ -234,14 +247,29 @@ async fn fetch_suggestions_from_api(
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // Desktop suggestion support not implemented
-        // Return placeholder suggestions for development/testing
-        let _ = (url, body);
-        Ok(vec![
-            "Suggestion 1 (desktop mode)".to_string(),
-            "Suggestion 2 (desktop mode)".to_string(),
-            "Suggestion 3 (desktop mode)".to_string(),
-        ])
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Server error: {}", response.status()));
+        }
+
+        #[derive(serde::Deserialize)]
+        struct SuggestionResponse {
+            suggestions: Vec<String>,
+        }
+
+        let data: SuggestionResponse = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        Ok(data.suggestions)
     }
 }
 

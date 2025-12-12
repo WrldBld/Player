@@ -27,6 +27,9 @@ pub struct DialogueBoxProps {
     pub on_custom_input: EventHandler<String>,
     /// Handler for advancing dialogue (clicking to continue)
     pub on_advance: EventHandler<()>,
+    /// Whether NPC is currently thinking (LLM processing)
+    #[props(default = false)]
+    pub is_llm_processing: bool,
 }
 
 /// Dialogue box component - displays dialogue with typewriter effect
@@ -50,34 +53,49 @@ pub fn DialogueBox(props: DialogueBoxProps) -> Element {
                 }
             }
 
-            // Dialogue text with typewriter cursor
+            // Dialogue text with typewriter cursor or loading indicator
             div {
                 class: "dialogue-text-container",
                 style: "min-height: 60px;",
                 onclick: move |_| {
-                    if props.is_typing {
+                    if props.is_typing && !props.is_llm_processing {
                         props.on_advance.call(());
                     }
                 },
 
-                p {
-                    class: "vn-dialogue-text",
+                if props.is_llm_processing {
+                    p {
+                        class: "vn-dialogue-text",
+                        style: "color: #9ca3af; font-style: italic;",
 
-                    "{props.dialogue_text}"
+                        "NPC is thinking"
 
-                    // Blinking cursor during typing
-                    if props.is_typing {
+                        // Animated ellipsis
                         span {
-                            class: "typewriter-cursor",
-                            style: "animation: blink 0.7s step-end infinite; margin-left: 2px;",
-                            "▌"
+                            style: "animation: ellipsis 1.5s steps(4, end) infinite;",
+                            "..."
+                        }
+                    }
+                } else {
+                    p {
+                        class: "vn-dialogue-text",
+
+                        "{props.dialogue_text}"
+
+                        // Blinking cursor during typing
+                        if props.is_typing {
+                            span {
+                                class: "typewriter-cursor",
+                                style: "animation: blink 0.7s step-end infinite; margin-left: 2px;",
+                                "▌"
+                            }
                         }
                     }
                 }
             }
 
-            // Choice menu or continue prompt
-            if !props.is_typing {
+            // Choice menu or continue prompt (disabled while processing)
+            if !props.is_typing && !props.is_llm_processing {
                 if has_choices {
                     ChoiceMenu {
                         choices: props.choices.clone(),

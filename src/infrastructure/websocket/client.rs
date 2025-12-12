@@ -245,8 +245,8 @@ mod wasm {
         url: String,
         state: Rc<RefCell<ConnectionState>>,
         ws: Rc<RefCell<Option<WebSocket>>>,
-        on_message: Rc<RefCell<Option<Box<dyn Fn(ServerMessage)>>>>,
-        on_state_change: Rc<RefCell<Option<Box<dyn Fn(ConnectionState)>>>>,
+        on_message: Rc<RefCell<Option<Box<dyn FnMut(ServerMessage)>>>>,
+        on_state_change: Rc<RefCell<Option<Box<dyn FnMut(ConnectionState)>>>>,
     }
 
     impl EngineClient {
@@ -267,14 +267,14 @@ mod wasm {
 
         pub fn set_on_message<F>(&self, callback: F)
         where
-            F: Fn(ServerMessage) + 'static,
+            F: FnMut(ServerMessage) + 'static,
         {
             *self.on_message.borrow_mut() = Some(Box::new(callback));
         }
 
         pub fn set_on_state_change<F>(&self, callback: F)
         where
-            F: Fn(ConnectionState) + 'static,
+            F: FnMut(ConnectionState) + 'static,
         {
             *self.on_state_change.borrow_mut() = Some(Box::new(callback));
         }
@@ -286,7 +286,7 @@ mod wasm {
         fn set_state(&self, new_state: ConnectionState) {
             *self.state.borrow_mut() = new_state;
 
-            if let Some(ref cb) = *self.on_state_change.borrow() {
+            if let Some(ref mut cb) = *self.on_state_change.borrow_mut() {
                 cb(new_state);
             }
         }
@@ -307,7 +307,7 @@ mod wasm {
                     let text: String = txt.into();
                     match serde_json::from_str::<ServerMessage>(&text) {
                         Ok(server_msg) => {
-                            if let Some(ref cb) = *on_message.borrow() {
+                            if let Some(ref mut cb) = *on_message.borrow_mut() {
                                 cb(server_msg);
                             }
                         }
@@ -327,7 +327,7 @@ mod wasm {
             let on_state_change = Rc::clone(&self.on_state_change);
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
                 *state.borrow_mut() = ConnectionState::Connected;
-                if let Some(ref cb) = *on_state_change.borrow() {
+                if let Some(ref mut cb) = *on_state_change.borrow_mut() {
                     cb(ConnectionState::Connected);
                 }
                 web_sys::console::log_1(&"WebSocket connected".into());
@@ -340,7 +340,7 @@ mod wasm {
             let on_state_change = Rc::clone(&self.on_state_change);
             let onclose_callback = Closure::<dyn FnMut()>::new(move || {
                 *state.borrow_mut() = ConnectionState::Disconnected;
-                if let Some(ref cb) = *on_state_change.borrow() {
+                if let Some(ref mut cb) = *on_state_change.borrow_mut() {
                     cb(ConnectionState::Disconnected);
                 }
                 web_sys::console::log_1(&"WebSocket closed".into());
@@ -353,7 +353,7 @@ mod wasm {
             let on_state_change = Rc::clone(&self.on_state_change);
             let onerror_callback = Closure::<dyn FnMut()>::new(move || {
                 *state.borrow_mut() = ConnectionState::Failed;
-                if let Some(ref cb) = *on_state_change.borrow() {
+                if let Some(ref mut cb) = *on_state_change.borrow_mut() {
                     cb(ConnectionState::Failed);
                 }
                 web_sys::console::error_1(&"WebSocket error".into());

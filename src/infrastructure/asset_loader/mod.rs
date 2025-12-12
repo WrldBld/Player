@@ -7,5 +7,15 @@ pub use world_snapshot::{
     SnapshotMetadata, WorldData, ActData, SceneData,
     CharacterData, WantData, LocationData, BackdropRegionData,
     RegionBoundsData, RelationshipData, ConnectionData,
-    RuleSystemConfig, StatDefinition, DiceSystem,
+    RuleSystemConfig, RuleSystemType, RuleSystemVariant,
+    StatDefinition, DiceSystem, SuccessComparison,
+    SkillData, SkillCategory,
+    // Character Sheet Template types
+    SheetTemplate, SheetSection, SheetField, SectionLayout,
+    FieldType, SelectOption, ItemListType,
+    CharacterSheetData, FieldValue,
+    // Challenge types
+    ChallengeData, ChallengeType, ChallengeDifficulty,
+    ChallengeOutcomes, Outcome, OutcomeTrigger,
+    TriggerCondition, TriggerType,
 };

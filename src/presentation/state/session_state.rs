@@ -5,7 +5,9 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::infrastructure::websocket::{EngineClient, ParticipantRole};
+use crate::infrastructure::websocket::{EngineClient, ParticipantRole, ProposedTool, ChallengeSuggestionInfo};
+use crate::presentation::components::tactical::PlayerSkillData;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Connection status to the Engine server
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,6 +53,74 @@ impl ConnectionStatus {
     }
 }
 
+/// A pending approval request from the LLM that the DM needs to review
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingApproval {
+    /// Unique request ID for this approval
+    pub request_id: String,
+    /// Name of the NPC responding
+    pub npc_name: String,
+    /// The proposed dialogue from the LLM
+    pub proposed_dialogue: String,
+    /// Internal reasoning from the LLM
+    pub internal_reasoning: String,
+    /// Proposed tool calls
+    pub proposed_tools: Vec<ProposedTool>,
+    /// Optional challenge suggestion from the Engine
+    pub challenge_suggestion: Option<ChallengeSuggestionInfo>,
+}
+
+/// Challenge prompt data shown to player
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChallengePromptData {
+    /// Unique challenge ID
+    pub challenge_id: String,
+    /// Human-readable challenge name
+    pub challenge_name: String,
+    /// Associated skill name
+    pub skill_name: String,
+    /// Difficulty display (e.g., "DC 12", "Very Hard")
+    pub difficulty_display: String,
+    /// Challenge description/flavor text
+    pub description: String,
+    /// Character's skill modifier for this challenge
+    pub character_modifier: i32,
+}
+
+/// Challenge result data for display
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChallengeResultData {
+    /// Challenge name
+    pub challenge_name: String,
+    /// Name of character who attempted the challenge
+    pub character_name: String,
+    /// The d20 roll result
+    pub roll: i32,
+    /// Applied modifier
+    pub modifier: i32,
+    /// Total result (roll + modifier)
+    pub total: i32,
+    /// Outcome type ("success", "failure", "critical_success", etc.)
+    pub outcome: String,
+    /// Descriptive outcome text
+    pub outcome_description: String,
+    /// Timestamp for ordering
+    pub timestamp: u64,
+}
+
+/// A log entry for the conversation
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConversationLogEntry {
+    /// Speaker name (or "System" for system messages)
+    pub speaker: String,
+    /// The message text
+    pub text: String,
+    /// Whether this is a system message
+    pub is_system: bool,
+    /// Timestamp (for ordering)
+    pub timestamp: u64,
+}
+
 /// Session state for connection and user information
 #[derive(Clone)]
 pub struct SessionState {
@@ -68,6 +138,16 @@ pub struct SessionState {
     pub engine_client: Signal<Option<Arc<EngineClient>>>,
     /// Error message if connection failed
     pub error_message: Signal<Option<String>>,
+    /// Pending approval requests (for DM)
+    pub pending_approvals: Signal<Vec<PendingApproval>>,
+    /// Conversation log (for DM view)
+    pub conversation_log: Signal<Vec<ConversationLogEntry>>,
+    /// Active challenge prompt (if any)
+    pub active_challenge: Signal<Option<ChallengePromptData>>,
+    /// Recent challenge results for display
+    pub challenge_results: Signal<Vec<ChallengeResultData>>,
+    /// Player character skills with modifiers
+    pub player_skills: Signal<Vec<PlayerSkillData>>,
 }
 
 impl SessionState {
@@ -81,6 +161,11 @@ impl SessionState {
             server_url: Signal::new(None),
             engine_client: Signal::new(None),
             error_message: Signal::new(None),
+            pending_approvals: Signal::new(Vec::new()),
+            conversation_log: Signal::new(Vec::new()),
+            active_challenge: Signal::new(None),
+            challenge_results: Signal::new(Vec::new()),
+            player_skills: Signal::new(Vec::new()),
         }
     }
 
@@ -137,11 +222,68 @@ impl SessionState {
         self.server_url.set(None);
         self.engine_client.set(None);
         self.error_message.set(None);
+        self.pending_approvals.set(Vec::new());
+        self.conversation_log.set(Vec::new());
+        self.active_challenge.set(None);
+        self.challenge_results.set(Vec::new());
+        self.player_skills.set(Vec::new());
+    }
+
+    /// Add a pending approval request
+    pub fn add_pending_approval(&mut self, approval: PendingApproval) {
+        self.pending_approvals.write().push(approval);
+    }
+
+    /// Remove a pending approval by request_id
+    pub fn remove_pending_approval(&mut self, request_id: &str) {
+        self.pending_approvals.write().retain(|a| a.request_id != request_id);
+    }
+
+    /// Add a conversation log entry
+    pub fn add_log_entry(&mut self, speaker: String, text: String, is_system: bool) {
+        #[cfg(target_arch = "wasm32")]
+        let timestamp = (js_sys::Date::now() / 1000.0) as u64;
+        #[cfg(not(target_arch = "wasm32"))]
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        self.conversation_log.write().push(ConversationLogEntry {
+            speaker,
+            text,
+            is_system,
+            timestamp,
+        });
     }
 
     /// Check if we have an active client
     pub fn has_client(&self) -> bool {
         self.engine_client.read().is_some()
+    }
+
+    /// Set active challenge prompt
+    pub fn set_active_challenge(&mut self, challenge: ChallengePromptData) {
+        self.active_challenge.set(Some(challenge));
+    }
+
+    /// Clear active challenge
+    pub fn clear_active_challenge(&mut self) {
+        self.active_challenge.set(None);
+    }
+
+    /// Add a challenge result
+    pub fn add_challenge_result(&mut self, result: ChallengeResultData) {
+        self.challenge_results.write().push(result);
+    }
+
+    /// Set player skills
+    pub fn set_player_skills(&mut self, skills: Vec<PlayerSkillData>) {
+        self.player_skills.set(skills);
+    }
+
+    /// Add a player skill
+    pub fn add_player_skill(&mut self, skill: PlayerSkillData) {
+        self.player_skills.write().push(skill);
     }
 }
 

@@ -107,17 +107,144 @@ pub struct WorldData {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Rule system configuration (matches Engine's RuleSystemConfig exactly)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RuleSystemConfig {
     pub name: String,
+    pub description: String,
+    pub system_type: RuleSystemType,
+    pub variant: RuleSystemVariant,
+    #[serde(default)]
     pub stat_definitions: Vec<StatDefinition>,
-    #[serde(default)]
-    pub dice_system: Option<DiceSystem>,
-    #[serde(default)]
-    pub skill_check_formula: Option<String>,
+    pub dice_system: DiceSystem,
+    pub success_comparison: SuccessComparison,
+    pub skill_check_formula: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl Default for RuleSystemConfig {
+    fn default() -> Self {
+        Self {
+            name: "Generic D20".to_string(),
+            description: "A generic d20-based rule system".to_string(),
+            system_type: RuleSystemType::D20,
+            variant: RuleSystemVariant::GenericD20,
+            stat_definitions: vec![],
+            dice_system: DiceSystem::D20,
+            success_comparison: SuccessComparison::GreaterOrEqual,
+            skill_check_formula: "1d20 + modifier vs DC".to_string(),
+        }
+    }
+}
+
+/// The type of rule system (how dice mechanics work)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuleSystemType {
+    /// Roll d20 + modifier vs Difficulty Class (D&D, Pathfinder)
+    D20,
+    /// Roll d100 under skill value (Call of Cthulhu, RuneQuest)
+    D100,
+    /// Fiction-first with descriptive outcomes (Kids on Bikes, FATE, PbtA)
+    Narrative,
+    /// Custom dice mechanics
+    Custom,
+}
+
+impl RuleSystemType {
+    pub fn all() -> Vec<Self> {
+        vec![Self::D20, Self::D100, Self::Narrative, Self::Custom]
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::D20 => "D20 System",
+            Self::D100 => "D100 System",
+            Self::Narrative => "Narrative System",
+            Self::Custom => "Custom",
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::D20 => "Roll d20 + modifier vs DC (D&D, Pathfinder)",
+            Self::D100 => "Roll percentile under skill (Call of Cthulhu)",
+            Self::Narrative => "Fiction-first, story-driven (Kids on Bikes, FATE)",
+            Self::Custom => "Define your own mechanics",
+        }
+    }
+}
+
+/// Specific rule system variants/presets
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuleSystemVariant {
+    // D20 variants
+    Dnd5e,
+    Pathfinder2e,
+    GenericD20,
+    // D100 variants
+    CallOfCthulhu7e,
+    RuneQuest,
+    GenericD100,
+    // Narrative variants
+    KidsOnBikes,
+    FateCore,
+    PoweredByApocalypse,
+    // Custom
+    Custom(String),
+}
+
+impl RuleSystemVariant {
+    pub fn variants_for_type(system_type: RuleSystemType) -> Vec<Self> {
+        match system_type {
+            RuleSystemType::D20 => vec![Self::Dnd5e, Self::Pathfinder2e, Self::GenericD20],
+            RuleSystemType::D100 => vec![Self::CallOfCthulhu7e, Self::RuneQuest, Self::GenericD100],
+            RuleSystemType::Narrative => vec![Self::KidsOnBikes, Self::FateCore, Self::PoweredByApocalypse],
+            RuleSystemType::Custom => vec![],
+        }
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Dnd5e => "D&D 5th Edition",
+            Self::Pathfinder2e => "Pathfinder 2e",
+            Self::GenericD20 => "Generic D20",
+            Self::CallOfCthulhu7e => "Call of Cthulhu 7e",
+            Self::RuneQuest => "RuneQuest",
+            Self::GenericD100 => "Generic D100",
+            Self::KidsOnBikes => "Kids on Bikes",
+            Self::FateCore => "FATE Core",
+            Self::PoweredByApocalypse => "Powered by the Apocalypse",
+            Self::Custom(_) => "Custom",
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::Dnd5e => "Six classic stats (STR, DEX, CON, INT, WIS, CHA)",
+            Self::Pathfinder2e => "Four degrees of success with proficiency",
+            Self::GenericD20 => "Simple d20 + modifier vs DC",
+            Self::CallOfCthulhu7e => "Skill-based percentile with sanity",
+            Self::RuneQuest => "Percentile with hit locations",
+            Self::GenericD100 => "Roll under skill value",
+            Self::KidsOnBikes => "Six stats representing tropes",
+            Self::FateCore => "Aspects, skills, and stunts",
+            Self::PoweredByApocalypse => "2d6 with 3 outcome tiers",
+            Self::Custom(_) => "Custom configuration",
+        }
+    }
+}
+
+/// How success is determined
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SuccessComparison {
+    /// Roll must be >= target (D20 systems)
+    GreaterOrEqual,
+    /// Roll must be <= target (D100 systems)
+    LessOrEqual,
+    /// Success tiers based on roll (narrative systems)
+    Narrative,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatDefinition {
     pub name: String,
     pub abbreviation: String,
@@ -126,10 +253,234 @@ pub struct StatDefinition {
     pub default_value: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiceSystem {
-    pub dice_notation: String,
+/// The dice system used for resolution (mirrors Engine's enum exactly)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DiceSystem {
+    /// Classic d20 system (D&D, Pathfinder)
+    D20,
+    /// Percentile system (Call of Cthulhu)
+    D100,
+    /// Dice pool system (World of Darkness)
+    DicePool { die_type: u8, success_threshold: u8 },
+    /// FATE/Fudge dice
+    Fate,
+    /// Custom dice expression
+    Custom(String),
+}
+
+/// A skill for character challenges
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SkillData {
+    pub id: String,
+    pub world_id: String,
+    pub name: String,
     pub description: String,
+    pub category: SkillCategory,
+    pub base_attribute: Option<String>,
+    pub is_custom: bool,
+    pub is_hidden: bool,
+    pub order: u32,
+}
+
+/// Skill categories for UI organization
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SkillCategory {
+    // D20 style categories
+    Physical,
+    Mental,
+    Social,
+    // D100/CoC style categories
+    Interpersonal,
+    Investigation,
+    Academic,
+    Practical,
+    Combat,
+    // Narrative style
+    Approach,
+    Aspect,
+    // General
+    Other,
+    Custom,
+}
+
+impl SkillCategory {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Physical => "Physical",
+            Self::Mental => "Mental",
+            Self::Social => "Social",
+            Self::Interpersonal => "Interpersonal",
+            Self::Investigation => "Investigation",
+            Self::Academic => "Academic",
+            Self::Practical => "Practical",
+            Self::Combat => "Combat",
+            Self::Approach => "Approach",
+            Self::Aspect => "Aspect",
+            Self::Other => "Other",
+            Self::Custom => "Custom",
+        }
+    }
+
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::Physical,
+            Self::Mental,
+            Self::Social,
+            Self::Interpersonal,
+            Self::Investigation,
+            Self::Academic,
+            Self::Practical,
+            Self::Combat,
+            Self::Approach,
+            Self::Aspect,
+            Self::Other,
+            Self::Custom,
+        ]
+    }
+}
+
+// ============================================================================
+// Challenge Types
+// ============================================================================
+
+/// Challenge data from API
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChallengeData {
+    pub id: String,
+    pub world_id: String,
+    pub scene_id: Option<String>,
+    pub name: String,
+    pub description: String,
+    pub challenge_type: ChallengeType,
+    pub skill_id: String,
+    pub difficulty: ChallengeDifficulty,
+    pub outcomes: ChallengeOutcomes,
+    pub trigger_conditions: Vec<TriggerCondition>,
+    pub prerequisite_challenges: Vec<String>,
+    pub active: bool,
+    pub order: u32,
+    pub is_favorite: bool,
+    pub tags: Vec<String>,
+}
+
+/// Types of challenges
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ChallengeType {
+    #[default]
+    SkillCheck,
+    AbilityCheck,
+    SavingThrow,
+    OpposedCheck,
+    ComplexChallenge,
+}
+
+impl ChallengeType {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::SkillCheck => "Skill Check",
+            Self::AbilityCheck => "Ability Check",
+            Self::SavingThrow => "Saving Throw",
+            Self::OpposedCheck => "Opposed Check",
+            Self::ComplexChallenge => "Complex Challenge",
+        }
+    }
+
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::SkillCheck,
+            Self::AbilityCheck,
+            Self::SavingThrow,
+            Self::OpposedCheck,
+            Self::ComplexChallenge,
+        ]
+    }
+}
+
+/// Challenge difficulty representation
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ChallengeDifficulty {
+    Dc { value: u32 },
+    Percentage { value: u32 },
+    Descriptor { value: String },
+    Opposed,
+    Custom { value: String },
+}
+
+impl Default for ChallengeDifficulty {
+    fn default() -> Self {
+        Self::Dc { value: 10 }
+    }
+}
+
+impl ChallengeDifficulty {
+    pub fn display(&self) -> String {
+        match self {
+            Self::Dc { value } => format!("DC {}", value),
+            Self::Percentage { value } => format!("{}%", value),
+            Self::Descriptor { value } => value.clone(),
+            Self::Opposed => "Opposed".to_string(),
+            Self::Custom { value } => value.clone(),
+        }
+    }
+}
+
+/// Outcomes for a challenge
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ChallengeOutcomes {
+    pub success: Outcome,
+    pub failure: Outcome,
+    #[serde(default)]
+    pub partial: Option<Outcome>,
+    #[serde(default)]
+    pub critical_success: Option<Outcome>,
+    #[serde(default)]
+    pub critical_failure: Option<Outcome>,
+}
+
+/// A single outcome with narrative text and triggered effects
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Outcome {
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub triggers: Vec<OutcomeTrigger>,
+}
+
+/// Effects triggered by challenge outcomes
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum OutcomeTrigger {
+    RevealInformation { info: String, persist: bool },
+    EnableChallenge { challenge_id: String },
+    DisableChallenge { challenge_id: String },
+    ModifyCharacterStat { stat: String, modifier: i32 },
+    TriggerScene { scene_id: String },
+    GiveItem { item_name: String, item_description: Option<String> },
+    Custom { description: String },
+}
+
+/// Condition that triggers LLM to suggest a challenge
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TriggerCondition {
+    pub condition_type: TriggerType,
+    pub description: String,
+    #[serde(default)]
+    pub required: bool,
+}
+
+/// Types of trigger conditions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TriggerType {
+    ObjectInteraction { keywords: Vec<String> },
+    EnterArea { keywords: Vec<String> },
+    DialogueTopic { keywords: Vec<String> },
+    ChallengeComplete { challenge_id: String, requires_success: Option<bool> },
+    TimeBased { turns: u32 },
+    NpcPresent { keywords: Vec<String> },
+    Custom { description: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,6 +589,152 @@ pub struct ConnectionData {
     pub description: String,
     pub bidirectional: bool,
     pub travel_time: Option<u32>,
+}
+
+// ============================================================================
+// Character Sheet Template Types
+// ============================================================================
+
+/// A character sheet template
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SheetTemplate {
+    pub id: String,
+    pub world_id: String,
+    pub name: String,
+    pub description: String,
+    pub variant: String,
+    pub sections: Vec<SheetSection>,
+    pub is_default: bool,
+}
+
+/// A section in the character sheet
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SheetSection {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    pub fields: Vec<SheetField>,
+    pub layout: SectionLayout,
+    #[serde(default)]
+    pub collapsible: bool,
+    #[serde(default)]
+    pub collapsed_by_default: bool,
+    #[serde(default)]
+    pub order: u32,
+}
+
+/// Layout for a section
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SectionLayout {
+    Vertical,
+    Grid { columns: u8 },
+    Flow,
+    TwoColumn,
+}
+
+impl Default for SectionLayout {
+    fn default() -> Self {
+        Self::Vertical
+    }
+}
+
+/// A field in the character sheet
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SheetField {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    pub field_type: FieldType,
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub read_only: bool,
+    #[serde(default)]
+    pub order: u32,
+}
+
+/// Field type with configuration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum FieldType {
+    Number {
+        min: Option<i32>,
+        max: Option<i32>,
+        default: Option<i32>,
+    },
+    Text {
+        multiline: bool,
+        max_length: Option<usize>,
+    },
+    Checkbox {
+        default: bool,
+    },
+    Select {
+        options: Vec<SelectOption>,
+    },
+    SkillReference {
+        categories: Option<Vec<String>>,
+        show_attribute: bool,
+    },
+    Derived {
+        formula: String,
+        depends_on: Vec<String>,
+    },
+    Resource {
+        max_field: Option<String>,
+        default_max: Option<i32>,
+    },
+    ItemList {
+        item_type: ItemListType,
+        max_items: Option<usize>,
+    },
+    SkillList {
+        show_modifier: bool,
+        show_proficiency: bool,
+    },
+}
+
+/// Option for select fields
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SelectOption {
+    pub value: String,
+    pub label: String,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// Type of items in an item list
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ItemListType {
+    Inventory,
+    Features,
+    Spells,
+    Notes,
+}
+
+/// Character sheet data (actual values)
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CharacterSheetData {
+    pub values: std::collections::HashMap<String, FieldValue>,
+}
+
+/// A value stored for a field
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum FieldValue {
+    Number(i32),
+    Text(String),
+    Boolean(bool),
+    Resource { current: i32, max: i32 },
+    List(Vec<String>),
+    SkillEntry {
+        skill_id: String,
+        proficient: bool,
+        bonus: i32,
+    },
 }
 
 /// Loader for world snapshots
