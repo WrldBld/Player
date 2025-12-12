@@ -422,10 +422,22 @@ pub fn get_event_type_icon(event_type: &StoryEventTypeData) -> &'static str {
     }
 }
 
+/// Paginated response wrapper from Engine API
+#[derive(Debug, Clone, serde::Deserialize)]
+struct PaginatedStoryEventsResponse {
+    events: Vec<StoryEventData>,
+    #[allow(dead_code)]
+    total: u64,
+    #[allow(dead_code)]
+    limit: u32,
+    #[allow(dead_code)]
+    offset: u32,
+}
+
 /// Fetch story events from the Engine API
 async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<Vec<StoryEventData>, String> {
     let url = if let Some(sid) = session_id {
-        format!("/api/sessions/{}/story-events", sid)
+        format!("/api/worlds/{}/story-events?session_id={}", world_id, sid)
     } else {
         format!("/api/worlds/{}/story-events", world_id)
     };
@@ -439,10 +451,11 @@ async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<
             .map_err(|e| format!("Request failed: {}", e))?;
 
         if response.ok() {
-            response
-                .json::<Vec<StoryEventData>>()
+            let paginated: PaginatedStoryEventsResponse = response
+                .json()
                 .await
-                .map_err(|e| format!("Parse error: {}", e))
+                .map_err(|e| format!("Parse error: {}", e))?;
+            Ok(paginated.events)
         } else {
             Err(format!("HTTP error: {}", response.status()))
         }
@@ -458,10 +471,11 @@ async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<
             .map_err(|e| format!("Request failed: {}", e))?;
 
         if response.status().is_success() {
-            response
-                .json::<Vec<StoryEventData>>()
+            let paginated: PaginatedStoryEventsResponse = response
+                .json()
                 .await
-                .map_err(|e| format!("Parse error: {}", e))
+                .map_err(|e| format!("Parse error: {}", e))?;
+            Ok(paginated.events)
         } else {
             Err(format!("HTTP error: {}", response.status()))
         }
@@ -475,7 +489,7 @@ async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), S
     #[cfg(target_arch = "wasm32")]
     {
         use gloo_net::http::Request;
-        let response = Request::post(&url)
+        let response = Request::put(&url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
@@ -492,7 +506,7 @@ async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), S
         let client = reqwest::Client::new();
         let full_url = format!("http://localhost:3000{}", url);
         let response = client
-            .post(&full_url)
+            .put(&full_url)
             .send()
             .await
             .map_err(|e| format!("Request failed: {}", e))?;

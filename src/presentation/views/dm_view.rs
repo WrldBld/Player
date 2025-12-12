@@ -9,6 +9,7 @@ use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallen
 use crate::presentation::components::settings::SettingsView;
 use crate::presentation::components::story_arc::{TimelineView, NarrativeEventLibrary};
 use crate::presentation::state::{use_game_state, use_session_state, PendingApproval};
+use crate::routes::Route;
 
 /// The active tab/mode in the DM View
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -33,6 +34,9 @@ pub struct DMViewProps {
     /// Optional Settings sub-tab (workflows, skills)
     #[props(default)]
     pub settings_subtab: Option<String>,
+    /// Optional Story Arc sub-tab (timeline, events, chains)
+    #[props(default)]
+    pub story_arc_subtab: Option<String>,
 }
 
 #[component]
@@ -55,7 +59,12 @@ pub fn DMView(props: DMViewProps) -> Element {
                             selected_tab: props.creator_subtab.clone(),
                         }
                     },
-                    DMMode::StoryArc => rsx! { StoryArcContent { world_id: props.world_id.clone() } },
+                    DMMode::StoryArc => rsx! {
+                        StoryArcContent {
+                            world_id: props.world_id.clone(),
+                            selected_tab: props.story_arc_subtab.clone(),
+                        }
+                    },
                     DMMode::Settings => rsx! {
                         SettingsView {
                             world_id: props.world_id.clone(),
@@ -77,41 +86,69 @@ pub enum StoryArcSubTab {
     EventChains,
 }
 
+impl StoryArcSubTab {
+    fn from_str(s: &str) -> Self {
+        match s {
+            "timeline" => Self::Timeline,
+            "events" => Self::NarrativeEvents,
+            "chains" => Self::EventChains,
+            _ => Self::Timeline,
+        }
+    }
+
+    fn to_route_str(&self) -> &'static str {
+        match self {
+            Self::Timeline => "timeline",
+            Self::NarrativeEvents => "events",
+            Self::EventChains => "chains",
+        }
+    }
+}
+
 /// Story Arc mode content - Timeline, Narrative Events, Event Chains
 #[derive(Props, Clone, PartialEq)]
 struct StoryArcContentProps {
     world_id: String,
+    #[props(default)]
+    selected_tab: Option<String>,
 }
 
 #[component]
 fn StoryArcContent(props: StoryArcContentProps) -> Element {
-    let mut active_tab = use_signal(|| StoryArcSubTab::Timeline);
+    // Parse selected tab from URL, default to Timeline
+    let active_tab = props.selected_tab
+        .as_ref()
+        .map(|s| StoryArcSubTab::from_str(s))
+        .unwrap_or(StoryArcSubTab::Timeline);
 
     rsx! {
         div {
             style: "height: 100%; display: flex; flex-direction: column;",
 
-            // Sub-tab navigation
+            // Sub-tab navigation using router Links
             div {
                 style: "display: flex; gap: 0; background: #0f0f23; border-bottom: 1px solid #374151;",
 
-                StoryArcTab {
+                StoryArcTabLink {
                     label: "Timeline",
                     icon: "📜",
-                    is_active: *active_tab.read() == StoryArcSubTab::Timeline,
-                    on_click: move |_| active_tab.set(StoryArcSubTab::Timeline),
+                    subtab: "timeline",
+                    world_id: props.world_id.clone(),
+                    is_active: active_tab == StoryArcSubTab::Timeline,
                 }
-                StoryArcTab {
+                StoryArcTabLink {
                     label: "Narrative Events",
                     icon: "⭐",
-                    is_active: *active_tab.read() == StoryArcSubTab::NarrativeEvents,
-                    on_click: move |_| active_tab.set(StoryArcSubTab::NarrativeEvents),
+                    subtab: "events",
+                    world_id: props.world_id.clone(),
+                    is_active: active_tab == StoryArcSubTab::NarrativeEvents,
                 }
-                StoryArcTab {
+                StoryArcTabLink {
                     label: "Event Chains",
                     icon: "🔗",
-                    is_active: *active_tab.read() == StoryArcSubTab::EventChains,
-                    on_click: move |_| active_tab.set(StoryArcSubTab::EventChains),
+                    subtab: "chains",
+                    world_id: props.world_id.clone(),
+                    is_active: active_tab == StoryArcSubTab::EventChains,
                 }
             }
 
@@ -119,7 +156,7 @@ fn StoryArcContent(props: StoryArcContentProps) -> Element {
             div {
                 style: "flex: 1; overflow: hidden;",
 
-                match *active_tab.read() {
+                match active_tab {
                     StoryArcSubTab::Timeline => rsx! {
                         TimelineView { world_id: props.world_id.clone() }
                     },
@@ -136,20 +173,24 @@ fn StoryArcContent(props: StoryArcContentProps) -> Element {
 }
 
 #[derive(Props, Clone, PartialEq)]
-struct StoryArcTabProps {
+struct StoryArcTabLinkProps {
     label: &'static str,
     icon: &'static str,
+    subtab: &'static str,
+    world_id: String,
     is_active: bool,
-    on_click: EventHandler<()>,
 }
 
 #[component]
-fn StoryArcTab(props: StoryArcTabProps) -> Element {
+fn StoryArcTabLink(props: StoryArcTabLinkProps) -> Element {
     rsx! {
-        button {
-            onclick: move |_| props.on_click.call(()),
+        Link {
+            to: Route::DMStoryArcSubTabRoute {
+                world_id: props.world_id.clone(),
+                subtab: props.subtab.to_string(),
+            },
             style: format!(
-                "padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; transition: all 0.2s; {}",
+                "padding: 0.75rem 1.25rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; transition: all 0.2s; text-decoration: none; {}",
                 if props.is_active {
                     "background: #1a1a2e; color: white; border-bottom: 2px solid #8b5cf6;"
                 } else {

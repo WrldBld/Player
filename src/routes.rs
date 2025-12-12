@@ -87,6 +87,10 @@ pub enum Route {
     #[route("/worlds/:world_id/dm/settings/:subtab")]
     DMSettingsSubTabRoute { world_id: String, subtab: String },
 
+    // Story Arc sub-tabs
+    #[route("/worlds/:world_id/dm/story-arc/:subtab")]
+    DMStoryArcSubTabRoute { world_id: String, subtab: String },
+
     #[route("/worlds/:world_id/play")]
     PCViewRoute { world_id: String },
 
@@ -289,10 +293,20 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
         return rsx! {};
     }
 
+    // If "story-arc" tab, redirect to story-arc subtab route
+    if tab == "story-arc" {
+        use_effect(move || {
+            navigator.replace(Route::DMStoryArcSubTabRoute {
+                world_id: world_id.clone(),
+                subtab: "timeline".to_string(),
+            });
+        });
+        return rsx! {};
+    }
+
     // Parse tab from URL, default to Director if invalid
     let dm_mode = match tab.as_str() {
         "director" => DMMode::Director,
-        "story-arc" => DMMode::StoryArc,
         _ => DMMode::Director,
     };
 
@@ -314,6 +328,7 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
             dm_mode: dm_mode,
             creator_subtab: None,
             settings_subtab: None,
+            story_arc_subtab: None,
         }
     }
 }
@@ -340,6 +355,7 @@ pub fn DMCreatorSubTabRoute(world_id: String, subtab: String) -> Element {
             dm_mode: DMMode::Creator,
             creator_subtab: Some(subtab),
             settings_subtab: None,
+            story_arc_subtab: None,
         }
     }
 }
@@ -364,6 +380,33 @@ pub fn DMSettingsSubTabRoute(world_id: String, subtab: String) -> Element {
             dm_mode: DMMode::Settings,
             creator_subtab: None,
             settings_subtab: Some(subtab),
+            story_arc_subtab: None,
+        }
+    }
+}
+
+/// DMStoryArcSubTabRoute - Story Arc with specific sub-tab
+#[component]
+pub fn DMStoryArcSubTabRoute(world_id: String, subtab: String) -> Element {
+    // Set page title based on subtab
+    let title = match subtab.as_str() {
+        "timeline" => "Story Arc - Timeline",
+        "events" => "Story Arc - Narrative Events",
+        "chains" => "Story Arc - Event Chains",
+        _ => "Story Arc",
+    };
+
+    use_effect(move || {
+        set_page_title(title);
+    });
+
+    rsx! {
+        DMViewLayout {
+            world_id: world_id,
+            dm_mode: DMMode::StoryArc,
+            creator_subtab: None,
+            settings_subtab: None,
+            story_arc_subtab: Some(subtab),
         }
     }
 }
@@ -375,6 +418,7 @@ struct DMViewLayoutProps {
     dm_mode: DMMode,
     creator_subtab: Option<String>,
     settings_subtab: Option<String>,
+    story_arc_subtab: Option<String>,
 }
 
 #[component]
@@ -416,6 +460,7 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
                     active_mode: props.dm_mode,
                     creator_subtab: props.creator_subtab.clone(),
                     settings_subtab: props.settings_subtab.clone(),
+                    story_arc_subtab: props.story_arc_subtab.clone(),
                 }
             }
 

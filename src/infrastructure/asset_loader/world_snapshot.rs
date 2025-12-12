@@ -772,6 +772,9 @@ pub struct StoryEventData {
     pub is_hidden: bool,
     pub tags: Vec<String>,
     pub triggered_by: Option<String>,
+    /// Human-readable event type name from Engine
+    #[serde(default)]
+    pub type_name: String,
 }
 
 /// Categories of story events
