@@ -249,73 +249,38 @@ pub fn PCViewRoute(world_id: String) -> Element {
     }
 }
 
-/// DMViewRoute - redirects to default tab (director)
+/// DMViewRoute - renders Director tab directly (no redirect needed)
 #[component]
 pub fn DMViewRoute(world_id: String) -> Element {
-    let navigator = use_navigator();
-
-    // Redirect to director tab by default
-    use_effect(move || {
-        navigator.replace(Route::DMViewTabRoute {
-            world_id: world_id.clone(),
-            tab: "director".to_string()
-        });
+    // Set page title
+    use_effect(|| {
+        set_page_title("Director");
     });
 
-    // Show nothing while redirecting
-    rsx! {}
+    // Render Director mode directly instead of redirecting
+    rsx! {
+        DMViewLayout {
+            world_id: world_id,
+            dm_mode: DMMode::Director,
+            creator_subtab: None,
+            settings_subtab: None,
+            story_arc_subtab: None,
+        }
+    }
 }
 
 /// DMViewTabRoute - DM view with specific tab
+/// For tabs with subtabs (creator, settings, story-arc), render with default subtab
+/// This avoids use_effect redirect race conditions
 #[component]
 pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
-    let navigator = use_navigator();
-
-    // If "creator" tab, redirect to creator subtab route
-    if tab == "creator" {
-        use_effect(move || {
-            navigator.replace(Route::DMCreatorSubTabRoute {
-                world_id: world_id.clone(),
-                subtab: "characters".to_string(),
-            });
-        });
-        return rsx! {};
-    }
-
-    // If "settings" tab, redirect to settings subtab route
-    if tab == "settings" {
-        use_effect(move || {
-            navigator.replace(Route::DMSettingsSubTabRoute {
-                world_id: world_id.clone(),
-                subtab: "workflows".to_string(),
-            });
-        });
-        return rsx! {};
-    }
-
-    // If "story-arc" tab, redirect to story-arc subtab route
-    if tab == "story-arc" {
-        use_effect(move || {
-            navigator.replace(Route::DMStoryArcSubTabRoute {
-                world_id: world_id.clone(),
-                subtab: "timeline".to_string(),
-            });
-        });
-        return rsx! {};
-    }
-
-    // Parse tab from URL, default to Director if invalid
-    let dm_mode = match tab.as_str() {
-        "director" => DMMode::Director,
-        _ => DMMode::Director,
-    };
-
-    // Set page title based on tab
-    let title = match dm_mode {
-        DMMode::Director => "Director",
-        DMMode::Creator => "Creator",
-        DMMode::StoryArc => "Story Arc",
-        DMMode::Settings => "Settings",
+    // Determine mode and default subtab based on tab parameter
+    let (dm_mode, creator_subtab, settings_subtab, story_arc_subtab, title) = match tab.as_str() {
+        "director" => (DMMode::Director, None, None, None, "Director"),
+        "creator" => (DMMode::Creator, Some("characters".to_string()), None, None, "Creator - Characters"),
+        "settings" => (DMMode::Settings, None, Some("workflows".to_string()), None, "Settings - Workflows"),
+        "story-arc" => (DMMode::StoryArc, None, None, Some("timeline".to_string()), "Story Arc - Timeline"),
+        _ => (DMMode::Director, None, None, None, "Director"),
     };
 
     use_effect(move || {
@@ -326,9 +291,9 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
         DMViewLayout {
             world_id: world_id,
             dm_mode: dm_mode,
-            creator_subtab: None,
-            settings_subtab: None,
-            story_arc_subtab: None,
+            creator_subtab: creator_subtab,
+            settings_subtab: settings_subtab,
+            story_arc_subtab: story_arc_subtab,
         }
     }
 }
@@ -626,17 +591,40 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
 }
 
 /// Header tab link for DM View - uses router navigation
+/// Links directly to the appropriate subtab route to avoid redirect race conditions
 #[component]
 fn DMHeaderTabLink(label: &'static str, tab: &'static str, world_id: String, active: bool) -> Element {
     let bg_color = if active { "#3b82f6" } else { "transparent" };
     let text_color = if active { "white" } else { "#9ca3af" };
 
+    // Determine the correct route based on tab - link directly to subtab routes
+    // to avoid use_effect redirect race conditions
+    let route = match tab {
+        "director" => Route::DMViewTabRoute {
+            world_id: world_id.clone(),
+            tab: "director".to_string(),
+        },
+        "creator" => Route::DMCreatorSubTabRoute {
+            world_id: world_id.clone(),
+            subtab: "characters".to_string(),
+        },
+        "story-arc" => Route::DMStoryArcSubTabRoute {
+            world_id: world_id.clone(),
+            subtab: "timeline".to_string(),
+        },
+        "settings" => Route::DMSettingsSubTabRoute {
+            world_id: world_id.clone(),
+            subtab: "workflows".to_string(),
+        },
+        _ => Route::DMViewTabRoute {
+            world_id: world_id.clone(),
+            tab: tab.to_string(),
+        },
+    };
+
     rsx! {
         Link {
-            to: Route::DMViewTabRoute {
-                world_id: world_id,
-                tab: tab.to_string(),
-            },
+            to: route,
             style: format!(
                 "padding: 0.4rem 0.75rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; position: relative; z-index: 103; pointer-events: auto; text-decoration: none;",
                 bg_color,

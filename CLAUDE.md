@@ -47,6 +47,34 @@ src/
 - Use `Link` component from Dioxus router, NOT onClick handlers for navigation
 - Tab state should come from URL parameters, not local signals
 
+**NEVER use `use_effect` + `navigator.replace()` for redirects!**
+
+This causes race conditions where the empty placeholder render conflicts with the next route's render, breaking the UI intermittently. Instead:
+
+1. **Link directly to the final route** - Header tabs should link to subtab routes, not intermediate routes
+2. **Render content directly** - If a route needs a "default", render the content with the default subtab instead of redirecting
+
+Bad pattern (causes race conditions):
+```rust
+// DON'T DO THIS
+if tab == "creator" {
+    use_effect(move || {
+        navigator.replace(Route::CreatorSubTab { ... });
+    });
+    return rsx! {};  // Empty render causes issues
+}
+```
+
+Good pattern:
+```rust
+// DO THIS - render directly with default subtab
+let (mode, subtab) = match tab.as_str() {
+    "creator" => (DMMode::Creator, Some("characters".to_string())),
+    _ => (DMMode::Director, None),
+};
+rsx! { DMViewLayout { dm_mode: mode, creator_subtab: subtab, ... } }
+```
+
 Example for adding a new tabbed view:
 
 1. Add route in `routes.rs`:
@@ -63,12 +91,12 @@ pub fn MyFeatureSubTabRoute(world_id: String, subtab: String) -> Element {
 }
 ```
 
-3. Use `Link` for tab navigation:
+3. Use `Link` for tab navigation (link directly to subtab route):
 ```rust
 Link {
     to: Route::MyFeatureSubTabRoute {
         world_id: world_id.clone(),
-        subtab: "tab-name".to_string(),
+        subtab: "default-tab".to_string(),
     },
     // ...
 }
