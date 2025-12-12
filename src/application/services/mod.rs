@@ -16,7 +16,11 @@ pub mod world_service;
 pub use action_service::ActionService;
 
 // Re-export session service types
-pub use session_service::{connection_state_to_status, SessionService, DEFAULT_ENGINE_URL};
+pub use session_service::{
+    connection_state_to_status, port_connection_state_to_status,
+    ConnectionStatePort, ParticipantRolePort,
+    SessionService, DEFAULT_ENGINE_URL,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use session_service::{handle_session_event, SessionEvent};

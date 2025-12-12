@@ -28,9 +28,9 @@
 use dioxus::prelude::*;
 use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
 use crate::presentation::views::dm_view::DMMode;
-use crate::infrastructure::websocket::ParticipantRole;
+// Use port type for ParticipantRole instead of infrastructure type
+use crate::application::services::{ParticipantRolePort as ParticipantRole, SessionService, DEFAULT_ENGINE_URL};
 use crate::infrastructure::storage;
-use crate::application::services::{SessionService, DEFAULT_ENGINE_URL};
 
 /// Set the browser page title (WASM only)
 ///

@@ -6,16 +6,25 @@
 //! - Processing server messages and updating application state
 //!
 //! Platform-specific implementations for desktop (async) and WASM (sync callbacks).
+//!
+//! NOTE: This service currently has some architecture violations that will be
+//! addressed in Phase 7. Specifically:
+//! - Uses infrastructure types (WorldSnapshot, ServerMessage)
+//! - Directly mutates presentation state (should return events instead)
 
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
-use crate::infrastructure::asset_loader::WorldSnapshot;
-use crate::infrastructure::websocket::{
-    ConnectionState, EngineClient, ParticipantRole, ServerMessage,
+use crate::application::ports::outbound::{
+    ConnectionState as PortConnectionState, GameConnectionPort, ParticipantRole as PortParticipantRole,
 };
+// TODO Phase 7: These infrastructure imports should be abstracted
+use crate::infrastructure::asset_loader::WorldSnapshot;
+use crate::infrastructure::websocket::{EngineClient, ServerMessage};
+// TODO Phase 6: Application layer should not import presentation state
+// This should return domain events instead of mutating state directly
 use crate::presentation::state::{
     ConnectionStatus, DialogueState, GameState, PendingApproval, SessionState,
     session_state::{ChallengePromptData, ChallengeResultData},
@@ -24,15 +33,41 @@ use crate::presentation::state::{
 /// Default WebSocket URL for the Engine server
 pub const DEFAULT_ENGINE_URL: &str = "ws://localhost:3000/ws";
 
-/// Convert internal ConnectionState to presentation ConnectionStatus
-pub fn connection_state_to_status(state: ConnectionState) -> ConnectionStatus {
+// Re-export port types for external use
+pub use crate::application::ports::outbound::{
+    ConnectionState as ConnectionStatePort,
+    ParticipantRole as ParticipantRolePort,
+};
+
+// Import infrastructure types for internal mapping
+use crate::infrastructure::websocket::ConnectionState as InfraConnectionState;
+
+/// Convert port ConnectionState to presentation ConnectionStatus
+pub fn port_connection_state_to_status(state: PortConnectionState) -> ConnectionStatus {
     match state {
-        ConnectionState::Disconnected => ConnectionStatus::Disconnected,
-        ConnectionState::Connecting => ConnectionStatus::Connecting,
-        ConnectionState::Connected => ConnectionStatus::Connected,
-        ConnectionState::Reconnecting => ConnectionStatus::Reconnecting,
-        ConnectionState::Failed => ConnectionStatus::Failed,
+        PortConnectionState::Disconnected => ConnectionStatus::Disconnected,
+        PortConnectionState::Connecting => ConnectionStatus::Connecting,
+        PortConnectionState::Connected => ConnectionStatus::Connected,
+        PortConnectionState::Reconnecting => ConnectionStatus::Reconnecting,
+        PortConnectionState::Failed => ConnectionStatus::Failed,
     }
+}
+
+/// Convert infrastructure ConnectionState to port ConnectionState
+pub fn infra_to_port_connection_state(state: InfraConnectionState) -> PortConnectionState {
+    match state {
+        InfraConnectionState::Disconnected => PortConnectionState::Disconnected,
+        InfraConnectionState::Connecting => PortConnectionState::Connecting,
+        InfraConnectionState::Connected => PortConnectionState::Connected,
+        InfraConnectionState::Reconnecting => PortConnectionState::Reconnecting,
+        InfraConnectionState::Failed => PortConnectionState::Failed,
+    }
+}
+
+/// Convert infrastructure ConnectionState to presentation ConnectionStatus
+/// (Convenience function that combines the two conversions)
+pub fn connection_state_to_status(state: InfraConnectionState) -> ConnectionStatus {
+    port_connection_state_to_status(infra_to_port_connection_state(state))
 }
 
 // ============================================================================
@@ -42,16 +77,20 @@ pub fn connection_state_to_status(state: ConnectionState) -> ConnectionStatus {
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop {
     use super::*;
+    use crate::infrastructure::websocket::ParticipantRole as InfraParticipantRole;
     use dioxus::prelude::WritableExt;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::sync::mpsc;
 
     /// Events sent from WebSocket thread to UI
+    ///
+    /// Uses port ConnectionState type for proper abstraction.
+    /// ServerMessage still uses infrastructure type (to be addressed in Phase 7).
     #[derive(Debug, Clone)]
     pub enum SessionEvent {
-        /// Connection state changed
-        StateChanged(ConnectionState),
-        /// Server message received
+        /// Connection state changed (uses port type)
+        StateChanged(PortConnectionState),
+        /// Server message received (TODO Phase 7: abstract this)
         MessageReceived(ServerMessage),
     }
 
@@ -96,12 +135,23 @@ mod desktop {
         /// 4. Sends a JoinSession message once connected
         ///
         /// The caller should poll the returned receiver to handle events.
+        ///
+        /// # Arguments
+        /// * `user_id` - Unique identifier for this user
+        /// * `role` - The participant role (uses port type)
         pub async fn connect(
             &self,
             user_id: String,
-            role: ParticipantRole,
+            role: PortParticipantRole,
         ) -> Result<mpsc::Receiver<SessionEvent>> {
             let (tx, rx) = mpsc::channel::<SessionEvent>(64);
+
+            // Convert port role to infrastructure role
+            let infra_role = match role {
+                PortParticipantRole::DungeonMaster => InfraParticipantRole::DungeonMaster,
+                PortParticipantRole::Player => InfraParticipantRole::Player,
+                PortParticipantRole::Spectator => InfraParticipantRole::Spectator,
+            };
 
             // Set up state change callback
             {
@@ -110,10 +160,12 @@ mod desktop {
                 self.client
                     .set_on_state_change(move |state| {
                         connected.store(
-                            matches!(state, ConnectionState::Connected),
+                            matches!(state, InfraConnectionState::Connected),
                             Ordering::SeqCst,
                         );
-                        let _ = tx.try_send(SessionEvent::StateChanged(state));
+                        // Convert infrastructure state to port state
+                        let port_state = infra_to_port_connection_state(state);
+                        let _ = tx.try_send(SessionEvent::StateChanged(port_state));
                     })
                     .await;
             }
@@ -141,8 +193,8 @@ mod desktop {
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
             // Send JoinSession message if connected
-            if self.client.state().await == ConnectionState::Connected {
-                self.client.join_session(&user_id_clone, role).await?;
+            if self.client.state().await == InfraConnectionState::Connected {
+                self.client.join_session(&user_id_clone, infra_role).await?;
                 tracing::info!("Sent JoinSession for user: {}", user_id_clone);
             }
 
@@ -162,6 +214,10 @@ mod desktop {
     }
 
     /// Process a session event and update application state
+    ///
+    /// NOTE: This function mutates presentation state directly, which is an
+    /// architecture violation. In Phase 7, this should be refactored to
+    /// return domain events instead.
     pub fn handle_session_event(
         event: SessionEvent,
         session_state: &mut SessionState,
@@ -170,10 +226,11 @@ mod desktop {
     ) {
         match event {
             SessionEvent::StateChanged(state) => {
-                let status = connection_state_to_status(state);
+                // Convert port state to presentation status
+                let status = port_connection_state_to_status(state);
                 session_state.connection_status.set(status);
 
-                if matches!(state, ConnectionState::Disconnected | ConnectionState::Failed) {
+                if matches!(state, PortConnectionState::Disconnected | PortConnectionState::Failed) {
                     session_state.engine_client.set(None);
                 }
             }
@@ -194,6 +251,7 @@ pub use desktop::{handle_session_event, SessionEvent, SessionService};
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::*;
+    use crate::infrastructure::websocket::ParticipantRole as InfraParticipantRole;
     use dioxus::prelude::WritableExt;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -232,14 +290,25 @@ mod wasm {
         /// 4. Initiates the WebSocket connection
         ///
         /// The JoinSession message is sent automatically when the connection opens.
+        ///
+        /// # Arguments
+        /// * `user_id` - Unique identifier for this user
+        /// * `role` - The participant role (uses port type)
         pub fn connect_and_join(
             &self,
             user_id: String,
-            role: ParticipantRole,
+            role: PortParticipantRole,
             mut session_state: SessionState,
             mut game_state: GameState,
             mut dialogue_state: DialogueState,
         ) -> Result<()> {
+            // Convert port role to infrastructure role
+            let infra_role = match role {
+                PortParticipantRole::DungeonMaster => InfraParticipantRole::DungeonMaster,
+                PortParticipantRole::Player => InfraParticipantRole::Player,
+                PortParticipantRole::Spectator => InfraParticipantRole::Spectator,
+            };
+
             // Update session state to connecting
             session_state.start_connecting(&self.url);
             session_state.set_user(user_id.clone(), role);
@@ -258,10 +327,10 @@ mod wasm {
                     session_state.connection_status.set(status);
 
                     match state {
-                        ConnectionState::Connected => {
+                        InfraConnectionState::Connected => {
                             // Send JoinSession when connected
                             if let Some(ref client) = *client_ref.borrow() {
-                                if let Err(e) = client.join_session(&user_id, role) {
+                                if let Err(e) = client.join_session(&user_id, infra_role) {
                                     web_sys::console::error_1(
                                         &format!("Failed to send JoinSession: {}", e).into(),
                                     );
@@ -272,7 +341,7 @@ mod wasm {
                                 }
                             }
                         }
-                        ConnectionState::Disconnected | ConnectionState::Failed => {
+                        InfraConnectionState::Disconnected | InfraConnectionState::Failed => {
                             session_state.engine_client.set(None);
                         }
                         _ => {}
@@ -331,7 +400,7 @@ mod wasm {
         /// Check if currently connected
         pub fn is_connected(&self) -> bool {
             if let Some(ref client) = *self.client.borrow() {
-                client.state() == ConnectionState::Connected
+                client.state() == InfraConnectionState::Connected
             } else {
                 false
             }
