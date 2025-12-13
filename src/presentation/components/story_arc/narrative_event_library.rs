@@ -3,9 +3,8 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::NarrativeEventData;
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::NarrativeEventCard;
+use crate::presentation::services::use_narrative_event_service;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct NarrativeEventLibraryProps {
@@ -22,17 +21,22 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
     let mut show_favorites_only = use_signal(|| false);
     let mut selected_event: Signal<Option<NarrativeEventData>> = use_signal(|| None);
 
+    // Get narrative event service
+    let narrative_event_service = use_narrative_event_service();
+    let narrative_event_service_for_effect = narrative_event_service.clone();
+
     // Load events
     let world_id = props.world_id.clone();
     use_effect(move || {
         let world_id = world_id.clone();
+        let service = narrative_event_service_for_effect.clone();
         spawn(async move {
             is_loading.set(true);
             error.set(None);
 
-            match fetch_narrative_events(&world_id).await {
+            match service.list_narrative_events(&world_id).await {
                 Ok(loaded) => events.set(loaded),
-                Err(e) => error.set(Some(e)),
+                Err(e) => error.set(Some(format!("Failed to load narrative events: {}", e))),
             }
             is_loading.set(false);
         });
@@ -202,14 +206,16 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                                 on_toggle_favorite: {
                                     let event_id = event.id.clone();
                                     let world_id = props.world_id.clone();
+                                    let service = narrative_event_service.clone();
                                     move |_| {
                                         let event_id = event_id.clone();
                                         let world_id = world_id.clone();
+                                        let service = service.clone();
                                         spawn(async move {
-                                            if let Err(e) = toggle_favorite(&event_id).await {
+                                            if let Err(e) = service.toggle_favorite(&event_id).await {
                                                 tracing::error!("Failed to toggle favorite: {}", e);
                                             }
-                                            if let Ok(reloaded) = fetch_narrative_events(&world_id).await {
+                                            if let Ok(reloaded) = service.list_narrative_events(&world_id).await {
                                                 events.set(reloaded);
                                             }
                                         });
@@ -219,14 +225,16 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                                     let event_id = event.id.clone();
                                     let is_active = event.is_active;
                                     let world_id = props.world_id.clone();
+                                    let service = narrative_event_service.clone();
                                     move |_| {
                                         let event_id = event_id.clone();
                                         let world_id = world_id.clone();
+                                        let service = service.clone();
                                         spawn(async move {
-                                            if let Err(e) = set_active(&event_id, !is_active).await {
+                                            if let Err(e) = service.set_active(&event_id, !is_active).await {
                                                 tracing::error!("Failed to toggle active: {}", e);
                                             }
-                                            if let Ok(reloaded) = fetch_narrative_events(&world_id).await {
+                                            if let Ok(reloaded) = service.list_narrative_events(&world_id).await {
                                                 events.set(reloaded);
                                             }
                                         });
@@ -241,17 +249,3 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
     }
 }
 
-async fn fetch_narrative_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let path = format!("/api/worlds/{}/narrative-events", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-async fn toggle_favorite(event_id: &str) -> Result<(), String> {
-    let path = format!("/api/narrative-events/{}/favorite", event_id);
-    HttpClient::post_empty(&path).await.map_err(|e| e.to_string())
-}
-
-async fn set_active(event_id: &str, active: bool) -> Result<(), String> {
-    let path = format!("/api/narrative-events/{}/active", event_id);
-    HttpClient::put_no_response(&path, &active).await.map_err(|e| e.to_string())
-}

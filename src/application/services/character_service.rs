@@ -5,7 +5,9 @@
 //! details from the presentation layer.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+use crate::application::dto::FieldValue;
 use crate::application::ports::outbound::{ApiError, ApiPort};
 
 /// Character summary for list views
@@ -16,21 +18,35 @@ pub struct CharacterSummary {
     pub archetype: Option<String>,
 }
 
+/// Character sheet data from API
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct CharacterSheetDataApi {
+    #[serde(default)]
+    pub values: HashMap<String, FieldValue>,
+}
+
 /// Full character data for editing
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CharacterData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub name: String,
-    #[serde(default)]
-    pub description: String,
-    pub archetype: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub archetype: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wants: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fears: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backstory: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sprite_asset: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub portrait_asset: Option<String>,
     #[serde(default)]
-    pub stats: serde_json::Value,
+    pub sheet_data: Option<CharacterSheetDataApi>,
 }
 
 /// Character service for managing characters

@@ -5,22 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use super::asset_gallery::AssetGallery;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::LocationData;
+use crate::presentation::services::use_location_service;
 use crate::presentation::state::GameState;
-
-/// Location data structure for API
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LocationData {
-    pub id: Option<String>,
-    pub name: String,
-    pub description: Option<String>,
-    pub location_type: Option<String>,
-    pub atmosphere: Option<String>,
-    pub notable_features: Option<String>,
-    pub hidden_secrets: Option<String>,
-    pub parent_location_id: Option<String>,
-}
 
 /// Location types
 const LOCATION_TYPES: &[&str] = &[
@@ -43,6 +30,7 @@ const LOCATION_TYPES: &[&str] = &[
 pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element {
     let is_new = location_id.is_empty();
     let game_state = use_context::<GameState>();
+    let loc_service = use_location_service();
 
     // Form state
     let mut name = use_signal(|| String::new());
@@ -61,21 +49,38 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
     // Load location data if editing existing location
     {
         let loc_id_for_effect = location_id.clone();
+        let loc_svc = loc_service.clone();
         use_effect(move || {
             let loc_id = loc_id_for_effect.clone();
             let load_existing = !loc_id.is_empty();
             let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
+            let svc = loc_svc.clone();
 
             spawn(async move {
                 if let Some(world_id) = world_id {
                     // Load parent locations list
-                    if let Ok(parents) = fetch_locations(&world_id).await {
-                        parent_locations.set(parents);
+                    if let Ok(parents) = svc.list_locations(&world_id).await {
+                        // Convert LocationSummary to LocationData for the dropdown
+                        let parent_data: Vec<LocationData> = parents.iter().map(|summary| {
+                            LocationData {
+                                id: Some(summary.id.clone()),
+                                name: summary.name.clone(),
+                                description: None,
+                                location_type: summary.location_type.clone(),
+                                atmosphere: None,
+                                notable_features: None,
+                                hidden_secrets: None,
+                                parent_location_id: None,
+                                backdrop_asset: None,
+                                backdrop_regions: Vec::new(),
+                            }
+                        }).collect();
+                        parent_locations.set(parent_data);
                     }
 
                     // Load location data if editing
                     if load_existing {
-                        match fetch_location(&world_id, &loc_id).await {
+                        match svc.get_location(&world_id, &loc_id).await {
                         Ok(loc_data) => {
                             name.set(loc_data.name);
                             description.set(loc_data.description.unwrap_or_default());
@@ -359,75 +364,81 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
                         if *is_saving.read() { "0.6" } else { "1" }
                     ),
                     disabled: *is_saving.read(),
-                    onclick: move |_| {
-                        let loc_name = name.read().clone();
-                        if loc_name.is_empty() {
-                            error_message.set(Some("Location name is required".to_string()));
-                            return;
-                        }
-
-                        error_message.set(None);
-                        success_message.set(None);
-                        is_saving.set(true);
-
-                        let loc_id = location_id.clone();
-                        let on_close = on_close.clone();
-
-                        spawn(async move {
-                            let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                            if let Some(world_id) = world_id {
-                                let loc_data = LocationData {
-                                    id: if is_new { None } else { Some(loc_id.clone()) },
-                                    name: name.read().clone(),
-                                    description: {
-                                        let desc = description.read().clone();
-                                        if desc.is_empty() { None } else { Some(desc) }
-                                    },
-                                    location_type: {
-                                        let lt = location_type.read().clone();
-                                        if lt.is_empty() { None } else { Some(lt) }
-                                    },
-                                    atmosphere: {
-                                        let atm = atmosphere.read().clone();
-                                        if atm.is_empty() { None } else { Some(atm) }
-                                    },
-                                    notable_features: {
-                                        let nf = notable_features.read().clone();
-                                        if nf.is_empty() { None } else { Some(nf) }
-                                    },
-                                    hidden_secrets: {
-                                        let hs = hidden_secrets.read().clone();
-                                        if hs.is_empty() { None } else { Some(hs) }
-                                    },
-                                    parent_location_id: parent_location_id.read().clone(),
-                                };
-
-                                match if is_new {
-                                    save_location(&world_id, loc_data).await
-                                } else {
-                                    update_location(&world_id, &loc_id, loc_data).await
-                                } {
-                                    Ok(_) => {
-                                        success_message.set(Some(if is_new {
-                                            "Location created successfully".to_string()
-                                        } else {
-                                            "Location saved successfully".to_string()
-                                        }));
-                                        is_saving.set(false);
-                                        // Close form - let the user see the success message
-                                        on_close.call(());
-                                    }
-                                    Err(e) => {
-                                        error_message.set(Some(format!("Save failed: {}", e)));
-                                        is_saving.set(false);
-                                    }
-                                }
-                            } else {
-                                error_message.set(Some("No world loaded".to_string()));
-                                is_saving.set(false);
+                    onclick: {
+                        let loc_svc = loc_service.clone();
+                        move |_| {
+                            let loc_name = name.read().clone();
+                            if loc_name.is_empty() {
+                                error_message.set(Some("Location name is required".to_string()));
+                                return;
                             }
-                        });
+
+                            error_message.set(None);
+                            success_message.set(None);
+                            is_saving.set(true);
+
+                            let loc_id = location_id.clone();
+                            let on_close = on_close.clone();
+                            let svc = loc_svc.clone();
+
+                            spawn(async move {
+                                let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
+
+                                if let Some(world_id) = world_id {
+                                    let loc_data = LocationData {
+                                        id: if is_new { None } else { Some(loc_id.clone()) },
+                                        name: name.read().clone(),
+                                        description: {
+                                            let desc = description.read().clone();
+                                            if desc.is_empty() { None } else { Some(desc) }
+                                        },
+                                        location_type: {
+                                            let lt = location_type.read().clone();
+                                            if lt.is_empty() { None } else { Some(lt) }
+                                        },
+                                        atmosphere: {
+                                            let atm = atmosphere.read().clone();
+                                            if atm.is_empty() { None } else { Some(atm) }
+                                        },
+                                        notable_features: {
+                                            let nf = notable_features.read().clone();
+                                            if nf.is_empty() { None } else { Some(nf) }
+                                        },
+                                        hidden_secrets: {
+                                            let hs = hidden_secrets.read().clone();
+                                            if hs.is_empty() { None } else { Some(hs) }
+                                        },
+                                        parent_location_id: parent_location_id.read().clone(),
+                                        backdrop_asset: None,
+                                        backdrop_regions: Vec::new(),
+                                    };
+
+                                    match if is_new {
+                                        svc.create_location(&world_id, &loc_data).await
+                                    } else {
+                                        svc.update_location(&loc_id, &loc_data).await
+                                    } {
+                                        Ok(_) => {
+                                            success_message.set(Some(if is_new {
+                                                "Location created successfully".to_string()
+                                            } else {
+                                                "Location saved successfully".to_string()
+                                            }));
+                                            is_saving.set(false);
+                                            // Close form - let the user see the success message
+                                            on_close.call(());
+                                        }
+                                        Err(e) => {
+                                            error_message.set(Some(format!("Save failed: {}", e)));
+                                            is_saving.set(false);
+                                        }
+                                    }
+                                } else {
+                                    error_message.set(Some("No world loaded".to_string()));
+                                    is_saving.set(false);
+                                }
+                            });
+                        }
                     },
                     if *is_saving.read() { "Saving..." } else { if is_new { "Create" } else { "Save" } }
                 }
@@ -455,28 +466,4 @@ fn FormField(label: &'static str, required: bool, children: Element) -> Element 
             {children}
         }
     }
-}
-
-/// Fetch all locations from the API (for parent location dropdown)
-async fn fetch_locations(world_id: &str) -> Result<Vec<LocationData>, String> {
-    let path = format!("/api/worlds/{}/locations", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Fetch a single location from the API
-async fn fetch_location(world_id: &str, location_id: &str) -> Result<LocationData, String> {
-    let path = format!("/api/worlds/{}/locations/{}", world_id, location_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Save a new location via the API
-async fn save_location(world_id: &str, location: LocationData) -> Result<LocationData, String> {
-    let path = format!("/api/worlds/{}/locations", world_id);
-    HttpClient::post(&path, &location).await.map_err(|e| e.to_string())
-}
-
-/// Update an existing location via the API
-async fn update_location(_world_id: &str, location_id: &str, location: LocationData) -> Result<LocationData, String> {
-    let path = format!("/api/locations/{}", location_id);
-    HttpClient::put(&path, &location).await.map_err(|e| e.to_string())
 }

@@ -5,8 +5,11 @@
 
 use dioxus::prelude::*;
 
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::presentation::services::use_workflow_service;
+use crate::application::services::{
+    WorkflowConfig, WorkflowAnalysis, WorkflowInput, PromptMapping, InputDefault,
+    TestWorkflowResponse,
+};
 
 /// Props for the WorkflowConfigEditor component
 #[derive(Props, Clone, PartialEq)]
@@ -21,61 +24,19 @@ pub struct WorkflowConfigEditorProps {
     pub on_deleted: EventHandler<()>,
 }
 
-/// Full workflow configuration data
-#[derive(Clone, Debug, Default)]
-pub struct WorkflowConfigFull {
-    pub id: String,
-    pub slot: String,
-    pub slot_display_name: String,
-    pub name: String,
-    pub analysis: WorkflowAnalysisData,
-    pub prompt_mappings: Vec<PromptMappingData>,
-    pub input_defaults: Vec<InputDefaultData>,
-    pub locked_inputs: Vec<String>,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct WorkflowAnalysisData {
-    pub node_count: usize,
-    pub inputs: Vec<WorkflowInputData>,
-    pub text_inputs: Vec<WorkflowInputData>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct WorkflowInputData {
-    pub node_id: String,
-    pub node_type: String,
-    pub node_title: Option<String>,
-    pub input_name: String,
-    pub input_type: String,
-    pub current_value: serde_json::Value,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct PromptMappingData {
-    pub node_id: String,
-    pub input_name: String,
-    pub mapping_type: String, // "primary" or "negative"
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct InputDefaultData {
-    pub node_id: String,
-    pub input_name: String,
-    pub default_value: serde_json::Value,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct WorkflowTestResult {
-    pub image_url: String,
-    pub duration_ms: u64,
-}
+// Type aliases for service types to minimize changes
+type WorkflowConfigFull = WorkflowConfig;
+type WorkflowAnalysisData = WorkflowAnalysis;
+type WorkflowInputData = WorkflowInput;
+type PromptMappingData = PromptMapping;
+type InputDefaultData = InputDefault;
+type WorkflowTestResult = TestWorkflowResponse;
 
 /// Workflow configuration editor
 #[component]
 pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
+    let workflow_service = use_workflow_service();
+
     // Track loading state
     let mut is_loading = use_signal(|| true);
     // Track error state
@@ -102,15 +63,17 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 
     let slot_id = props.slot.clone();
     let slot_id_for_effect = slot_id.clone();
+    let workflow_service_for_effect = workflow_service.clone();
 
     // Fetch config on mount or when slot changes
     use_effect(move || {
         let slot = slot_id_for_effect.clone();
+        let svc = workflow_service_for_effect.clone();
         spawn(async move {
             is_loading.set(true);
             error.set(None);
 
-            match fetch_workflow_config(&slot).await {
+            match svc.get_workflow_config(&slot).await {
                 Ok(Some(fetched_config)) => {
                     edited_defaults.set(fetched_config.input_defaults.clone());
                     config.set(Some(fetched_config));
@@ -121,7 +84,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_loading.set(false);
                 }
             }
@@ -129,27 +92,23 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
     });
 
     let slot_id_for_save = slot_id.clone();
+    let workflow_service_for_save = workflow_service.clone();
     // Save handler
     let save_config = move |_| {
         let slot = slot_id_for_save.clone();
         let defaults = edited_defaults.read().clone();
         let current_config = config.read().clone();
+        let svc = workflow_service_for_save.clone();
 
         spawn(async move {
             is_saving.set(true);
 
             if let Some(cfg) = current_config {
-                match save_workflow_defaults(&slot, &cfg.name, defaults).await {
-                    Ok(_) => {
-                        // Refresh the config
-                        if let Ok(Some(updated)) = fetch_workflow_config(&slot).await {
-                            config.set(Some(updated));
-                        }
-                    }
-                    Err(e) => {
-                        error.set(Some(e));
-                    }
-                }
+                // For now, just save defaults (TODO: implement full save in service)
+                // This is a simplified version - we'd need to add a method to service
+                // to update just the defaults
+                let _ = (slot, cfg.name, defaults);
+                // TODO: Add update_workflow_defaults method to WorkflowService
             }
 
             is_saving.set(false);
@@ -157,22 +116,24 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
     };
 
     let slot_id_for_delete = slot_id.clone();
+    let workflow_service_for_delete = workflow_service.clone();
     // Delete handler
     let on_deleted = props.on_deleted.clone();
     let do_delete = move |_| {
         let slot = slot_id_for_delete.clone();
         let callback = on_deleted.clone();
+        let svc = workflow_service_for_delete.clone();
 
         spawn(async move {
             is_deleting.set(true);
 
-            match delete_workflow_config(&slot).await {
+            match svc.delete_workflow_config(&slot).await {
                 Ok(_) => {
                     show_delete_confirmation.set(false);
                     callback.call(());
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_deleting.set(false);
                     show_delete_confirmation.set(false);
                 }
@@ -181,22 +142,24 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
     };
 
     let slot_id_for_test = slot_id.clone();
+    let workflow_service_for_test = workflow_service.clone();
     // Test handler
     let do_test = move |_| {
         let slot = slot_id_for_test.clone();
         let prompt = test_prompt.read().clone();
+        let svc = workflow_service_for_test.clone();
 
         spawn(async move {
             is_testing.set(true);
             test_error.set(None);
             test_result.set(None);
 
-            match test_workflow(&slot, &prompt).await {
+            match svc.test_workflow(&slot, &prompt).await {
                 Ok(result) => {
                     test_result.set(Some(result));
                 }
                 Err(e) => {
-                    test_error.set(Some(e));
+                    test_error.set(Some(e.to_string()));
                 }
             }
 
@@ -868,145 +831,3 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
     }
 }
 
-/// Fetch workflow configuration from the Engine API
-async fn fetch_workflow_config(slot: &str) -> Result<Option<WorkflowConfigFull>, String> {
-    let path = format!("/api/workflows/{}", slot);
-    let result: Option<WorkflowConfigResponse> = HttpClient::get_optional(&path)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(result.map(|r| r.into()))
-}
-
-/// Save workflow defaults
-async fn save_workflow_defaults(
-    slot: &str,
-    name: &str,
-    defaults: Vec<InputDefaultData>,
-) -> Result<(), String> {
-    let base_url = "http://localhost:3000";
-    let _ = (slot, name, defaults, base_url);
-    // TODO: Implement save - for now just return Ok
-    Ok(())
-}
-
-/// Response structure from the API
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowConfigResponse {
-    id: String,
-    slot: String,
-    slot_display_name: String,
-    name: String,
-    analysis: WorkflowAnalysisResponse,
-    prompt_mappings: Vec<PromptMappingResponse>,
-    input_defaults: Vec<InputDefaultResponse>,
-    locked_inputs: Vec<String>,
-    created_at: String,
-    updated_at: String,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowAnalysisResponse {
-    node_count: usize,
-    inputs: Vec<WorkflowInputResponse>,
-    text_inputs: Vec<WorkflowInputResponse>,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowInputResponse {
-    node_id: String,
-    node_type: String,
-    node_title: Option<String>,
-    input_name: String,
-    input_type: String,
-    current_value: serde_json::Value,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct PromptMappingResponse {
-    node_id: String,
-    input_name: String,
-    mapping_type: String,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct InputDefaultResponse {
-    node_id: String,
-    input_name: String,
-    default_value: serde_json::Value,
-}
-
-impl From<WorkflowConfigResponse> for WorkflowConfigFull {
-    fn from(resp: WorkflowConfigResponse) -> Self {
-        Self {
-            id: resp.id,
-            slot: resp.slot,
-            slot_display_name: resp.slot_display_name,
-            name: resp.name,
-            analysis: WorkflowAnalysisData {
-                node_count: resp.analysis.node_count,
-                inputs: resp.analysis.inputs.into_iter().map(|i| WorkflowInputData {
-                    node_id: i.node_id,
-                    node_type: i.node_type,
-                    node_title: i.node_title,
-                    input_name: i.input_name,
-                    input_type: i.input_type,
-                    current_value: i.current_value,
-                }).collect(),
-                text_inputs: resp.analysis.text_inputs.into_iter().map(|i| WorkflowInputData {
-                    node_id: i.node_id,
-                    node_type: i.node_type,
-                    node_title: i.node_title,
-                    input_name: i.input_name,
-                    input_type: i.input_type,
-                    current_value: i.current_value,
-                }).collect(),
-            },
-            prompt_mappings: resp.prompt_mappings.into_iter().map(|m| PromptMappingData {
-                node_id: m.node_id,
-                input_name: m.input_name,
-                mapping_type: m.mapping_type,
-            }).collect(),
-            input_defaults: resp.input_defaults.into_iter().map(|d| InputDefaultData {
-                node_id: d.node_id,
-                input_name: d.input_name,
-                default_value: d.default_value,
-            }).collect(),
-            locked_inputs: resp.locked_inputs,
-            created_at: resp.created_at,
-            updated_at: resp.updated_at,
-        }
-    }
-}
-
-/// Delete workflow configuration
-async fn delete_workflow_config(slot: &str) -> Result<(), String> {
-    let path = format!("/api/workflows/{}", slot);
-    HttpClient::delete(&path).await.map_err(|e| e.to_string())
-}
-
-/// Test workflow with a prompt
-async fn test_workflow(slot: &str, prompt: &str) -> Result<WorkflowTestResult, String> {
-    let path = format!("/api/workflows/{}/test", slot);
-    let body = serde_json::json!({ "prompt": prompt });
-    let result: WorkflowTestResponse = HttpClient::post(&path, &body)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(result.into())
-}
-
-/// Response from test endpoint
-#[derive(Clone, Debug, serde::Deserialize)]
-struct WorkflowTestResponse {
-    image_url: String,
-    #[serde(default)]
-    duration_ms: u64,
-}
-
-impl From<WorkflowTestResponse> for WorkflowTestResult {
-    fn from(resp: WorkflowTestResponse) -> Self {
-        Self {
-            image_url: resp.image_url,
-            duration_ms: resp.duration_ms,
-        }
-    }
-}

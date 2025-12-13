@@ -5,9 +5,8 @@
 
 use dioxus::prelude::*;
 
-// TODO Phase 7.4: Replace infrastructure imports with service/config abstractions
-use crate::infrastructure::api::get_engine_url;
-use crate::infrastructure::http_client::HttpClient;
+use crate::presentation::services::use_workflow_service;
+use crate::application::services::{WorkflowSlotStatus, WorkflowConfigBrief, WorkflowSlotCategory, WorkflowSlotsResponse};
 
 /// Props for the WorkflowSlotList component
 #[derive(Props, Clone, PartialEq)]
@@ -23,6 +22,8 @@ pub struct WorkflowSlotListProps {
 /// List of all workflow slots with their configuration status
 #[component]
 pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
+    let workflow_service = use_workflow_service();
+
     // Track loading state
     let mut is_loading = use_signal(|| true);
     // Track error state
@@ -32,14 +33,15 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
 
     // Fetch workflow slots on mount
     use_effect(move || {
+        let svc = workflow_service.clone();
         spawn(async move {
-            match fetch_workflow_slots().await {
+            match svc.list_workflows().await {
                 Ok(response) => {
                     categories.set(response.categories);
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_loading.set(false);
                 }
             }
@@ -87,7 +89,7 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
                             p { style: "margin: 0 0 0.25rem 0;", "Troubleshooting:" }
                             ul { style: "margin: 0; padding-left: 1.25rem;",
                                 li { "Is the Engine server running?" }
-                                li { "Check that it's accessible at: {get_engine_url()}" }
+                                li { "Check that the Engine API is accessible" }
                             }
                         }
                     }
@@ -250,41 +252,3 @@ fn SlotCard(props: SlotCardProps) -> Element {
     }
 }
 
-// ============================================================================
-// API Types & Fetch
-// ============================================================================
-
-/// Workflow slot status from API
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct WorkflowSlotStatus {
-    pub slot: String,
-    pub display_name: String,
-    pub default_width: u32,
-    pub default_height: u32,
-    pub configured: bool,
-    pub config: Option<WorkflowConfigBrief>,
-}
-
-/// Brief workflow config info
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct WorkflowConfigBrief {
-    pub name: String,
-}
-
-/// A category of workflow slots
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct WorkflowSlotCategory {
-    pub name: String,
-    pub slots: Vec<WorkflowSlotStatus>,
-}
-
-/// Response from GET /api/workflows
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct WorkflowSlotsResponse {
-    pub categories: Vec<WorkflowSlotCategory>,
-}
-
-/// Fetch workflow slots from the Engine API
-async fn fetch_workflow_slots() -> Result<WorkflowSlotsResponse, String> {
-    HttpClient::get("/api/workflows").await.map_err(|e| e.to_string())
-}

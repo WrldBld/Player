@@ -6,6 +6,14 @@
 //!
 //! Phase 8 will move many of these to proper domain entities.
 
+pub mod session_dto;
+
+// Re-export session DTOs
+pub use session_dto::{
+    AppConnectionStatus, AppPendingApproval, AppChallengePromptData,
+    AppChallengeResultData, AppConversationLogEntry,
+};
+
 // Re-export infrastructure types through the application layer
 // This allows presentation to import from application instead of infrastructure
 pub use crate::infrastructure::asset_loader::{

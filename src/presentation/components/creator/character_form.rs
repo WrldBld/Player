@@ -8,30 +8,9 @@ use super::asset_gallery::AssetGallery;
 use super::sheet_field_input::CharacterSheetForm;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
 use crate::application::dto::{FieldValue, SheetTemplate};
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::{CharacterData, CharacterSheetDataApi};
+use crate::presentation::services::{use_character_service, use_world_service};
 use crate::presentation::state::GameState;
-
-/// Character data structure for API
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CharacterData {
-    pub id: Option<String>,
-    pub name: String,
-    pub description: Option<String>,
-    pub archetype: Option<String>,
-    pub wants: Option<String>,
-    pub fears: Option<String>,
-    pub backstory: Option<String>,
-    #[serde(default)]
-    pub sheet_data: Option<CharacterSheetDataApi>,
-}
-
-/// Character sheet data from API
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct CharacterSheetDataApi {
-    #[serde(default)]
-    pub values: HashMap<String, FieldValue>,
-}
 
 /// Character archetypes
 const ARCHETYPES: &[&str] = &[
@@ -50,6 +29,8 @@ const ARCHETYPES: &[&str] = &[
 pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Element {
     let is_new = character_id.is_empty();
     let game_state = use_context::<GameState>();
+    let char_service = use_character_service();
+    let world_service = use_world_service();
 
     // Form state
     let mut name = use_signal(|| String::new());
@@ -70,14 +51,25 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
 
     // Load sheet template on mount
     {
+        let world_svc = world_service.clone();
         use_effect(move || {
+            let svc = world_svc.clone();
             spawn(async move {
                 let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
 
                 if let Some(world_id) = world_id {
-                    match fetch_sheet_template(&world_id).await {
-                        Ok(template) => {
-                            sheet_template.set(Some(template));
+                    match svc.get_sheet_template(&world_id).await {
+                        Ok(template_json) => {
+                            // Parse the JSON into SheetTemplate
+                            match serde_json::from_value::<SheetTemplate>(template_json) {
+                                Ok(template) => {
+                                    sheet_template.set(Some(template));
+                                }
+                                Err(_e) => {
+                                    #[cfg(target_arch = "wasm32")]
+                                    web_sys::console::log_1(&format!("Failed to parse sheet template: {}", _e).into());
+                                }
+                            }
                         }
                         Err(_e) => {
                             // Template fetch failure is not critical - sheet section just won't appear
@@ -93,14 +85,16 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
     // Load character data if editing existing character
     {
         let char_id_for_effect = character_id.clone();
+        let char_svc = char_service.clone();
         use_effect(move || {
             let char_id = char_id_for_effect.clone();
+            let svc = char_svc.clone();
             if !char_id.is_empty() {
                 spawn(async move {
                     let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
 
                     if let Some(world_id) = world_id {
-                        match fetch_character(&world_id, &char_id).await {
+                        match svc.get_character(&world_id, &char_id).await {
                             Ok(char_data) => {
                                 name.set(char_data.name);
                                 description.set(char_data.description.unwrap_or_default());
@@ -398,85 +392,91 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                         if *is_saving.read() { "0.6" } else { "1" }
                     ),
                     disabled: *is_saving.read(),
-                    onclick: move |_| {
-                        let char_name = name.read().clone();
-                        if char_name.is_empty() {
-                            error_message.set(Some("Character name is required".to_string()));
-                            return;
-                        }
-
-                        error_message.set(None);
-                        success_message.set(None);
-                        is_saving.set(true);
-
-                        let char_id = character_id.clone();
-                        let on_close = on_close.clone();
-
-                        spawn(async move {
-                            let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                            if let Some(world_id) = world_id {
-                                // Get sheet values
-                                let sheet_data_to_save = {
-                                    let values = sheet_values.read().clone();
-                                    if values.is_empty() {
-                                        None
-                                    } else {
-                                        Some(CharacterSheetDataApi { values })
-                                    }
-                                };
-
-                                let char_data = CharacterData {
-                                    id: if is_new { None } else { Some(char_id.clone()) },
-                                    name: name.read().clone(),
-                                    description: {
-                                        let desc = description.read().clone();
-                                        if desc.is_empty() { None } else { Some(desc) }
-                                    },
-                                    archetype: {
-                                        let arch = archetype.read().clone();
-                                        if arch.is_empty() { None } else { Some(arch) }
-                                    },
-                                    wants: {
-                                        let w = wants.read().clone();
-                                        if w.is_empty() { None } else { Some(w) }
-                                    },
-                                    fears: {
-                                        let f = fears.read().clone();
-                                        if f.is_empty() { None } else { Some(f) }
-                                    },
-                                    backstory: {
-                                        let b = backstory.read().clone();
-                                        if b.is_empty() { None } else { Some(b) }
-                                    },
-                                    sheet_data: sheet_data_to_save,
-                                };
-
-                                match if is_new {
-                                    save_character(&world_id, char_data).await
-                                } else {
-                                    update_character(&world_id, &char_id, char_data).await
-                                } {
-                                    Ok(_) => {
-                                        success_message.set(Some(if is_new {
-                                            "Character created successfully".to_string()
-                                        } else {
-                                            "Character saved successfully".to_string()
-                                        }));
-                                        is_saving.set(false);
-                                        // Close form - let the user see the success message
-                                        on_close.call(());
-                                    }
-                                    Err(e) => {
-                                        error_message.set(Some(format!("Save failed: {}", e)));
-                                        is_saving.set(false);
-                                    }
-                                }
-                            } else {
-                                error_message.set(Some("No world loaded".to_string()));
-                                is_saving.set(false);
+                    onclick: {
+                        let char_svc = char_service.clone();
+                        move |_| {
+                            let char_name = name.read().clone();
+                            if char_name.is_empty() {
+                                error_message.set(Some("Character name is required".to_string()));
+                                return;
                             }
-                        });
+
+                            error_message.set(None);
+                            success_message.set(None);
+                            is_saving.set(true);
+
+                            let char_id = character_id.clone();
+                            let on_close = on_close.clone();
+                            let svc = char_svc.clone();
+
+                            spawn(async move {
+                                let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
+
+                                if let Some(world_id) = world_id {
+                                    // Get sheet values
+                                    let sheet_data_to_save = {
+                                        let values = sheet_values.read().clone();
+                                        if values.is_empty() {
+                                            None
+                                        } else {
+                                            Some(CharacterSheetDataApi { values })
+                                        }
+                                    };
+
+                                    let char_data = CharacterData {
+                                        id: if is_new { None } else { Some(char_id.clone()) },
+                                        name: name.read().clone(),
+                                        description: {
+                                            let desc = description.read().clone();
+                                            if desc.is_empty() { None } else { Some(desc) }
+                                        },
+                                        archetype: {
+                                            let arch = archetype.read().clone();
+                                            if arch.is_empty() { None } else { Some(arch) }
+                                        },
+                                        wants: {
+                                            let w = wants.read().clone();
+                                            if w.is_empty() { None } else { Some(w) }
+                                        },
+                                        fears: {
+                                            let f = fears.read().clone();
+                                            if f.is_empty() { None } else { Some(f) }
+                                        },
+                                        backstory: {
+                                            let b = backstory.read().clone();
+                                            if b.is_empty() { None } else { Some(b) }
+                                        },
+                                        sprite_asset: None,
+                                        portrait_asset: None,
+                                        sheet_data: sheet_data_to_save,
+                                    };
+
+                                    match if is_new {
+                                        svc.create_character(&world_id, &char_data).await
+                                    } else {
+                                        svc.update_character(&char_id, &char_data).await
+                                    } {
+                                        Ok(_) => {
+                                            success_message.set(Some(if is_new {
+                                                "Character created successfully".to_string()
+                                            } else {
+                                                "Character saved successfully".to_string()
+                                            }));
+                                            is_saving.set(false);
+                                            // Close form - let the user see the success message
+                                            on_close.call(());
+                                        }
+                                        Err(e) => {
+                                            error_message.set(Some(format!("Save failed: {}", e)));
+                                            is_saving.set(false);
+                                        }
+                                    }
+                                } else {
+                                    error_message.set(Some("No world loaded".to_string()));
+                                    is_saving.set(false);
+                                }
+                            });
+                        }
                     },
                     if *is_saving.read() { "Saving..." } else { if is_new { "Create" } else { "Save" } }
                 }
@@ -504,28 +504,4 @@ fn FormField(label: &'static str, required: bool, children: Element) -> Element 
             {children}
         }
     }
-}
-
-/// Fetch a single character from the API
-async fn fetch_character(world_id: &str, character_id: &str) -> Result<CharacterData, String> {
-    let path = format!("/api/worlds/{}/characters/{}", world_id, character_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Save a new character via the API
-async fn save_character(world_id: &str, character: CharacterData) -> Result<CharacterData, String> {
-    let path = format!("/api/worlds/{}/characters", world_id);
-    HttpClient::post(&path, &character).await.map_err(|e| e.to_string())
-}
-
-/// Update an existing character via the API
-async fn update_character(_world_id: &str, character_id: &str, character: CharacterData) -> Result<CharacterData, String> {
-    let path = format!("/api/characters/{}", character_id);
-    HttpClient::put(&path, &character).await.map_err(|e| e.to_string())
-}
-
-/// Fetch the sheet template for a world
-async fn fetch_sheet_template(world_id: &str) -> Result<SheetTemplate, String> {
-    let path = format!("/api/worlds/{}/sheet-template", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }

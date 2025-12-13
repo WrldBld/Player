@@ -5,8 +5,8 @@
 
 use dioxus::prelude::*;
 
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::presentation::services::use_workflow_service;
+use crate::application::services::AnalyzeWorkflowResponse;
 
 /// Props for the WorkflowUploadModal component
 #[derive(Props, Clone, PartialEq)]
@@ -50,6 +50,8 @@ pub enum UploadStep {
 /// Workflow upload modal
 #[component]
 pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
+    let workflow_service = use_workflow_service();
+
     // Track wizard step
     let mut current_step = use_signal(|| UploadStep::Upload);
     // Store the workflow name
@@ -67,24 +69,37 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
     let mut primary_mapping: Signal<Option<TextInputInfo>> = use_signal(|| None);
     let mut negative_mapping: Signal<Option<TextInputInfo>> = use_signal(|| None);
 
+    let workflow_service_for_analyze = workflow_service.clone();
     // Analyze workflow
     let do_analyze = move |_| {
         let json_text = workflow_json.read().clone();
+        let svc = workflow_service_for_analyze.clone();
 
         spawn(async move {
             is_analyzing.set(true);
             error.set(None);
 
-            match analyze_workflow(&json_text).await {
-                Ok(result) => {
-                    // Auto-select suggested mappings
+            // Parse the JSON first
+            let workflow_json_value = match serde_json::from_str::<serde_json::Value>(&json_text) {
+                Ok(v) => v,
+                Err(e) => {
+                    error.set(Some(format!("Invalid JSON: {}", e)));
+                    is_analyzing.set(false);
+                    return;
+                }
+            };
+
+            match svc.analyze_workflow(workflow_json_value).await {
+                Ok(analysis_result) => {
+                    // Convert to local type and auto-select suggested mappings
+                    let result = WorkflowAnalysisResult::from(analysis_result);
                     primary_mapping.set(result.suggested_primary.clone());
                     negative_mapping.set(result.suggested_negative.clone());
                     analysis.set(Some(result));
                     current_step.set(UploadStep::Configure);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                 }
             }
 
@@ -95,6 +110,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
     // Save workflow configuration
     let slot_for_save = props.slot.clone();
     let on_save_handler = props.on_save.clone();
+    let workflow_service_for_save = workflow_service.clone();
     let do_save = move |_| {
         let json_text = workflow_json.read().clone();
         let name = workflow_name.read().clone();
@@ -102,17 +118,45 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
         let negative = negative_mapping.read().clone();
         let slot = slot_for_save.clone();
         let on_save = on_save_handler.clone();
+        let svc = workflow_service_for_save.clone();
 
         spawn(async move {
             is_saving.set(true);
             error.set(None);
 
-            match save_workflow_config(&slot, &name, &json_text, primary, negative).await {
+            // Parse JSON
+            let workflow_json_value = match serde_json::from_str::<serde_json::Value>(&json_text) {
+                Ok(v) => v,
+                Err(e) => {
+                    error.set(Some(format!("Invalid JSON: {}", e)));
+                    is_saving.set(false);
+                    return;
+                }
+            };
+
+            // Build prompt mappings
+            let mut prompt_mappings = Vec::new();
+            if let Some(p) = primary {
+                prompt_mappings.push(serde_json::json!({
+                    "node_id": p.node_id,
+                    "input_name": p.input_name,
+                    "mapping_type": "primary"
+                }));
+            }
+            if let Some(n) = negative {
+                prompt_mappings.push(serde_json::json!({
+                    "node_id": n.node_id,
+                    "input_name": n.input_name,
+                    "mapping_type": "negative"
+                }));
+            }
+
+            match svc.save_workflow_config(&slot, &name, workflow_json_value, prompt_mappings, vec![], vec![]).await {
                 Ok(_) => {
                     on_save.call(());
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                 }
             }
 
@@ -559,89 +603,6 @@ fn ReviewRow(label: &'static str, value: String) -> Element {
     }
 }
 
-/// Analyze workflow via Engine API
-async fn analyze_workflow(json_text: &str) -> Result<WorkflowAnalysisResult, String> {
-    // Parse the JSON first
-    let workflow_json: serde_json::Value = serde_json::from_str(json_text)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
-
-    let body = serde_json::json!({ "workflow_json": workflow_json });
-    let analysis: AnalyzeWorkflowResponse = HttpClient::post("/api/workflows/analyze", &body)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(analysis.into())
-}
-
-/// Save workflow configuration via Engine API
-async fn save_workflow_config(
-    slot: &str,
-    name: &str,
-    json_text: &str,
-    primary_mapping: Option<TextInputInfo>,
-    negative_mapping: Option<TextInputInfo>,
-) -> Result<(), String> {
-    let workflow_json: serde_json::Value = serde_json::from_str(json_text)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
-
-    let mut prompt_mappings = Vec::new();
-    if let Some(primary) = primary_mapping {
-        prompt_mappings.push(serde_json::json!({
-            "node_id": primary.node_id,
-            "input_name": primary.input_name,
-            "mapping_type": "primary"
-        }));
-    }
-    if let Some(negative) = negative_mapping {
-        prompt_mappings.push(serde_json::json!({
-            "node_id": negative.node_id,
-            "input_name": negative.input_name,
-            "mapping_type": "negative"
-        }));
-    }
-
-    let body = serde_json::json!({
-        "name": name,
-        "workflow_json": workflow_json,
-        "prompt_mappings": prompt_mappings,
-        "input_defaults": [],
-        "locked_inputs": []
-    });
-
-    let path = format!("/api/workflows/{}", slot);
-    HttpClient::post_no_response(&path, &body).await.map_err(|e| e.to_string())
-}
-
-/// Response from analyze endpoint
-#[derive(Clone, Debug, serde::Deserialize)]
-struct AnalyzeWorkflowResponse {
-    is_valid: bool,
-    analysis: AnalysisData,
-    suggested_prompt_mappings: Vec<SuggestedMapping>,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct AnalysisData {
-    node_count: usize,
-    inputs: Vec<InputData>,
-    text_inputs: Vec<InputData>,
-    #[serde(default)]
-    errors: Vec<String>,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct InputData {
-    node_id: String,
-    node_title: Option<String>,
-    input_name: String,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-struct SuggestedMapping {
-    node_id: String,
-    input_name: String,
-    mapping_type: String,
-}
-
 impl From<AnalyzeWorkflowResponse> for WorkflowAnalysisResult {
     fn from(resp: AnalyzeWorkflowResponse) -> Self {
         let text_inputs: Vec<TextInputInfo> = resp.analysis.text_inputs.iter().map(|i| TextInputInfo {
@@ -669,7 +630,7 @@ impl From<AnalyzeWorkflowResponse> for WorkflowAnalysisResult {
             text_inputs,
             suggested_primary,
             suggested_negative,
-            errors: resp.analysis.errors,
+            errors: resp.errors,
         }
     }
 }

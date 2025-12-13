@@ -4,48 +4,8 @@
 //! updating, and managing challenges. It abstracts away the HTTP client
 //! details from the presentation layer.
 
-use serde::{Deserialize, Serialize};
-
+use crate::application::dto::{ChallengeData, ChallengeDifficulty, ChallengeOutcomes};
 use crate::application::ports::outbound::{ApiError, ApiPort};
-
-/// Challenge difficulty
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum ChallengeDifficulty {
-    Trivial,
-    Easy,
-    Medium,
-    Hard,
-    Extreme,
-    Custom(i32),
-}
-
-/// Challenge outcome description
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChallengeOutcomes {
-    pub critical_success: String,
-    pub success: String,
-    pub failure: String,
-    pub critical_failure: String,
-}
-
-/// Full challenge data
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChallengeData {
-    pub id: String,
-    pub world_id: String,
-    pub name: String,
-    pub description: String,
-    pub skill_id: String,
-    pub difficulty: ChallengeDifficulty,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outcomes: Option<ChallengeOutcomes>,
-    #[serde(default)]
-    pub is_active: bool,
-    #[serde(default)]
-    pub is_favorite: bool,
-    #[serde(default)]
-    pub tags: Vec<String>,
-}
 
 /// Challenge service for managing challenges
 ///

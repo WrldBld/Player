@@ -7,12 +7,11 @@
 //! - Edit and delete custom skills
 
 use dioxus::prelude::*;
-use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::application::dto::{SkillCategory, SkillData};
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::{CreateSkillRequest, UpdateSkillRequest};
+use crate::presentation::services::use_skill_service;
 
 /// Props for SkillsPanel
 #[derive(Props, Clone, PartialEq)]
@@ -40,17 +39,21 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
     let world_id_for_add = world_id.clone();
     let world_id_for_edit = world_id;
 
+    // Get skill service
+    let skill_service = use_skill_service();
+
     // Load skills on mount
     use_effect(move || {
         let world_id = world_id_for_effect.clone();
+        let service = skill_service.clone();
         spawn(async move {
-            match fetch_skills(&world_id).await {
+            match service.list_skills(&world_id).await {
                 Ok(list) => {
                     skills.set(list);
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(format!("Failed to load skills: {}", e)));
                     is_loading.set(false);
                 }
             }
@@ -250,6 +253,9 @@ fn SkillRow(
     let world_id_for_toggle = world_id.clone();
     let world_id_for_delete = world_id.clone();
 
+    // Get skill service
+    let skill_service = use_skill_service();
+
     // Pre-compute styles based on hidden state
     let row_bg = if skill.is_hidden { "rgba(107, 114, 128, 0.2)" } else { "#0f0f23" };
     let icon_color = if skill.is_hidden { "#6b7280" } else { "#10b981" };
@@ -258,38 +264,46 @@ fn SkillRow(
     let icon_style = format!("padding: 0.25rem; background: transparent; border: none; color: {}; cursor: pointer; font-size: 0.875rem;", icon_color);
     let name_style = format!("color: {}; font-weight: 500;", name_color);
 
-    let handle_toggle = move |_| {
-        let world_id = world_id_for_toggle.clone();
-        let skill_id = skill_id_for_toggle.clone();
-        let new_hidden = !is_hidden;
-        spawn(async move {
-            match update_skill_visibility(&world_id, &skill_id, new_hidden).await {
-                Ok(updated) => {
-                    let mut skills_write = skills_signal.write();
-                    if let Some(skill) = skills_write.iter_mut().find(|s| s.id == skill_id) {
-                        skill.is_hidden = updated.is_hidden;
+    let handle_toggle = {
+        let service = skill_service.clone();
+        move |_| {
+            let world_id = world_id_for_toggle.clone();
+            let skill_id = skill_id_for_toggle.clone();
+            let new_hidden = !is_hidden;
+            let service = service.clone();
+            spawn(async move {
+                match service.update_skill_visibility(&world_id, &skill_id, new_hidden).await {
+                    Ok(updated) => {
+                        let mut skills_write = skills_signal.write();
+                        if let Some(skill) = skills_write.iter_mut().find(|s| s.id == skill_id) {
+                            skill.is_hidden = updated.is_hidden;
+                        }
+                    }
+                    Err(e) => {
+                        error_signal.set(Some(format!("Failed to update skill: {}", e)));
                     }
                 }
-                Err(e) => {
-                    error_signal.set(Some(format!("Failed to update skill: {}", e)));
-                }
-            }
-        });
+            });
+        }
     };
 
-    let handle_delete = move |_| {
-        let world_id = world_id_for_delete.clone();
-        let skill_id = skill_id_for_delete.clone();
-        spawn(async move {
-            match delete_skill(&world_id, &skill_id).await {
-                Ok(()) => {
-                    skills_signal.write().retain(|s| s.id != skill_id);
+    let handle_delete = {
+        let service = skill_service.clone();
+        move |_| {
+            let world_id = world_id_for_delete.clone();
+            let skill_id = skill_id_for_delete.clone();
+            let service = service.clone();
+            spawn(async move {
+                match service.delete_skill(&world_id, &skill_id).await {
+                    Ok(()) => {
+                        skills_signal.write().retain(|s| s.id != skill_id);
+                    }
+                    Err(e) => {
+                        error_signal.set(Some(format!("Failed to delete skill: {}", e)));
+                    }
                 }
-                Err(e) => {
-                    error_signal.set(Some(format!("Failed to delete skill: {}", e)));
-                }
-            }
-        });
+            });
+        }
     };
 
     rsx! {
@@ -359,6 +373,9 @@ fn AddSkillForm(
     let mut is_creating = use_signal(|| false);
     let mut error: Signal<Option<String>> = use_signal(|| None);
 
+    // Get skill service
+    let skill_service = use_skill_service();
+
     let handle_create = move |_| {
         let name_val = name.read().clone();
         if name_val.trim().is_empty() {
@@ -370,17 +387,25 @@ fn AddSkillForm(
         let desc = description.read().clone();
         let cat = *category.read();
         let attr = base_attribute.read().clone();
+        let service = skill_service.clone();
 
         spawn(async move {
             is_creating.set(true);
             error.set(None);
 
-            match create_skill(&world_id, &name_val, &desc, cat, if attr.is_empty() { None } else { Some(&attr) }).await {
+            let request = CreateSkillRequest {
+                name: name_val,
+                description: desc,
+                category: cat,
+                base_attribute: if attr.is_empty() { None } else { Some(attr) },
+            };
+
+            match service.create_skill(&world_id, &request).await {
                 Ok(skill) => {
                     on_created.call(skill);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(format!("Failed to create skill: {}", e)));
                     is_creating.set(false);
                 }
             }
@@ -504,6 +529,9 @@ fn EditSkillForm(
 
     let skill_id = skill.id.clone();
 
+    // Get skill service
+    let skill_service = use_skill_service();
+
     let handle_save = move |_| {
         let name_val = name.read().clone();
         if name_val.trim().is_empty() {
@@ -516,17 +544,26 @@ fn EditSkillForm(
         let desc = description.read().clone();
         let cat = *category.read();
         let attr = base_attribute.read().clone();
+        let service = skill_service.clone();
 
         spawn(async move {
             is_saving.set(true);
             error.set(None);
 
-            match update_skill(&world_id, &skill_id, &name_val, &desc, cat, if attr.is_empty() { None } else { Some(&attr) }).await {
+            let request = UpdateSkillRequest {
+                name: Some(name_val),
+                description: Some(desc),
+                category: Some(cat),
+                base_attribute: if attr.is_empty() { None } else { Some(attr) },
+                is_hidden: None,
+            };
+
+            match service.update_skill(&world_id, &skill_id, &request).await {
                 Ok(skill) => {
                     on_updated.call(skill);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(format!("Failed to update skill: {}", e)));
                     is_saving.set(false);
                 }
             }
@@ -631,76 +668,3 @@ fn EditSkillForm(
     }
 }
 
-// API Functions
-
-async fn fetch_skills(world_id: &str) -> Result<Vec<SkillData>, String> {
-    let path = format!("/api/worlds/{}/skills", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-#[derive(Serialize)]
-struct CreateSkillRequest {
-    name: String,
-    description: String,
-    category: SkillCategory,
-    base_attribute: Option<String>,
-}
-
-async fn create_skill(
-    world_id: &str,
-    name: &str,
-    description: &str,
-    category: SkillCategory,
-    base_attribute: Option<&str>,
-) -> Result<SkillData, String> {
-    let path = format!("/api/worlds/{}/skills", world_id);
-    let body = CreateSkillRequest {
-        name: name.to_string(),
-        description: description.to_string(),
-        category,
-        base_attribute: base_attribute.map(|s| s.to_string()),
-    };
-    HttpClient::post(&path, &body).await.map_err(|e| e.to_string())
-}
-
-#[derive(Serialize)]
-struct UpdateSkillRequest {
-    name: Option<String>,
-    description: Option<String>,
-    category: Option<SkillCategory>,
-    base_attribute: Option<String>,
-}
-
-async fn update_skill(
-    world_id: &str,
-    skill_id: &str,
-    name: &str,
-    description: &str,
-    category: SkillCategory,
-    base_attribute: Option<&str>,
-) -> Result<SkillData, String> {
-    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
-    let body = UpdateSkillRequest {
-        name: Some(name.to_string()),
-        description: Some(description.to_string()),
-        category: Some(category),
-        base_attribute: base_attribute.map(|s| s.to_string()),
-    };
-    HttpClient::put(&path, &body).await.map_err(|e| e.to_string())
-}
-
-#[derive(Serialize)]
-struct UpdateVisibilityRequest {
-    is_hidden: Option<bool>,
-}
-
-async fn update_skill_visibility(world_id: &str, skill_id: &str, is_hidden: bool) -> Result<SkillData, String> {
-    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
-    let body = UpdateVisibilityRequest { is_hidden: Some(is_hidden) };
-    HttpClient::put(&path, &body).await.map_err(|e| e.to_string())
-}
-
-async fn delete_skill(world_id: &str, skill_id: &str) -> Result<(), String> {
-    let path = format!("/api/worlds/{}/skills/{}", world_id, skill_id);
-    HttpClient::delete(&path).await.map_err(|e| e.to_string())
-}

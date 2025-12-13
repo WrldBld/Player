@@ -1,0 +1,179 @@
+//! Suggestion Service - Application service for AI-powered content suggestions
+//!
+//! This service provides use case implementations for fetching content suggestions
+//! from the Engine API. It abstracts away the HTTP client details from the
+//! presentation layer.
+
+use serde::{Deserialize, Serialize};
+
+use crate::application::ports::outbound::{ApiError, ApiPort};
+
+/// Context for generating suggestions
+#[derive(Clone, Default, PartialEq, Serialize)]
+pub struct SuggestionContext {
+    /// Type of entity (e.g., "character", "location", "tavern", "forest")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entity_type: Option<String>,
+    /// Name of the entity (if already set)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entity_name: Option<String>,
+    /// World/setting name or type
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub world_setting: Option<String>,
+    /// Hints or keywords to guide generation (e.g., archetype)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hints: Option<String>,
+    /// Additional context from other fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_context: Option<String>,
+}
+
+/// Response from suggestion API
+#[derive(Clone, Debug, Deserialize)]
+pub struct SuggestionResponse {
+    pub suggestions: Vec<String>,
+}
+
+/// Suggestion service for fetching AI-powered content suggestions
+///
+/// This service provides methods for suggestion-related operations
+/// while depending only on the `ApiPort` trait, not concrete
+/// infrastructure implementations.
+pub struct SuggestionService<A: ApiPort> {
+    api: A,
+}
+
+impl<A: ApiPort> SuggestionService<A> {
+    /// Create a new SuggestionService with the given API port
+    pub fn new(api: A) -> Self {
+        Self { api }
+    }
+
+    /// Get character name suggestions
+    pub async fn suggest_character_name(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/character/name", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get character description suggestions
+    pub async fn suggest_character_description(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/character/description", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get character wants suggestions
+    pub async fn suggest_character_wants(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/character/wants", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get character fears suggestions
+    pub async fn suggest_character_fears(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/character/fears", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get character backstory suggestions
+    pub async fn suggest_character_backstory(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/character/backstory", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get location name suggestions
+    pub async fn suggest_location_name(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/location/name", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get location description suggestions
+    pub async fn suggest_location_description(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/location/description", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get location atmosphere suggestions
+    pub async fn suggest_location_atmosphere(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/location/atmosphere", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get location features suggestions
+    pub async fn suggest_location_features(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/location/features", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+
+    /// Get location secrets suggestions
+    pub async fn suggest_location_secrets(
+        &self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<String>, ApiError> {
+        let response: SuggestionResponse = self
+            .api
+            .post("/api/suggest/location/secrets", context)
+            .await?;
+        Ok(response.suggestions)
+    }
+}
+
+impl<A: ApiPort + Clone> Clone for SuggestionService<A> {
+    fn clone(&self) -> Self {
+        Self {
+            api: self.api.clone(),
+        }
+    }
+}

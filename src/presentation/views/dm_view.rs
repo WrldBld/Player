@@ -2,10 +2,9 @@
 
 use dioxus::prelude::*;
 
-use crate::application::dto::{ChallengeData, SkillData, ApprovalDecision, ClientMessage};
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::dto::{ApprovalDecision, ChallengeData, ClientMessage, SkillData};
 use crate::presentation::components::creator::CreatorMode;
+use crate::presentation::services::{use_challenge_service, use_skill_service};
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
 use crate::presentation::components::settings::SettingsView;
 use crate::presentation::components::story_arc::{TimelineView, NarrativeEventLibrary};
@@ -224,6 +223,8 @@ fn EventChainsPlaceholder() -> Element {
 fn DirectorModeContent() -> Element {
     let session_state = use_session_state();
     let game_state = use_game_state();
+    let skill_service = use_skill_service();
+    let challenge_service = use_challenge_service();
 
     // Local state for directorial inputs
     let mut scene_notes = use_signal(|| String::new());
@@ -238,18 +239,30 @@ fn DirectorModeContent() -> Element {
     let world_id_for_challenges = game_state.world.read().as_ref().map(|w| w.world.id.clone());
     use_effect(move || {
         if let Some(world_id) = world_id_for_skills.clone() {
+            let svc = skill_service.clone();
             spawn(async move {
-                if let Ok(skill_list) = fetch_skills(&world_id).await {
-                    skills.set(skill_list);
+                if let Ok(skill_list) = svc.list_skills(&world_id).await {
+                    // Convert service types to DTO types via JSON
+                    if let Ok(json) = serde_json::to_value(&skill_list) {
+                        if let Ok(dto_skills) = serde_json::from_value::<Vec<SkillData>>(json) {
+                            skills.set(dto_skills);
+                        }
+                    }
                 }
             });
         }
     });
     use_effect(move || {
         if let Some(world_id) = world_id_for_challenges.clone() {
+            let svc = challenge_service.clone();
             spawn(async move {
-                if let Ok(challenge_list) = fetch_challenges(&world_id).await {
-                    challenges.set(challenge_list);
+                if let Ok(challenge_list) = svc.list_challenges(&world_id).await {
+                    // Convert service types to DTO types via JSON
+                    if let Ok(json) = serde_json::to_value(&challenge_list) {
+                        if let Ok(dto_challenges) = serde_json::from_value::<Vec<ChallengeData>>(json) {
+                            challenges.set(dto_challenges);
+                        }
+                    }
                 }
             });
         }
@@ -857,16 +870,4 @@ fn NPCToggle(name: &'static str, active: bool) -> Element {
             span { "{name}" }
         }
     }
-}
-
-/// Fetch skills for a world from the Engine API
-async fn fetch_skills(world_id: &str) -> Result<Vec<SkillData>, String> {
-    let path = format!("/api/worlds/{}/skills", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Fetch challenges for a world from the Engine API
-async fn fetch_challenges(world_id: &str) -> Result<Vec<ChallengeData>, String> {
-    let path = format!("/api/worlds/{}/challenges", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
 }

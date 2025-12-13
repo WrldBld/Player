@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::{Asset, GenerateRequest};
+use crate::presentation::services::use_asset_service;
 
 /// Asset types that can be generated
 const ASSET_TYPES: &[(&str, &str)] = &[
@@ -16,6 +16,7 @@ const ASSET_TYPES: &[(&str, &str)] = &[
 /// Asset gallery for an entity
 #[component]
 pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
+    let asset_service = use_asset_service();
     let mut selected_asset_type = use_signal(|| "portrait".to_string());
     let mut show_generate_modal = use_signal(|| false);
     let mut assets: Signal<Vec<Asset>> = use_signal(Vec::new);
@@ -26,18 +27,20 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
     {
         let entity_type_clone = entity_type.clone();
         let entity_id_clone = entity_id.clone();
+        let asset_svc = asset_service.clone();
 
         use_effect(move || {
             let et = entity_type_clone.clone();
             let ei = entity_id_clone.clone();
+            let svc = asset_svc.clone();
             spawn(async move {
-                match fetch_assets(&et, &ei).await {
+                match svc.get_assets(&et, &ei).await {
                     Ok(fetched_assets) => {
                         assets.set(fetched_assets);
                         is_loading.set(false);
                     }
                     Err(e) => {
-                        error.set(Some(e));
+                        error.set(Some(e.to_string()));
                         is_loading.set(false);
                     }
                 }
@@ -113,6 +116,8 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                             let entity_id_activate = entity_id.clone();
                             let entity_type_delete = entity_type.clone();
                             let entity_id_delete = entity_id.clone();
+                            let asset_svc_activate = asset_service.clone();
+                            let asset_svc_delete = asset_service.clone();
                             rsx! {
                                 AssetThumbnail {
                                     id: asset.id.clone(),
@@ -121,8 +126,9 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                                     on_activate: move |id: String| {
                                         let entity_type = entity_type_activate.clone();
                                         let entity_id = entity_id_activate.clone();
+                                        let svc = asset_svc_activate.clone();
                                         spawn(async move {
-                                            if let Err(e) = activate_asset(&entity_type, &entity_id, &id).await {
+                                            if let Err(e) = svc.activate_asset(&entity_type, &entity_id, &id).await {
                                                 tracing::error!("Failed to activate asset: {}", e);
                                             }
                                         });
@@ -130,8 +136,9 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                                     on_delete: move |id: String| {
                                         let entity_type = entity_type_delete.clone();
                                         let entity_id = entity_id_delete.clone();
+                                        let svc = asset_svc_delete.clone();
                                         spawn(async move {
-                                            if let Err(e) = delete_asset(&entity_type, &entity_id, &id).await {
+                                            if let Err(e) = svc.delete_asset(&entity_type, &entity_id, &id).await {
                                                 tracing::error!("Failed to delete asset: {}", e);
                                             }
                                         });
@@ -158,27 +165,22 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                     entity_id: entity_id.clone(),
                     asset_type: selected_asset_type.read().clone(),
                     on_close: move |_| show_generate_modal.set(false),
-                    on_generate: move |req| {
-                        spawn(async move {
-                            if let Err(e) = queue_generation(&req).await {
-                                tracing::error!("Failed to queue generation: {}", e);
-                            }
-                        });
-                        show_generate_modal.set(false);
+                    on_generate: {
+                        let asset_svc_gen = asset_service.clone();
+                        move |req| {
+                            let svc = asset_svc_gen.clone();
+                            spawn(async move {
+                                if let Err(e) = svc.generate_assets(&req).await {
+                                    tracing::error!("Failed to queue generation: {}", e);
+                                }
+                            });
+                            show_generate_modal.set(false);
+                        }
                     },
                 }
             }
         }
     }
-}
-
-/// Asset structure from API
-#[derive(Clone, Debug, serde::Deserialize)]
-struct Asset {
-    id: String,
-    asset_type: String,
-    label: Option<String>,
-    is_active: bool,
 }
 
 /// Props for AssetThumbnail
@@ -403,51 +405,3 @@ fn GenerateAssetModal(
     }
 }
 
-/// Request to generate assets
-#[derive(Clone, serde::Serialize)]
-pub struct GenerateRequest {
-    pub entity_type: String,
-    pub entity_id: String,
-    pub asset_type: String,
-    pub prompt: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub negative_prompt: Option<String>,
-    pub count: u8,
-}
-
-/// Fetch assets from the Engine API
-async fn fetch_assets(entity_type: &str, entity_id: &str) -> Result<Vec<Asset>, String> {
-    #[derive(serde::Deserialize)]
-    struct GalleryResponse {
-        assets: Vec<Asset>,
-    }
-
-    let path = format!("/api/{}/{}/gallery", entity_type, entity_id);
-    let data: GalleryResponse = HttpClient::get(&path).await.map_err(|e| e.to_string())?;
-    Ok(data.assets)
-}
-
-/// Activate an asset
-async fn activate_asset(
-    entity_type: &str,
-    entity_id: &str,
-    asset_id: &str,
-) -> Result<(), String> {
-    let path = format!("/api/{}/{}/gallery/{}/activate", entity_type, entity_id, asset_id);
-    HttpClient::put_empty(&path).await.map_err(|e| e.to_string())
-}
-
-/// Delete an asset
-async fn delete_asset(
-    entity_type: &str,
-    entity_id: &str,
-    asset_id: &str,
-) -> Result<(), String> {
-    let path = format!("/api/{}/{}/gallery/{}", entity_type, entity_id, asset_id);
-    HttpClient::delete(&path).await.map_err(|e| e.to_string())
-}
-
-/// Queue asset generation
-async fn queue_generation(req: &GenerateRequest) -> Result<(), String> {
-    HttpClient::post_no_response("/api/assets/generate", req).await.map_err(|e| e.to_string())
-}

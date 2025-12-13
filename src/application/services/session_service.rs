@@ -13,22 +13,17 @@
 //! - Directly mutates presentation state (should return events instead)
 
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
 use crate::application::ports::outbound::{
-    ConnectionState as PortConnectionState, GameConnectionPort, ParticipantRole as PortParticipantRole,
+    ConnectionState as PortConnectionState, ParticipantRole as PortParticipantRole,
 };
 // TODO Phase 7: These infrastructure imports should be abstracted
-use crate::infrastructure::asset_loader::WorldSnapshot;
 use crate::infrastructure::websocket::{EngineClient, ServerMessage};
-// TODO Phase 6: Application layer should not import presentation state
-// This should return domain events instead of mutating state directly
-use crate::presentation::state::{
-    ConnectionStatus, DialogueState, GameState, PendingApproval, SessionState,
-    session_state::{ChallengePromptData, ChallengeResultData},
-};
+
+// Application layer DTOs - no presentation imports!
+use crate::application::dto::AppConnectionStatus;
 
 /// Default WebSocket URL for the Engine server
 pub const DEFAULT_ENGINE_URL: &str = "ws://localhost:3000/ws";
@@ -42,14 +37,14 @@ pub use crate::application::ports::outbound::{
 // Import infrastructure types for internal mapping
 use crate::infrastructure::websocket::ConnectionState as InfraConnectionState;
 
-/// Convert port ConnectionState to presentation ConnectionStatus
-pub fn port_connection_state_to_status(state: PortConnectionState) -> ConnectionStatus {
+/// Convert port ConnectionState to application ConnectionStatus
+pub fn port_connection_state_to_status(state: PortConnectionState) -> AppConnectionStatus {
     match state {
-        PortConnectionState::Disconnected => ConnectionStatus::Disconnected,
-        PortConnectionState::Connecting => ConnectionStatus::Connecting,
-        PortConnectionState::Connected => ConnectionStatus::Connected,
-        PortConnectionState::Reconnecting => ConnectionStatus::Reconnecting,
-        PortConnectionState::Failed => ConnectionStatus::Failed,
+        PortConnectionState::Disconnected => AppConnectionStatus::Disconnected,
+        PortConnectionState::Connecting => AppConnectionStatus::Connecting,
+        PortConnectionState::Connected => AppConnectionStatus::Connected,
+        PortConnectionState::Reconnecting => AppConnectionStatus::Reconnecting,
+        PortConnectionState::Failed => AppConnectionStatus::Failed,
     }
 }
 
@@ -64,9 +59,9 @@ pub fn infra_to_port_connection_state(state: InfraConnectionState) -> PortConnec
     }
 }
 
-/// Convert infrastructure ConnectionState to presentation ConnectionStatus
+/// Convert infrastructure ConnectionState to application ConnectionStatus
 /// (Convenience function that combines the two conversions)
-pub fn connection_state_to_status(state: InfraConnectionState) -> ConnectionStatus {
+pub fn connection_state_to_status(state: InfraConnectionState) -> AppConnectionStatus {
     port_connection_state_to_status(infra_to_port_connection_state(state))
 }
 
@@ -78,7 +73,6 @@ pub fn connection_state_to_status(state: InfraConnectionState) -> ConnectionStat
 mod desktop {
     use super::*;
     use crate::infrastructure::websocket::ParticipantRole as InfraParticipantRole;
-    use dioxus::prelude::WritableExt;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::sync::mpsc;
 
@@ -213,36 +207,13 @@ mod desktop {
         }
     }
 
-    /// Process a session event and update application state
-    ///
-    /// NOTE: This function mutates presentation state directly, which is an
-    /// architecture violation. In Phase 7, this should be refactored to
-    /// return domain events instead.
-    pub fn handle_session_event(
-        event: SessionEvent,
-        session_state: &mut SessionState,
-        game_state: &mut GameState,
-        dialogue_state: &mut DialogueState,
-    ) {
-        match event {
-            SessionEvent::StateChanged(state) => {
-                // Convert port state to presentation status
-                let status = port_connection_state_to_status(state);
-                session_state.connection_status.set(status);
-
-                if matches!(state, PortConnectionState::Disconnected | PortConnectionState::Failed) {
-                    session_state.engine_client.set(None);
-                }
-            }
-            SessionEvent::MessageReceived(message) => {
-                handle_server_message(message, session_state, game_state, dialogue_state);
-            }
-        }
-    }
+    // NOTE: Event handling has been moved to presentation layer
+    // See presentation/handlers/session_event_handler.rs
+    // The application layer should not mutate presentation state directly
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use desktop::{handle_session_event, SessionEvent, SessionService};
+pub use desktop::{SessionEvent, SessionService};
 
 // ============================================================================
 // WASM (Web-sys) Implementation
@@ -414,10 +385,27 @@ pub use wasm::SessionService;
 // ============================================================================
 // Shared Message Handler
 // ============================================================================
+//
+// TODO Phase 7: This entire section violates hexagonal architecture.
+// It should be moved to presentation/handlers/session_message_handler.rs
+// The application layer should NOT import Dioxus or mutate presentation state.
 
+#[cfg(target_arch = "wasm32")]
 use dioxus::prelude::{WritableExt, ReadableExt};
 
+// TEMPORARY: These imports violate architecture - to be removed in Phase 7
+#[cfg(target_arch = "wasm32")]
+use crate::presentation::state::{
+    DialogueState, GameState, SessionState, PendingApproval,
+    session_state::{ChallengePromptData, ChallengeResultData},
+};
+
 /// Handle incoming server messages and update application state
+///
+/// WARNING: This function violates hexagonal architecture by importing
+/// presentation types. It exists only to support the current WASM implementation
+/// and will be moved to the presentation layer in Phase 7.
+#[cfg(target_arch = "wasm32")]
 fn handle_server_message(
     message: ServerMessage,
     session_state: &mut SessionState,

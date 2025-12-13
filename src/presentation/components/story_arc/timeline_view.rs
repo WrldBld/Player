@@ -3,11 +3,10 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::{StoryEventData, StoryEventTypeData};
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::components::story_arc::{
     TimelineEventCard, TimelineFilters, AddDmMarkerModal,
 };
+use crate::presentation::services::use_story_event_service;
 use crate::presentation::state::use_game_state;
 
 /// Filter options for the timeline
@@ -40,20 +39,25 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
     let mut show_add_marker = use_signal(|| false);
     let mut selected_event: Signal<Option<StoryEventData>> = use_signal(|| None);
 
+    // Get story event service
+    let story_event_service = use_story_event_service();
+    let story_event_service_for_effect = story_event_service.clone();
+
     // Load events when component mounts or world changes
     let world_id = props.world_id.clone();
     use_effect(move || {
         let world_id = world_id.clone();
+        let service = story_event_service_for_effect.clone();
         spawn(async move {
             is_loading.set(true);
             error.set(None);
 
-            match fetch_story_events(&world_id, None).await {
+            match service.list_story_events(&world_id, None).await {
                 Ok(loaded_events) => {
                     events.set(loaded_events);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(format!("Failed to load events: {}", e)));
                 }
             }
             is_loading.set(false);
@@ -188,15 +192,17 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
                             on_toggle_visibility: {
                                 let event_id = event.id.clone();
                                 let world_id = props.world_id.clone();
+                                let service = story_event_service.clone();
                                 move |_| {
                                     let event_id = event_id.clone();
                                     let world_id = world_id.clone();
+                                    let service = service.clone();
                                     spawn(async move {
-                                        if let Err(e) = toggle_event_visibility(&world_id, &event_id).await {
+                                        if let Err(e) = service.toggle_event_visibility(&event_id).await {
                                             tracing::error!("Failed to toggle visibility: {}", e);
                                         }
                                         // Reload events
-                                        if let Ok(reloaded) = fetch_story_events(&world_id, None).await {
+                                        if let Ok(reloaded) = service.list_story_events(&world_id, None).await {
                                             events.set(reloaded);
                                         }
                                     });
@@ -215,12 +221,14 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
                     on_close: move |_| show_add_marker.set(false),
                     on_created: {
                         let world_id = props.world_id.clone();
+                        let service = story_event_service.clone();
                         move |_| {
                             show_add_marker.set(false);
                             // Reload events
                             let world_id = world_id.clone();
+                            let service = service.clone();
                             spawn(async move {
-                                if let Ok(reloaded) = fetch_story_events(&world_id, None).await {
+                                if let Ok(reloaded) = service.list_story_events(&world_id, None).await {
                                     events.set(reloaded);
                                 }
                             });
@@ -424,35 +432,3 @@ pub fn get_event_type_icon(event_type: &StoryEventTypeData) -> &'static str {
     }
 }
 
-/// Paginated response wrapper from Engine API
-#[derive(Debug, Clone, serde::Deserialize)]
-struct PaginatedStoryEventsResponse {
-    events: Vec<StoryEventData>,
-    #[allow(dead_code)]
-    total: u64,
-    #[allow(dead_code)]
-    limit: u32,
-    #[allow(dead_code)]
-    offset: u32,
-}
-
-/// Fetch story events from the Engine API
-async fn fetch_story_events(world_id: &str, session_id: Option<&str>) -> Result<Vec<StoryEventData>, String> {
-    let path = if let Some(sid) = session_id {
-        format!("/api/worlds/{}/story-events?session_id={}", world_id, sid)
-    } else {
-        format!("/api/worlds/{}/story-events", world_id)
-    };
-
-    let paginated: PaginatedStoryEventsResponse = HttpClient::get(&path)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(paginated.events)
-}
-
-/// Toggle event visibility
-async fn toggle_event_visibility(world_id: &str, event_id: &str) -> Result<(), String> {
-    let _ = world_id; // Unused but kept for API consistency
-    let path = format!("/api/story-events/{}/visibility", event_id);
-    HttpClient::put_empty(&path).await.map_err(|e| e.to_string())
-}

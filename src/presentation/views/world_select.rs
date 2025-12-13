@@ -6,24 +6,15 @@
 //! - Spectator: Can watch existing worlds
 
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
 
 use crate::application::dto::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
     SuccessComparison, WorldSnapshot,
 };
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::world_service::WorldSummary;
+use crate::presentation::services::use_world_service;
 use crate::presentation::state::GameState;
 use crate::UserRole;
-
-/// Summary of a world for the list view
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WorldSummary {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
 
 /// Props for WorldSelectView
 #[derive(Props, Clone, PartialEq)]
@@ -40,6 +31,7 @@ pub struct WorldSelectViewProps {
 #[component]
 pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
     let mut game_state = use_context::<GameState>();
+    let world_service = use_world_service();
     let mut worlds: Signal<Vec<WorldSummary>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
@@ -48,16 +40,21 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
 
     let is_dm = props.role == UserRole::DungeonMaster;
 
+    // Clone services for use in effects
+    let world_service_for_list = world_service.clone();
+    let world_service_for_load = world_service.clone();
+
     // Fetch worlds on mount
     use_effect(move || {
+        let svc = world_service_for_list.clone();
         spawn(async move {
-            match fetch_worlds().await {
+            match svc.list_worlds().await {
                 Ok(list) => {
                     worlds.set(list);
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_loading.set(false);
                 }
             }
@@ -69,13 +66,23 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
         if let Some(world_id) = world_to_load.read().clone() {
             let mut game_state = game_state.clone();
             let world_id_for_callback = world_id.clone();
+            let svc = world_service_for_load.clone();
             spawn(async move {
                 is_loading.set(true);
-                match fetch_world_snapshot(&world_id).await {
-                    Ok(snapshot) => {
-                        game_state.load_world(snapshot);
-                        // Signal that world is loaded - parent will navigate
-                        props.on_world_selected.call(world_id_for_callback);
+                match svc.load_world_snapshot(&world_id).await {
+                    Ok(snapshot_json) => {
+                        // Parse the JSON value into WorldSnapshot
+                        match serde_json::from_value::<WorldSnapshot>(snapshot_json) {
+                            Ok(snapshot) => {
+                                game_state.load_world(snapshot);
+                                // Signal that world is loaded - parent will navigate
+                                props.on_world_selected.call(world_id_for_callback);
+                            }
+                            Err(e) => {
+                                error.set(Some(format!("Failed to parse world snapshot: {}", e)));
+                                is_loading.set(false);
+                            }
+                        }
                     }
                     Err(e) => {
                         error.set(Some(format!("Failed to load world: {}", e)));
@@ -243,6 +250,7 @@ fn WorldCard(
 /// Form for creating a new world (DM only)
 #[component]
 fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>) -> Element {
+    let world_service = use_world_service();
     let mut name = use_signal(|| String::new());
     let mut description = use_signal(|| String::new());
     let mut selected_type = use_signal(|| RuleSystemType::D20);
@@ -261,6 +269,10 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
     let current_type = *selected_type.read();
     let available_variants = RuleSystemVariant::variants_for_type(current_type);
 
+    // Clone services for use in effect and handler
+    let world_service_for_preset = world_service.clone();
+    let world_service_for_create = world_service.clone();
+
     // Effect to call on_created when world is created
     use_effect(move || {
         let world_id = created_world_id.read().clone();
@@ -274,11 +286,28 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
     let variant_for_effect = selected_variant.read().clone();
     use_effect(move || {
         if let Some(variant) = variant_for_effect.clone() {
+            let svc = world_service_for_preset.clone();
             spawn(async move {
                 is_loading_preset.set(true);
-                match fetch_preset(&variant).await {
-                    Ok(config) => {
-                        rule_config.set(Some(config));
+                // Determine system type for the variant
+                let system_type = match variant {
+                    RuleSystemVariant::Dnd5e | RuleSystemVariant::Pathfinder2e | RuleSystemVariant::GenericD20 => "D20",
+                    RuleSystemVariant::CallOfCthulhu7e | RuleSystemVariant::RuneQuest | RuleSystemVariant::GenericD100 => "D100",
+                    RuleSystemVariant::KidsOnBikes | RuleSystemVariant::FateCore | RuleSystemVariant::PoweredByApocalypse => "Narrative",
+                    RuleSystemVariant::Custom(_) => "Custom",
+                };
+                let variant_str = format!("{:?}", variant);
+
+                match svc.get_rule_system_preset(system_type, &variant_str).await {
+                    Ok(config_json) => {
+                        match serde_json::from_value::<RuleSystemConfig>(config_json) {
+                            Ok(config) => {
+                                rule_config.set(Some(config));
+                            }
+                            Err(e) => {
+                                error.set(Some(format!("Failed to parse preset: {}", e)));
+                            }
+                        }
                     }
                     Err(e) => {
                         error.set(Some(format!("Failed to load preset: {}", e)));
@@ -329,15 +358,19 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
         let desc_val = description.read().clone();
         let config = rule_config.read().clone();
+        let svc = world_service_for_create.clone();
 
         spawn(async move {
             is_creating.set(true);
             error.set(None);
 
-            match create_world(
+            // Convert RuleSystemConfig to JSON
+            let rule_system_json = config.and_then(|c| serde_json::to_value(c).ok());
+
+            match svc.create_world(
                 &name_val,
                 if desc_val.is_empty() { None } else { Some(&desc_val) },
-                config,
+                rule_system_json,
             )
             .await
             {
@@ -345,7 +378,7 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
                     created_world_id.set(Some(world_id));
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_creating.set(false);
                 }
             }
@@ -763,60 +796,4 @@ fn RuleSystemConfigEditor(
             }
         }
     }
-}
-
-/// Fetch list of worlds from API
-async fn fetch_worlds() -> Result<Vec<WorldSummary>, String> {
-    HttpClient::get("/api/worlds").await.map_err(|e| e.to_string())
-}
-
-/// Fetch a full world snapshot by ID
-async fn fetch_world_snapshot(world_id: &str) -> Result<WorldSnapshot, String> {
-    let path = format!("/api/worlds/{}/export/raw", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Fetch a preset configuration from the API
-async fn fetch_preset(variant: &RuleSystemVariant) -> Result<RuleSystemConfig, String> {
-    let system_type = match variant {
-        RuleSystemVariant::Dnd5e | RuleSystemVariant::Pathfinder2e | RuleSystemVariant::GenericD20 => "D20",
-        RuleSystemVariant::CallOfCthulhu7e | RuleSystemVariant::RuneQuest | RuleSystemVariant::GenericD100 => "D100",
-        RuleSystemVariant::KidsOnBikes | RuleSystemVariant::FateCore | RuleSystemVariant::PoweredByApocalypse => "Narrative",
-        RuleSystemVariant::Custom(_) => "Custom",
-    };
-    let variant_str = format!("{:?}", variant);
-    let path = format!("/api/rule-systems/{}/presets/{}", system_type, variant_str);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-/// Create a new world with full rule system configuration
-async fn create_world(
-    name: &str,
-    description: Option<&str>,
-    rule_system: Option<RuleSystemConfig>,
-) -> Result<String, String> {
-    #[derive(Serialize)]
-    struct CreateWorldRequest {
-        name: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        description: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        rule_system: Option<RuleSystemConfig>,
-    }
-
-    #[derive(Deserialize)]
-    struct CreateWorldResponse {
-        id: String,
-    }
-
-    let body = CreateWorldRequest {
-        name: name.to_string(),
-        description: description.map(|s| s.to_string()),
-        rule_system,
-    };
-
-    let data: CreateWorldResponse = HttpClient::post("/api/worlds", &body)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(data.id)
 }

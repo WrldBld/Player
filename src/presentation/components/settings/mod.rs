@@ -187,12 +187,13 @@ struct SkillsManagementTabProps {
 
 #[component]
 fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
-    use crate::application::dto::{SkillCategory, SkillData};
-    // TODO Phase 7.4: Replace HttpClient with service calls
-    use crate::infrastructure::http_client::HttpClient;
+    use crate::application::services::SkillCategory;
+    use crate::presentation::services::use_skill_service;
     use std::collections::HashMap;
 
-    let mut skills: Signal<Vec<SkillData>> = use_signal(Vec::new);
+    let skill_service = use_skill_service();
+
+    let mut skills: Signal<Vec<crate::application::services::SkillData>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut show_hidden = use_signal(|| false);
@@ -206,14 +207,15 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
     // Load skills on mount
     use_effect(move || {
         let world_id = world_id_for_effect.clone();
+        let svc = skill_service.clone();
         spawn(async move {
-            match fetch_skills_for_tab(&world_id).await {
+            match svc.list_skills(&world_id).await {
                 Ok(list) => {
                     skills.set(list);
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(e.to_string()));
                     is_loading.set(false);
                 }
             }
@@ -221,10 +223,10 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
     });
 
     // Group skills by category
-    let skills_by_category: HashMap<SkillCategory, Vec<SkillData>> = {
+    let skills_by_category: HashMap<SkillCategory, Vec<crate::application::services::SkillData>> = {
         let skills_read = skills.read();
         let show_hidden_val = *show_hidden.read();
-        let mut grouped: HashMap<SkillCategory, Vec<SkillData>> = HashMap::new();
+        let mut grouped: HashMap<SkillCategory, Vec<crate::application::services::SkillData>> = HashMap::new();
         for skill in skills_read.iter() {
             if !skill.is_hidden || show_hidden_val {
                 grouped.entry(skill.category).or_default().push(skill.clone());
@@ -366,7 +368,7 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
 /// Inline skill row for Skills Management tab
 #[derive(Props, Clone, PartialEq)]
 struct SkillRowInlineProps {
-    skill: crate::infrastructure::asset_loader::SkillData,
+    skill: crate::application::services::SkillData,
 }
 
 #[component]
@@ -427,13 +429,6 @@ fn SkillRowInline(props: SkillRowInlineProps) -> Element {
     }
 }
 
-/// Fetch skills for the tab
-async fn fetch_skills_for_tab(world_id: &str) -> Result<Vec<crate::infrastructure::asset_loader::SkillData>, String> {
-    use crate::infrastructure::http_client::HttpClient;
-
-    let path = format!("/api/worlds/{}/skills", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
 
 /// Empty state panel when no workflow is selected
 #[component]

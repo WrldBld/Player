@@ -3,8 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::NarrativeEventData;
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::presentation::services::use_narrative_event_service;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct PendingEventsWidgetProps {
@@ -19,13 +18,17 @@ pub fn PendingEventsWidget(props: PendingEventsWidgetProps) -> Element {
     let mut events: Signal<Vec<NarrativeEventData>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
 
+    // Get narrative event service
+    let narrative_event_service = use_narrative_event_service();
+
     // Load active/pending events
     let world_id = props.world_id.clone();
     use_effect(move || {
         let world_id = world_id.clone();
+        let service = narrative_event_service.clone();
         spawn(async move {
             is_loading.set(true);
-            if let Ok(loaded) = fetch_pending_events(&world_id).await {
+            if let Ok(loaded) = service.list_pending_events(&world_id).await {
                 events.set(loaded);
             }
             is_loading.set(false);
@@ -164,19 +167,3 @@ fn PendingEventItem(props: PendingEventItemProps) -> Element {
     }
 }
 
-async fn fetch_pending_events(world_id: &str) -> Result<Vec<NarrativeEventData>, String> {
-    let pending_path = format!("/api/worlds/{}/narrative-events/pending", world_id);
-
-    // Try pending endpoint first
-    match HttpClient::get::<Vec<NarrativeEventData>>(&pending_path).await {
-        Ok(events) => Ok(events),
-        Err(_) => {
-            // Fall back to fetching all and filtering client-side
-            let all_path = format!("/api/worlds/{}/narrative-events", world_id);
-            let all: Vec<NarrativeEventData> = HttpClient::get(&all_path)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(all.into_iter().filter(|e| e.is_active && !e.is_triggered).collect())
-        }
-    }
-}

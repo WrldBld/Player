@@ -12,8 +12,7 @@ use std::collections::HashMap;
 use crate::application::dto::{
     ChallengeData, ChallengeType, ChallengeDifficulty, SkillData,
 };
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::presentation::services::use_challenge_service;
 
 /// Props for ChallengeLibrary
 #[derive(Props, Clone, PartialEq)]
@@ -53,17 +52,22 @@ pub fn ChallengeLibrary(props: ChallengeLibraryProps) -> Element {
     let world_id = props.world_id.clone();
     let world_id_for_effect = world_id.clone();
 
+    // Get challenge service
+    let challenge_service = use_challenge_service();
+    let challenge_service_for_effect = challenge_service.clone();
+
     // Load challenges on mount
     use_effect(move || {
         let world_id = world_id_for_effect.clone();
+        let service = challenge_service_for_effect.clone();
         spawn(async move {
-            match fetch_challenges(&world_id).await {
+            match service.list_challenges(&world_id).await {
                 Ok(list) => {
                     challenges.set(list);
                     is_loading.set(false);
                 }
                 Err(e) => {
-                    error.set(Some(e));
+                    error.set(Some(format!("Failed to load challenges: {}", e)));
                     is_loading.set(false);
                 }
             }
@@ -129,91 +133,103 @@ pub fn ChallengeLibrary(props: ChallengeLibraryProps) -> Element {
         grouped
     };
 
-    let handle_toggle_favorite = move |challenge_id: String| {
-        let id = challenge_id.clone();
-        spawn(async move {
-            // Save original state for rollback
-            let mut challenges_write = challenges.write();
-            let original_state = challenges_write.iter().find(|c| c.id == id).map(|c| c.is_favorite);
+    let handle_toggle_favorite = {
+        let service = challenge_service.clone();
+        move |challenge_id: String| {
+            let id = challenge_id.clone();
+            let service = service.clone();
+            spawn(async move {
+                // Save original state for rollback
+                let mut challenges_write = challenges.write();
+                let original_state = challenges_write.iter().find(|c| c.id == id).map(|c| c.is_favorite);
 
-            if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
-                c.is_favorite = !c.is_favorite;
-            }
-            drop(challenges_write);
-
-            // Call API
-            match toggle_challenge_favorite(&id).await {
-                Ok(is_favorite) => {
-                    // Update with confirmed state from server
-                    let mut challenges_write = challenges.write();
-                    if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
-                        c.is_favorite = is_favorite;
-                    }
+                if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
+                    c.is_favorite = !c.is_favorite;
                 }
-                Err(_) => {
-                    // Rollback on error
-                    let mut challenges_write = challenges.write();
-                    if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
-                        if let Some(original) = original_state {
-                            c.is_favorite = original;
+                drop(challenges_write);
+
+                // Call API via service
+                match service.toggle_favorite(&id).await {
+                    Ok(is_favorite) => {
+                        // Update with confirmed state from server
+                        let mut challenges_write = challenges.write();
+                        if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
+                            c.is_favorite = is_favorite;
+                        }
+                    }
+                    Err(_) => {
+                        // Rollback on error
+                        let mut challenges_write = challenges.write();
+                        if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
+                            if let Some(original) = original_state {
+                                c.is_favorite = original;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     };
 
-    let handle_toggle_active = move |challenge_id: String| {
-        let id = challenge_id.clone();
-        spawn(async move {
-            // Save original state for rollback
-            let mut challenges_write = challenges.write();
-            let original_active = challenges_write.iter().find(|c| c.id == id).map(|c| c.active);
+    let handle_toggle_active = {
+        let service = challenge_service.clone();
+        move |challenge_id: String| {
+            let id = challenge_id.clone();
+            let service = service.clone();
+            spawn(async move {
+                // Save original state for rollback
+                let mut challenges_write = challenges.write();
+                let original_active = challenges_write.iter().find(|c| c.id == id).map(|c| c.active);
 
-            if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
-                c.active = !c.active;
-            }
-            drop(challenges_write);
-
-            let new_active = match original_active {
-                Some(was_active) => !was_active,
-                None => true,
-            };
-
-            // Call API
-            match set_challenge_active(&id, new_active).await {
-                Ok(()) => {
-                    // State already updated optimistically, confirmed by server
+                if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
+                    c.active = !c.active;
                 }
-                Err(_) => {
-                    // Rollback on error
-                    let mut challenges_write = challenges.write();
-                    if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
-                        if let Some(original) = original_active {
-                            c.active = original;
+                drop(challenges_write);
+
+                let new_active = match original_active {
+                    Some(was_active) => !was_active,
+                    None => true,
+                };
+
+                // Call API via service
+                match service.set_active(&id, new_active).await {
+                    Ok(()) => {
+                        // State already updated optimistically, confirmed by server
+                    }
+                    Err(_) => {
+                        // Rollback on error
+                        let mut challenges_write = challenges.write();
+                        if let Some(c) = challenges_write.iter_mut().find(|c| c.id == id) {
+                            if let Some(original) = original_active {
+                                c.active = original;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     };
 
     let handle_delete = move |challenge_id: String| {
         show_delete_confirmation.set(Some(challenge_id));
     };
 
-    let do_delete = move |_| {
-        if let Some(challenge_id) = show_delete_confirmation.read().clone() {
-            let id = challenge_id.clone();
-            spawn(async move {
-                is_deleting.set(true);
-                if delete_challenge(&id).await.is_ok() {
-                    challenges.write().retain(|c| c.id != id);
-                    show_delete_confirmation.set(None);
-                } else {
-                    is_deleting.set(false);
-                }
-            });
+    let do_delete = {
+        let service = challenge_service.clone();
+        move |_| {
+            if let Some(challenge_id) = show_delete_confirmation.read().clone() {
+                let id = challenge_id.clone();
+                let service = service.clone();
+                spawn(async move {
+                    is_deleting.set(true);
+                    if service.delete_challenge(&id).await.is_ok() {
+                        challenges.write().retain(|c| c.id != id);
+                        show_delete_confirmation.set(None);
+                    } else {
+                        is_deleting.set(false);
+                    }
+                });
+            }
         }
     };
 
@@ -644,6 +660,13 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
     let challenge_id = initial.id.clone();
     let world_id = props.world_id.clone();
 
+    // Get challenge service
+    let challenge_service = use_challenge_service();
+
+    let world_id_for_save = world_id.clone();
+    let challenge_id_for_save = challenge_id.clone();
+    let challenge_service_for_save = challenge_service.clone();
+
     let handle_save = move |_| {
         // Validate inputs
         let mut errors = Vec::new();
@@ -681,8 +704,8 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
         save_error.set(None);
 
         let challenge_data = ChallengeData {
-            id: challenge_id.clone(),
-            world_id: world_id.clone(),
+            id: challenge_id_for_save.clone(),
+            world_id: world_id_for_save.clone(),
             scene_id: None,
             name: name.read().clone(),
             description: description.read().clone(),
@@ -717,12 +740,14 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
 
         let on_save = props.on_save.clone();
         let is_edit = is_edit;
+        let service = challenge_service_for_save.clone();
+        let wid = world_id_for_save.clone();
 
         spawn(async move {
             let result = if is_edit {
-                update_challenge(&challenge_data).await
+                service.update_challenge(&challenge_data).await
             } else {
-                create_challenge(&challenge_data).await
+                service.create_challenge(&wid, &challenge_data).await
             };
 
             match result {
@@ -730,7 +755,7 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
                     on_save.call(saved);
                 }
                 Err(e) => {
-                    save_error.set(Some(e));
+                    save_error.set(Some(format!("Failed to save challenge: {}", e)));
                     is_saving.set(false);
                 }
             }
@@ -1089,38 +1114,4 @@ impl DefaultChallenge for Option<ChallengeData> {
     }
 }
 
-// ============================================================================
-// API Functions
-// ============================================================================
-
 use crate::application::dto::ChallengeOutcomes;
-
-async fn fetch_challenges(world_id: &str) -> Result<Vec<ChallengeData>, String> {
-    let path = format!("/api/worlds/{}/challenges", world_id);
-    HttpClient::get(&path).await.map_err(|e| e.to_string())
-}
-
-async fn create_challenge(challenge: &ChallengeData) -> Result<ChallengeData, String> {
-    let path = format!("/api/worlds/{}/challenges", challenge.world_id);
-    HttpClient::post(&path, challenge).await.map_err(|e| e.to_string())
-}
-
-async fn update_challenge(challenge: &ChallengeData) -> Result<ChallengeData, String> {
-    let path = format!("/api/challenges/{}", challenge.id);
-    HttpClient::put(&path, challenge).await.map_err(|e| e.to_string())
-}
-
-async fn delete_challenge(challenge_id: &str) -> Result<(), String> {
-    let path = format!("/api/challenges/{}", challenge_id);
-    HttpClient::delete(&path).await.map_err(|e| e.to_string())
-}
-
-async fn toggle_challenge_favorite(challenge_id: &str) -> Result<bool, String> {
-    let path = format!("/api/challenges/{}/favorite", challenge_id);
-    HttpClient::put_empty_with_response(&path).await.map_err(|e| e.to_string())
-}
-
-async fn set_challenge_active(challenge_id: &str, active: bool) -> Result<(), String> {
-    let path = format!("/api/challenges/{}/active", challenge_id);
-    HttpClient::put_no_response(&path, &active).await.map_err(|e| e.to_string())
-}

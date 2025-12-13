@@ -22,11 +22,18 @@ pub struct LocationData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub name: String,
-    #[serde(default)]
-    pub description: String,
-    pub location_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub parent_id: Option<String>,
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub atmosphere: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notable_features: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden_secrets: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_location_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backdrop_asset: Option<String>,
     #[serde(default)]

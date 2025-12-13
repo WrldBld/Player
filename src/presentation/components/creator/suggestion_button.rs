@@ -5,8 +5,8 @@
 
 use dioxus::prelude::*;
 
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+pub use crate::application::services::SuggestionContext;
+use crate::presentation::services::use_suggestion_service;
 
 /// Types of suggestions that can be requested
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,39 +23,6 @@ pub enum SuggestionType {
     LocationSecrets,
 }
 
-impl SuggestionType {
-    /// Get the API endpoint path for this suggestion type
-    pub fn endpoint(&self) -> &'static str {
-        match self {
-            SuggestionType::CharacterName => "/api/suggest/character/name",
-            SuggestionType::CharacterDescription => "/api/suggest/character/description",
-            SuggestionType::CharacterWants => "/api/suggest/character/wants",
-            SuggestionType::CharacterFears => "/api/suggest/character/fears",
-            SuggestionType::CharacterBackstory => "/api/suggest/character/backstory",
-            SuggestionType::LocationName => "/api/suggest/location/name",
-            SuggestionType::LocationDescription => "/api/suggest/location/description",
-            SuggestionType::LocationAtmosphere => "/api/suggest/location/atmosphere",
-            SuggestionType::LocationFeatures => "/api/suggest/location/features",
-            SuggestionType::LocationSecrets => "/api/suggest/location/secrets",
-        }
-    }
-}
-
-/// Context for generating suggestions
-#[derive(Clone, Default, PartialEq)]
-pub struct SuggestionContext {
-    /// Type of entity (e.g., "character", "location", "tavern", "forest")
-    pub entity_type: Option<String>,
-    /// Name of the entity (if already set)
-    pub entity_name: Option<String>,
-    /// World/setting name or type
-    pub world_setting: Option<String>,
-    /// Hints or keywords to guide generation (e.g., archetype)
-    pub hints: Option<String>,
-    /// Additional context from other fields
-    pub additional_context: Option<String>,
-}
-
 /// Suggestion button component with dropdown
 ///
 /// Fetches suggestions from the API when clicked and displays them
@@ -66,6 +33,7 @@ pub fn SuggestionButton(
     context: SuggestionContext,
     on_select: EventHandler<String>,
 ) -> Element {
+    let suggestion_service = use_suggestion_service();
     let mut loading = use_signal(|| false);
     let mut suggestions: Signal<Vec<String>> = use_signal(Vec::new);
     let mut show_dropdown = use_signal(|| false);
@@ -76,40 +44,57 @@ pub fn SuggestionButton(
         show_dropdown.set(false);
     };
 
-    let fetch_suggestions = move |_| {
-        let context = context.clone();
-        let suggestion_type = suggestion_type;
+    let fetch_suggestions = {
+        let svc = suggestion_service.clone();
+        move |_| {
+            let context = context.clone();
+            let suggestion_type = suggestion_type;
+            let service = svc.clone();
 
-        spawn(async move {
-            loading.set(true);
-            error.set(None);
-            suggestions.set(Vec::new());
+            spawn(async move {
+                loading.set(true);
+                error.set(None);
+                suggestions.set(Vec::new());
 
-            #[cfg(target_arch = "wasm32")]
-            web_sys::console::log_1(&format!("Fetching suggestions for {:?}", suggestion_type).into());
+                #[cfg(target_arch = "wasm32")]
+                web_sys::console::log_1(&format!("Fetching suggestions for {:?}", suggestion_type).into());
 
-            match fetch_suggestions_from_api(suggestion_type, &context).await {
-                Ok(results) => {
-                    #[cfg(target_arch = "wasm32")]
-                    web_sys::console::log_1(&format!("Got {} suggestions: {:?}", results.len(), results).into());
+                let result = match suggestion_type {
+                    SuggestionType::CharacterName => service.suggest_character_name(&context).await,
+                    SuggestionType::CharacterDescription => service.suggest_character_description(&context).await,
+                    SuggestionType::CharacterWants => service.suggest_character_wants(&context).await,
+                    SuggestionType::CharacterFears => service.suggest_character_fears(&context).await,
+                    SuggestionType::CharacterBackstory => service.suggest_character_backstory(&context).await,
+                    SuggestionType::LocationName => service.suggest_location_name(&context).await,
+                    SuggestionType::LocationDescription => service.suggest_location_description(&context).await,
+                    SuggestionType::LocationAtmosphere => service.suggest_location_atmosphere(&context).await,
+                    SuggestionType::LocationFeatures => service.suggest_location_features(&context).await,
+                    SuggestionType::LocationSecrets => service.suggest_location_secrets(&context).await,
+                };
 
-                    if results.is_empty() {
-                        error.set(Some("No suggestions returned".to_string()));
-                    } else {
-                        suggestions.set(results);
-                        show_dropdown.set(true);
+                match result {
+                    Ok(results) => {
+                        #[cfg(target_arch = "wasm32")]
+                        web_sys::console::log_1(&format!("Got {} suggestions: {:?}", results.len(), results).into());
+
+                        if results.is_empty() {
+                            error.set(Some("No suggestions returned".to_string()));
+                        } else {
+                            suggestions.set(results);
+                            show_dropdown.set(true);
+                        }
+                    }
+                    Err(e) => {
+                        #[cfg(target_arch = "wasm32")]
+                        web_sys::console::log_1(&format!("Suggestion error: {}", e).into());
+
+                        error.set(Some(e.to_string()));
                     }
                 }
-                Err(e) => {
-                    #[cfg(target_arch = "wasm32")]
-                    web_sys::console::log_1(&format!("Suggestion error: {}", e).into());
 
-                    error.set(Some(e));
-                }
-            }
-
-            loading.set(false);
-        });
+                loading.set(false);
+            });
+        }
     };
 
     rsx! {
@@ -184,46 +169,6 @@ fn SuggestionItem(text: String, on_click: EventHandler<()>) -> Element {
             "{text}"
         }
     }
-}
-
-/// Fetch suggestions from the Engine API
-async fn fetch_suggestions_from_api(
-    suggestion_type: SuggestionType,
-    context: &SuggestionContext,
-) -> Result<Vec<String>, String> {
-    // Build the request body
-    #[derive(serde::Serialize)]
-    struct RequestBody {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        entity_type: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        entity_name: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        world_setting: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        hints: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        additional_context: Option<String>,
-    }
-
-    #[derive(serde::Deserialize)]
-    struct SuggestionResponse {
-        suggestions: Vec<String>,
-    }
-
-    let body = RequestBody {
-        entity_type: context.entity_type.clone(),
-        entity_name: context.entity_name.clone(),
-        world_setting: context.world_setting.clone(),
-        hints: context.hints.clone(),
-        additional_context: context.additional_context.clone(),
-    };
-
-    let path = suggestion_type.endpoint();
-    let data: SuggestionResponse = HttpClient::post(path, &body)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(data.suggestions)
 }
 
 /// Compact suggestion button for inline use (smaller, icon-style)

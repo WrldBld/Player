@@ -708,7 +708,7 @@ fn initiate_connection(
     mut game_state: GameState,
     mut dialogue_state: DialogueState,
 ) {
-    use crate::application::services::handle_session_event;
+    use crate::presentation::handlers::handle_session_event;
     use dioxus::prelude::*;
 
     // Update session state to connecting

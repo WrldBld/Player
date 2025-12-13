@@ -4,34 +4,10 @@
 //! updating, and deleting skills. It abstracts away the HTTP client
 //! details from the presentation layer.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
+use crate::application::dto::{SkillCategory, SkillData};
 use crate::application::ports::outbound::{ApiError, ApiPort};
-
-/// Skill category
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum SkillCategory {
-    Combat,
-    Social,
-    Exploration,
-    Knowledge,
-    Physical,
-    Mental,
-    Custom(String),
-}
-
-/// Full skill data
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct SkillData {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub category: SkillCategory,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_attribute: Option<String>,
-    #[serde(default)]
-    pub is_hidden: bool,
-}
 
 /// Request to create a new skill
 #[derive(Clone, Debug, Serialize)]

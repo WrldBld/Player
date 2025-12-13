@@ -112,6 +112,12 @@ impl<A: ApiPort> WorldService<A> {
         let path = format!("/api/rule-systems/{}/presets/{}", system_type, variant);
         self.api.get(&path).await
     }
+
+    /// Fetch the character sheet template for a world
+    pub async fn get_sheet_template(&self, world_id: &str) -> Result<serde_json::Value, ApiError> {
+        let path = format!("/api/worlds/{}/sheet-template", world_id);
+        self.api.get(&path).await
+    }
 }
 
 impl<A: ApiPort + Clone> Clone for WorldService<A> {

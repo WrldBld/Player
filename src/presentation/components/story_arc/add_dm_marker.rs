@@ -1,10 +1,9 @@
 //! Add DM Marker Modal - Create DM notes/markers on the timeline
 
 use dioxus::prelude::*;
-use serde::Serialize;
 
-// TODO Phase 7.4: Replace HttpClient with service calls
-use crate::infrastructure::http_client::HttpClient;
+use crate::application::services::CreateDmMarkerRequest;
+use crate::presentation::services::use_story_event_service;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct AddDmMarkerModalProps {
@@ -15,18 +14,10 @@ pub struct AddDmMarkerModalProps {
     pub on_created: EventHandler<()>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct CreateDmMarkerRequest {
-    title: String,
-    note: String,
-    importance: String,
-    marker_type: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    tags: Vec<String>,
-}
-
 #[component]
 pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
+    // Get story event service
+    let story_event_service = use_story_event_service();
     let mut title = use_signal(|| String::new());
     let mut note = use_signal(|| String::new());
     let mut importance = use_signal(|| "normal".to_string());
@@ -214,6 +205,7 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                             onclick: {
                                 let world_id = props.world_id.clone();
                                 let session_id = props.session_id.clone();
+                                let service = story_event_service.clone();
                                 move |_| {
                                     if !can_save { return; }
 
@@ -229,6 +221,7 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
 
                                     let world_id = world_id.clone();
                                     let session_id = session_id.clone();
+                                    let service = service.clone();
                                     spawn(async move {
                                         is_saving.set(true);
                                         error.set(None);
@@ -241,12 +234,12 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                                             tags,
                                         };
 
-                                        match create_dm_marker(&world_id, session_id.as_deref(), &request).await {
+                                        match service.create_dm_marker(&world_id, session_id.as_deref(), &request).await {
                                             Ok(_) => {
                                                 props.on_created.call(());
                                             }
                                             Err(e) => {
-                                                error.set(Some(e));
+                                                error.set(Some(format!("Failed to create marker: {}", e)));
                                             }
                                         }
 
@@ -277,18 +270,4 @@ fn get_importance_color(importance: &str) -> &'static str {
         "minor" => "#6b7280",
         _ => "#6b7280",
     }
-}
-
-async fn create_dm_marker(
-    world_id: &str,
-    session_id: Option<&str>,
-    request: &CreateDmMarkerRequest,
-) -> Result<(), String> {
-    let path = if let Some(sid) = session_id {
-        format!("/api/sessions/{}/story-events", sid)
-    } else {
-        format!("/api/worlds/{}/story-events", world_id)
-    };
-
-    HttpClient::post_no_response(&path, request).await.map_err(|e| e.to_string())
 }
