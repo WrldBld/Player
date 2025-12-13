@@ -6,6 +6,7 @@
 use dioxus::prelude::*;
 
 pub use crate::application::services::SuggestionContext;
+use crate::application::ports::outbound::Platform;
 use crate::presentation::services::use_suggestion_service;
 
 /// Types of suggestions that can be requested
@@ -33,6 +34,7 @@ pub fn SuggestionButton(
     context: SuggestionContext,
     on_select: EventHandler<String>,
 ) -> Element {
+    let platform = use_context::<Platform>();
     let suggestion_service = use_suggestion_service();
     let mut loading = use_signal(|| false);
     let mut suggestions: Signal<Vec<String>> = use_signal(Vec::new);
@@ -46,18 +48,19 @@ pub fn SuggestionButton(
 
     let fetch_suggestions = {
         let svc = suggestion_service.clone();
+        let plat = platform.clone();
         move |_| {
             let context = context.clone();
             let suggestion_type = suggestion_type;
             let service = svc.clone();
+            let platform = plat.clone();
 
             spawn(async move {
                 loading.set(true);
                 error.set(None);
                 suggestions.set(Vec::new());
 
-                #[cfg(target_arch = "wasm32")]
-                web_sys::console::log_1(&format!("Fetching suggestions for {:?}", suggestion_type).into());
+                platform.log_info(&format!("Fetching suggestions for {:?}", suggestion_type));
 
                 let result = match suggestion_type {
                     SuggestionType::CharacterName => service.suggest_character_name(&context).await,
@@ -74,8 +77,7 @@ pub fn SuggestionButton(
 
                 match result {
                     Ok(results) => {
-                        #[cfg(target_arch = "wasm32")]
-                        web_sys::console::log_1(&format!("Got {} suggestions: {:?}", results.len(), results).into());
+                        platform.log_info(&format!("Got {} suggestions: {:?}", results.len(), results));
 
                         if results.is_empty() {
                             error.set(Some("No suggestions returned".to_string()));
@@ -85,8 +87,7 @@ pub fn SuggestionButton(
                         }
                     }
                     Err(e) => {
-                        #[cfg(target_arch = "wasm32")]
-                        web_sys::console::log_1(&format!("Suggestion error: {}", e).into());
+                        platform.log_error(&format!("Suggestion error: {}", e));
 
                         error.set(Some(e.to_string()));
                     }

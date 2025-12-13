@@ -8,6 +8,7 @@ use super::asset_gallery::AssetGallery;
 use super::sheet_field_input::CharacterSheetForm;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
 use crate::application::dto::{FieldValue, SheetTemplate};
+use crate::application::ports::outbound::Platform;
 use crate::application::services::{CharacterData, CharacterSheetDataApi};
 use crate::presentation::services::{use_character_service, use_world_service};
 use crate::presentation::state::GameState;
@@ -28,6 +29,7 @@ const ARCHETYPES: &[&str] = &[
 #[component]
 pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Element {
     let is_new = character_id.is_empty();
+    let platform = use_context::<Platform>();
     let game_state = use_context::<GameState>();
     let char_service = use_character_service();
     let world_service = use_world_service();
@@ -52,8 +54,10 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
     // Load sheet template on mount
     {
         let world_svc = world_service.clone();
+        let plat = platform.clone();
         use_effect(move || {
             let svc = world_svc.clone();
+            let platform = plat.clone();
             spawn(async move {
                 let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
 
@@ -66,15 +70,13 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                                     sheet_template.set(Some(template));
                                 }
                                 Err(_e) => {
-                                    #[cfg(target_arch = "wasm32")]
-                                    web_sys::console::log_1(&format!("Failed to parse sheet template: {}", _e).into());
+                                    platform.log_warn(&format!("Failed to parse sheet template: {}", _e));
                                 }
                             }
                         }
                         Err(_e) => {
                             // Template fetch failure is not critical - sheet section just won't appear
-                            #[cfg(target_arch = "wasm32")]
-                            web_sys::console::log_1(&format!("Failed to load sheet template: {}", _e).into());
+                            platform.log_warn(&format!("Failed to load sheet template: {}", _e));
                         }
                     }
                 }

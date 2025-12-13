@@ -4,6 +4,7 @@
 //! Allows players to roll dice and add character modifiers.
 
 use dioxus::prelude::*;
+use crate::application::ports::outbound::Platform;
 
 /// Props for the ChallengeRollModal component
 #[derive(Props, Clone, PartialEq)]
@@ -37,26 +38,14 @@ pub struct ChallengeRollModalProps {
 pub fn ChallengeRollModal(props: ChallengeRollModalProps) -> Element {
     let mut roll_result = use_signal(|| None::<i32>);
     let mut is_rolling = use_signal(|| false);
+    let platform = use_context::<Platform>();
 
     // Perform the d20 roll
     let do_roll = move |_| {
         is_rolling.set(true);
         // Generate random d20 roll (1-20)
-        #[cfg(target_arch = "wasm32")]
-        {
-            let roll = ((js_sys::Math::random() * 20.0).floor() as i32) + 1;
-            roll_result.set(Some(roll));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            use std::time::{SystemTime, UNIX_EPOCH};
-            let nanos = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.subsec_nanos())
-                .unwrap_or(42);
-            let roll = ((nanos % 20) + 1) as i32;
-            roll_result.set(Some(roll));
-        }
+        let roll = platform.random_range(1, 20);
+        roll_result.set(Some(roll));
         is_rolling.set(false);
     };
 

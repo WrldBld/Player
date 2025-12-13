@@ -1,0 +1,114 @@
+//! WASM platform implementations
+//!
+//! Provides platform-specific implementations for web browsers using
+//! js_sys and web_sys crates.
+
+use crate::application::ports::outbound::platform::{
+    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
+};
+
+/// WASM time provider using js_sys::Date
+#[derive(Clone, Default)]
+pub struct WasmTimeProvider;
+
+impl TimeProvider for WasmTimeProvider {
+    fn now_unix_secs(&self) -> u64 {
+        (js_sys::Date::now() / 1000.0) as u64
+    }
+
+    fn now_millis(&self) -> u64 {
+        js_sys::Date::now() as u64
+    }
+}
+
+/// WASM random provider using js_sys::Math
+#[derive(Clone, Default)]
+pub struct WasmRandomProvider;
+
+impl RandomProvider for WasmRandomProvider {
+    fn random_f64(&self) -> f64 {
+        js_sys::Math::random()
+    }
+
+    fn random_range(&self, min: i32, max: i32) -> i32 {
+        let range = (max - min + 1) as f64;
+        min + (js_sys::Math::random() * range).floor() as i32
+    }
+}
+
+/// WASM storage provider using localStorage
+#[derive(Clone, Default)]
+pub struct WasmStorageProvider;
+
+impl StorageProvider for WasmStorageProvider {
+    fn save(&self, key: &str, value: &str) {
+        if let Some(storage) = web_sys::window()
+            .and_then(|w| w.local_storage().ok())
+            .flatten()
+        {
+            let _ = storage.set_item(key, value);
+        }
+    }
+
+    fn load(&self, key: &str) -> Option<String> {
+        web_sys::window()
+            .and_then(|w| w.local_storage().ok())
+            .flatten()
+            .and_then(|s| s.get_item(key).ok())
+            .flatten()
+    }
+
+    fn remove(&self, key: &str) {
+        if let Some(storage) = web_sys::window()
+            .and_then(|w| w.local_storage().ok())
+            .flatten()
+        {
+            let _ = storage.remove_item(key);
+        }
+    }
+}
+
+/// WASM log provider using web_sys::console
+#[derive(Clone, Default)]
+pub struct WasmLogProvider;
+
+impl LogProvider for WasmLogProvider {
+    fn info(&self, msg: &str) {
+        web_sys::console::log_1(&msg.into());
+    }
+
+    fn error(&self, msg: &str) {
+        web_sys::console::error_1(&msg.into());
+    }
+
+    fn debug(&self, msg: &str) {
+        web_sys::console::debug_1(&msg.into());
+    }
+
+    fn warn(&self, msg: &str) {
+        web_sys::console::warn_1(&msg.into());
+    }
+}
+
+/// WASM document provider for browser document operations
+#[derive(Clone, Default)]
+pub struct WasmDocumentProvider;
+
+impl DocumentProvider for WasmDocumentProvider {
+    fn set_page_title(&self, title: &str) {
+        if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+            document.set_title(&format!("{} | WrldBldr", title));
+        }
+    }
+}
+
+/// Create platform services for WASM
+pub fn create_platform() -> Platform {
+    Platform::new(
+        WasmTimeProvider,
+        WasmRandomProvider,
+        WasmStorageProvider,
+        WasmLogProvider,
+        WasmDocumentProvider,
+    )
+}

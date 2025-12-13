@@ -6,9 +6,14 @@
 
 pub mod api_port;
 pub mod game_connection_port;
+pub mod platform;
 
 pub use api_port::{ApiError, ApiPort};
 pub use game_connection_port::{
     ApprovalDecision, ConnectionState, DirectorialContext, GameConnectionPort, NpcMotivation,
     ParticipantRole,
+};
+pub use platform::{
+    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
+    storage_keys,
 };

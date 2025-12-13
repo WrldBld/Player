@@ -7,7 +7,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::application::services::SessionEvent;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::application::ports::outbound::ConnectionState as PortConnectionState;
+use crate::application::ports::outbound::{ConnectionState as PortConnectionState, Platform};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::application::services::port_connection_state_to_status;
 #[cfg(not(target_arch = "wasm32"))]
@@ -20,8 +20,6 @@ use crate::infrastructure::asset_loader::WorldSnapshot;
 use crate::presentation::state::{PendingApproval, session_state::{ChallengePromptData, ChallengeResultData}};
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::{WritableExt, ReadableExt};
-#[cfg(not(target_arch = "wasm32"))]
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Process a session event and update presentation state
 ///
@@ -33,6 +31,7 @@ pub fn handle_session_event(
     session_state: &mut SessionState,
     game_state: &mut GameState,
     dialogue_state: &mut DialogueState,
+    platform: &Platform,
 ) {
     match event {
         SessionEvent::StateChanged(state) => {
@@ -55,7 +54,7 @@ pub fn handle_session_event(
             }
         }
         SessionEvent::MessageReceived(message) => {
-            handle_server_message(message, session_state, game_state, dialogue_state);
+            handle_server_message(message, session_state, game_state, dialogue_state, platform);
         }
     }
 }
@@ -70,6 +69,7 @@ fn handle_server_message(
     session_state: &mut SessionState,
     game_state: &mut GameState,
     dialogue_state: &mut DialogueState,
+    platform: &Platform,
 ) {
     match message {
         ServerMessage::SessionJoined {
@@ -86,6 +86,7 @@ fn handle_server_message(
                 "System".to_string(),
                 format!("Joined session: {}", session_id),
                 true,
+                platform,
             );
 
             // Parse and load world snapshot
@@ -97,6 +98,7 @@ fn handle_server_message(
                         "System".to_string(),
                         "World data loaded".to_string(),
                         true,
+                        platform,
                     );
                 }
                 Err(e) => {
@@ -122,7 +124,7 @@ fn handle_server_message(
         } => {
             tracing::info!("DialogueResponse from: {}", speaker_name);
             // Add to conversation log for DM view
-            session_state.add_log_entry(speaker_name.clone(), text.clone(), false);
+            session_state.add_log_entry(speaker_name.clone(), text.clone(), false, platform);
             dialogue_state.apply_dialogue(speaker_id, speaker_name, text, choices);
         }
 
@@ -134,6 +136,7 @@ fn handle_server_message(
                 "System".to_string(),
                 format!("Processing action: {}", action_id),
                 true,
+                platform,
             );
         }
 
@@ -269,10 +272,7 @@ fn handle_server_message(
                 }
             }
             // Add to challenge results
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            let timestamp = platform.now_unix_secs();
             let result = ChallengeResultData {
                 challenge_name,
                 character_name,

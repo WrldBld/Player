@@ -30,34 +30,7 @@ use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, Gen
 use crate::presentation::views::dm_view::DMMode;
 // Use port type for ParticipantRole instead of infrastructure type
 use crate::application::services::{ParticipantRolePort as ParticipantRole, SessionService, DEFAULT_ENGINE_URL};
-use crate::infrastructure::storage;
-
-/// Set the browser page title (WASM only)
-///
-/// Updates the browser tab title with a consistent format.
-/// On web platforms, this helps users distinguish between open tabs.
-/// On desktop platforms, the window title is managed by the OS window manager.
-///
-/// # Arguments
-/// * `title` - The page title to display (will be formatted as "{title} | WrldBldr")
-///
-/// # Example
-/// ```ignore
-/// set_page_title("Main Menu");  // Sets tab title to "Main Menu | WrldBldr"
-/// ```
-#[cfg(target_arch = "wasm32")]
-fn set_page_title(title: &str) {
-    if let Some(window) = web_sys::window() {
-        if let Some(document) = window.document() {
-            document.set_title(&format!("{} | WrldBldr", title));
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn set_page_title(_title: &str) {
-    // Desktop title is set by window manager
-}
+use crate::application::ports::outbound::{Platform, storage_keys};
 
 /// Application routes - each URL maps to a view
 #[derive(Clone, Routable, Debug, PartialEq)]
@@ -106,17 +79,22 @@ pub enum Route {
 #[component]
 pub fn MainMenuRoute() -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
+
+    // Clone platform for different closures
+    let platform_title = platform.clone();
+    let platform_storage = platform.clone();
 
     // Set page title for this view
-    use_effect(|| {
-        set_page_title("Main Menu");
+    use_effect(move || {
+        platform_title.set_page_title("Main Menu");
     });
 
     rsx! {
         crate::presentation::views::main_menu::MainMenu {
             on_connect: move |server_url: String| {
                 // Save server URL preference
-                storage::save(storage::STORAGE_KEY_SERVER_URL, &server_url);
+                platform_storage.storage_save(storage_keys::SERVER_URL, &server_url);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -126,10 +104,15 @@ pub fn MainMenuRoute() -> Element {
 #[component]
 pub fn RoleSelectRoute() -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
+
+    // Clone platform for different closures
+    let platform_title = platform.clone();
+    let platform_storage = platform.clone();
 
     // Set page title for this view
-    use_effect(|| {
-        set_page_title("Select Role");
+    use_effect(move || {
+        platform_title.set_page_title("Select Role");
     });
 
     rsx! {
@@ -137,7 +120,7 @@ pub fn RoleSelectRoute() -> Element {
             on_select_role: move |role: crate::UserRole| {
                 // Save selected role preference
                 let role_str = format!("{:?}", role);
-                storage::save(storage::STORAGE_KEY_ROLE, &role_str);
+                platform_storage.storage_save(storage_keys::ROLE, &role_str);
                 navigator.push(Route::WorldSelectRoute {});
             }
         }
@@ -147,26 +130,32 @@ pub fn RoleSelectRoute() -> Element {
 #[component]
 pub fn WorldSelectRoute() -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Clone platform for different closures
+    let platform_title = platform.clone();
+    let platform_handler = platform.clone();
+
     // Set page title for this view
-    use_effect(|| {
-        set_page_title("Select World");
+    use_effect(move || {
+        platform_title.set_page_title("Select World");
     });
 
     // Load selected role from localStorage
-    let role = load_role_from_storage();
+    let role = load_role_from_storage(&platform);
 
     rsx! {
         crate::presentation::views::world_select::WorldSelectView {
             role: role,
             on_world_selected: {
                 let role = role;
+                let platform_connection = platform_handler.clone();
                 move |world_id: String| {
                     // Save last accessed world
-                    storage::save(storage::STORAGE_KEY_LAST_WORLD, &world_id);
+                    platform_connection.storage_save(storage_keys::LAST_WORLD, &world_id);
 
                     // Map UserRole to ParticipantRole
                     let participant_role = match role {
@@ -186,6 +175,7 @@ pub fn WorldSelectRoute() -> Element {
                         session_state.clone(),
                         game_state.clone(),
                         dialogue_state.clone(),
+                        platform_connection.clone(),
                     );
 
                     // Navigate to the appropriate view based on role
@@ -210,10 +200,10 @@ pub fn WorldSelectRoute() -> Element {
 }
 
 /// Load user role from localStorage, defaults to Player
-fn load_role_from_storage() -> crate::UserRole {
+fn load_role_from_storage(platform: &Platform) -> crate::UserRole {
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(role_str) = storage::load(storage::STORAGE_KEY_ROLE) {
+        if let Some(role_str) = platform.storage_load(storage_keys::ROLE) {
             match role_str.as_str() {
                 "DungeonMaster" => return crate::UserRole::DungeonMaster,
                 "Player" => return crate::UserRole::Player,
@@ -228,13 +218,18 @@ fn load_role_from_storage() -> crate::UserRole {
 #[component]
 pub fn PCViewRoute(world_id: String) -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Clone platform for different closures
+    let platform_title = platform.clone();
+    let platform_storage = platform.clone();
+
     // Set page title for this view
     use_effect(move || {
-        set_page_title("Playing");
+        platform_title.set_page_title("Playing");
     });
 
     rsx! {
@@ -242,7 +237,7 @@ pub fn PCViewRoute(world_id: String) -> Element {
             on_back: move |_| {
                 handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
                 // Clear world preference when disconnecting
-                storage::remove(storage::STORAGE_KEY_LAST_WORLD);
+                platform_storage.storage_remove(storage_keys::LAST_WORLD);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -252,9 +247,11 @@ pub fn PCViewRoute(world_id: String) -> Element {
 /// DMViewRoute - renders Director tab directly (no redirect needed)
 #[component]
 pub fn DMViewRoute(world_id: String) -> Element {
+    let platform = use_context::<Platform>();
+
     // Set page title
-    use_effect(|| {
-        set_page_title("Director");
+    use_effect(move || {
+        platform.set_page_title("Director");
     });
 
     // Render Director mode directly instead of redirecting
@@ -274,6 +271,8 @@ pub fn DMViewRoute(world_id: String) -> Element {
 /// This avoids use_effect redirect race conditions
 #[component]
 pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
+    let platform = use_context::<Platform>();
+
     // Determine mode and default subtab based on tab parameter
     let (dm_mode, creator_subtab, settings_subtab, story_arc_subtab, title) = match tab.as_str() {
         "director" => (DMMode::Director, None, None, None, "Director"),
@@ -284,7 +283,7 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
     };
 
     use_effect(move || {
-        set_page_title(title);
+        platform.set_page_title(title);
     });
 
     rsx! {
@@ -301,6 +300,8 @@ pub fn DMViewTabRoute(world_id: String, tab: String) -> Element {
 /// DMCreatorSubTabRoute - Creator mode with specific sub-tab
 #[component]
 pub fn DMCreatorSubTabRoute(world_id: String, subtab: String) -> Element {
+    let platform = use_context::<Platform>();
+
     // Set page title based on subtab
     let title = match subtab.as_str() {
         "characters" => "Creator - Characters",
@@ -311,7 +312,7 @@ pub fn DMCreatorSubTabRoute(world_id: String, subtab: String) -> Element {
     };
 
     use_effect(move || {
-        set_page_title(title);
+        platform.set_page_title(title);
     });
 
     rsx! {
@@ -328,6 +329,8 @@ pub fn DMCreatorSubTabRoute(world_id: String, subtab: String) -> Element {
 /// DMSettingsSubTabRoute - Settings with specific sub-tab
 #[component]
 pub fn DMSettingsSubTabRoute(world_id: String, subtab: String) -> Element {
+    let platform = use_context::<Platform>();
+
     // Set page title based on subtab
     let title = match subtab.as_str() {
         "workflows" => "Settings - Workflows",
@@ -336,7 +339,7 @@ pub fn DMSettingsSubTabRoute(world_id: String, subtab: String) -> Element {
     };
 
     use_effect(move || {
-        set_page_title(title);
+        platform.set_page_title(title);
     });
 
     rsx! {
@@ -353,6 +356,8 @@ pub fn DMSettingsSubTabRoute(world_id: String, subtab: String) -> Element {
 /// DMStoryArcSubTabRoute - Story Arc with specific sub-tab
 #[component]
 pub fn DMStoryArcSubTabRoute(world_id: String, subtab: String) -> Element {
+    let platform = use_context::<Platform>();
+
     // Set page title based on subtab
     let title = match subtab.as_str() {
         "timeline" => "Story Arc - Timeline",
@@ -362,7 +367,7 @@ pub fn DMStoryArcSubTabRoute(world_id: String, subtab: String) -> Element {
     };
 
     use_effect(move || {
-        set_page_title(title);
+        platform.set_page_title(title);
     });
 
     rsx! {
@@ -389,6 +394,7 @@ struct DMViewLayoutProps {
 #[component]
 fn DMViewLayout(props: DMViewLayoutProps) -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
@@ -410,7 +416,7 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
                     move |_| {
                         handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
                         // Clear world preference when disconnecting
-                        storage::remove(storage::STORAGE_KEY_LAST_WORLD);
+                        platform.storage_remove(storage_keys::LAST_WORLD);
                         navigator.push(Route::RoleSelectRoute {});
                     }
                 },
@@ -445,13 +451,18 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
 #[component]
 pub fn SpectatorViewRoute(world_id: String) -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
 
+    // Clone platform for different closures
+    let platform_title = platform.clone();
+    let platform_storage = platform.clone();
+
     // Set page title for this view
     use_effect(move || {
-        set_page_title("Watching");
+        platform_title.set_page_title("Watching");
     });
 
     rsx! {
@@ -459,7 +470,7 @@ pub fn SpectatorViewRoute(world_id: String) -> Element {
             on_back: move |_| {
                 handle_disconnect(session_state.clone(), game_state.clone(), dialogue_state.clone());
                 // Clear world preference when disconnecting
-                storage::remove(storage::STORAGE_KEY_LAST_WORLD);
+                platform_storage.storage_remove(storage_keys::LAST_WORLD);
                 navigator.push(Route::RoleSelectRoute {});
             }
         }
@@ -469,10 +480,11 @@ pub fn SpectatorViewRoute(world_id: String) -> Element {
 #[component]
 pub fn NotFoundRoute(route: Vec<String>) -> Element {
     let navigator = use_navigator();
+    let platform = use_context::<Platform>();
 
     // Set page title for this view
-    use_effect(|| {
-        set_page_title("Page Not Found");
+    use_effect(move || {
+        platform.set_page_title("Page Not Found");
     });
 
     rsx! {
@@ -683,6 +695,7 @@ fn initiate_connection(
     session_state: SessionState,
     game_state: GameState,
     dialogue_state: DialogueState,
+    platform: Platform,
 ) {
     let session_service = SessionService::new(&server_url);
 
@@ -692,6 +705,7 @@ fn initiate_connection(
         session_state.clone(),
         game_state,
         dialogue_state,
+        platform,
     ) {
         web_sys::console::error_1(&format!("Connection failed: {}", e).into());
         session_state.clone().set_failed(e.to_string());
@@ -707,6 +721,7 @@ fn initiate_connection(
     mut session_state: SessionState,
     mut game_state: GameState,
     mut dialogue_state: DialogueState,
+    platform: Platform,
 ) {
     use crate::presentation::handlers::handle_session_event;
     use dioxus::prelude::*;
@@ -731,6 +746,7 @@ fn initiate_connection(
                         &mut session_state,
                         &mut game_state,
                         &mut dialogue_state,
+                        &platform,
                     );
                 }
 

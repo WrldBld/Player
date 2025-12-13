@@ -5,4 +5,5 @@
 
 pub mod session_event_handler;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub use session_event_handler::handle_session_event;

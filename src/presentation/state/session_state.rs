@@ -6,13 +6,12 @@ use dioxus::prelude::*;
 use std::sync::Arc;
 
 // Use port types and application DTOs instead of infrastructure types
-use crate::application::ports::outbound::ParticipantRole;
+use crate::application::ports::outbound::{ParticipantRole, Platform};
 use crate::application::dto::{ProposedTool, ChallengeSuggestionInfo};
 // NOTE: EngineClient is still needed here for the client reference.
 // This will be fully abstracted when we implement a proper connection service.
 use crate::infrastructure::websocket::EngineClient;
 use crate::presentation::components::tactical::PlayerSkillData;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Connection status to the Engine server
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,14 +244,8 @@ impl SessionState {
     }
 
     /// Add a conversation log entry
-    pub fn add_log_entry(&mut self, speaker: String, text: String, is_system: bool) {
-        #[cfg(target_arch = "wasm32")]
-        let timestamp = (js_sys::Date::now() / 1000.0) as u64;
-        #[cfg(not(target_arch = "wasm32"))]
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+    pub fn add_log_entry(&mut self, speaker: String, text: String, is_system: bool, platform: &Platform) {
+        let timestamp = platform.now_unix_secs();
         self.conversation_log.write().push(ConversationLogEntry {
             speaker,
             text,

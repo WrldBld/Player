@@ -18,6 +18,7 @@ use anyhow::Result;
 
 use crate::application::ports::outbound::{
     ConnectionState as PortConnectionState, ParticipantRole as PortParticipantRole,
+    Platform,
 };
 // TODO Phase 7: These infrastructure imports should be abstracted
 use crate::infrastructure::websocket::{EngineClient, ServerMessage};
@@ -272,6 +273,7 @@ mod wasm {
             mut session_state: SessionState,
             mut game_state: GameState,
             mut dialogue_state: DialogueState,
+            platform: Platform,
         ) -> Result<()> {
             // Convert port role to infrastructure role
             let infra_role = match role {
@@ -294,7 +296,15 @@ mod wasm {
                 let user_id = user_id.clone();
 
                 client.set_on_state_change(move |state| {
-                    let status = connection_state_to_status(state);
+                    let app_status = connection_state_to_status(state);
+                    // Convert application status to presentation status
+                    let status = match app_status {
+                        AppConnectionStatus::Disconnected => ConnectionStatus::Disconnected,
+                        AppConnectionStatus::Connecting => ConnectionStatus::Connecting,
+                        AppConnectionStatus::Connected => ConnectionStatus::Connected,
+                        AppConnectionStatus::Reconnecting => ConnectionStatus::Reconnecting,
+                        AppConnectionStatus::Failed => ConnectionStatus::Failed,
+                    };
                     session_state.connection_status.set(status);
 
                     match state {
@@ -325,6 +335,7 @@ mod wasm {
                 let mut session_state = session_state.clone();
                 let mut game_state = game_state.clone();
                 let mut dialogue_state = dialogue_state.clone();
+                let platform = platform.clone();
 
                 client.set_on_message(move |message| {
                     handle_server_message(
@@ -332,6 +343,7 @@ mod wasm {
                         &mut session_state,
                         &mut game_state,
                         &mut dialogue_state,
+                        &platform,
                     );
                 });
             }
@@ -396,9 +408,11 @@ use dioxus::prelude::{WritableExt, ReadableExt};
 // TEMPORARY: These imports violate architecture - to be removed in Phase 7
 #[cfg(target_arch = "wasm32")]
 use crate::presentation::state::{
-    DialogueState, GameState, SessionState, PendingApproval,
+    ConnectionStatus, DialogueState, GameState, SessionState, PendingApproval,
     session_state::{ChallengePromptData, ChallengeResultData},
 };
+#[cfg(target_arch = "wasm32")]
+use crate::infrastructure::asset_loader::WorldSnapshot;
 
 /// Handle incoming server messages and update application state
 ///
@@ -411,6 +425,7 @@ fn handle_server_message(
     session_state: &mut SessionState,
     game_state: &mut GameState,
     dialogue_state: &mut DialogueState,
+    platform: &Platform,
 ) {
     match message {
         ServerMessage::SessionJoined {
@@ -427,6 +442,7 @@ fn handle_server_message(
                 "System".to_string(),
                 format!("Joined session: {}", session_id),
                 true,
+                platform,
             );
 
             // Parse and load world snapshot
@@ -438,6 +454,7 @@ fn handle_server_message(
                         "System".to_string(),
                         "World data loaded".to_string(),
                         true,
+                        platform,
                     );
                 }
                 Err(e) => {
@@ -463,7 +480,7 @@ fn handle_server_message(
         } => {
             log_message(&format!("DialogueResponse from: {}", speaker_name));
             // Add to conversation log for DM view
-            session_state.add_log_entry(speaker_name.clone(), text.clone(), false);
+            session_state.add_log_entry(speaker_name.clone(), text.clone(), false, platform);
             dialogue_state.apply_dialogue(speaker_id, speaker_name, text, choices);
         }
 
@@ -475,6 +492,7 @@ fn handle_server_message(
                 "System".to_string(),
                 format!("Processing action: {}", action_id),
                 true,
+                platform,
             );
         }
 
@@ -606,10 +624,7 @@ fn handle_server_message(
                 }
             }
             // Add to challenge results
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            let timestamp = platform.now_unix_secs();
             let result = ChallengeResultData {
                 challenge_name,
                 character_name,
