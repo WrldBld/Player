@@ -11,16 +11,7 @@ pub mod generation_queue;
 pub mod suggestion_button;
 pub mod sheet_field_input;
 
-pub use entity_browser::EntityBrowser;
-pub use character_form::CharacterForm;
-pub use location_form::LocationForm;
-pub use asset_gallery::AssetGallery;
-pub use generation_queue::GenerationQueuePanel;
-pub use suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
-pub use sheet_field_input::{CharacterSheetForm, SheetFieldInput, SheetSectionInput};
-
 use dioxus::prelude::*;
-use crate::routes::Route;
 
 /// Props for CreatorMode
 #[derive(Props, Clone, PartialEq)]
@@ -58,7 +49,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
 
                 // Entity browser (tree view) - now uses router for tab changes
-                EntityBrowser {
+                entity_browser::EntityBrowser {
                     world_id: props.world_id.clone(),
                     selected_type: selected_entity_type,
                     selected_id: selected_entity_id.read().clone(),
@@ -66,7 +57,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                 }
 
                 // Generation queue panel
-                GenerationQueuePanel {}
+                generation_queue::GenerationQueuePanel {}
             }
 
             // Right panel - Editor/Form area
@@ -76,25 +67,25 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
 
                 match (selected_entity_type, selected_entity_id.read().clone()) {
                     (EntityTypeTab::Characters, Some(id)) => rsx! {
-                        CharacterForm {
+                        character_form::CharacterForm {
                             character_id: id,
                             on_close: move |_| selected_entity_id.set(None),
                         }
                     },
                     (EntityTypeTab::Characters, None) => rsx! {
-                        CharacterForm {
+                        character_form::CharacterForm {
                             character_id: String::new(),
                             on_close: move |_| {},
                         }
                     },
                     (EntityTypeTab::Locations, Some(id)) => rsx! {
-                        LocationForm {
+                        location_form::LocationForm {
                             location_id: id,
                             on_close: move |_| selected_entity_id.set(None),
                         }
                     },
                     (EntityTypeTab::Locations, None) => rsx! {
-                        LocationForm {
+                        location_form::LocationForm {
                             location_id: String::new(),
                             on_close: move |_| {},
                         }

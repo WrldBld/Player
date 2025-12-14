@@ -1,7 +1,6 @@
 //! Location Form - Create and edit locations
 
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
 
 use super::asset_gallery::AssetGallery;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};

@@ -31,8 +31,8 @@ pub fn PCView(props: PCViewProps) -> Element {
 
     // Character sheet viewer state
     let mut show_character_sheet = use_signal(|| false);
-    let mut character_sheet_template: Signal<Option<SheetTemplate>> = use_signal(|| None);
-    let mut character_sheet_values: Signal<HashMap<String, FieldValue>> = use_signal(HashMap::new);
+    let character_sheet_template: Signal<Option<SheetTemplate>> = use_signal(|| None);
+    let character_sheet_values: Signal<HashMap<String, FieldValue>> = use_signal(HashMap::new);
     let mut player_character_name = use_signal(|| "Your Character".to_string());
 
     // Run typewriter effect
@@ -156,7 +156,7 @@ pub fn PCView(props: PCViewProps) -> Element {
                         tracing::info!("Open character sheet");
                         // TODO: Fetch character data and template from API
                         // For now, use placeholder data from game state
-                        if let Some(world) = game_state.world.read().as_ref() {
+                        if let Some(_world) = game_state.world.read().as_ref() {
                             player_character_name.set("Your Character".to_string());
                             // Character sheet template and values would come from API
                             // For now just show the modal

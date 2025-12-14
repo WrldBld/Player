@@ -163,7 +163,7 @@ fn SuggestionItem(text: String, on_click: EventHandler<()>) -> Element {
         div {
             onclick: move |_| on_click.call(()),
             style: "padding: 0.75rem 1rem; color: #e5e7eb; cursor: pointer; border-bottom: 1px solid #374151; transition: background 0.15s;",
-            onmouseenter: move |evt| {
+            onmouseenter: move |_evt| {
                 // Would be nice to highlight on hover, but we can't easily change style here
                 // In real app, would use a class and CSS hover state
             },

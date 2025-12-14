@@ -5,7 +5,7 @@
 
 use dioxus::prelude::*;
 
-use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
+use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, EmptyDialogueBox};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_typewriter_effect};
 
 /// Props for SpectatorView
@@ -207,7 +207,7 @@ fn SpectatorDialogueBox(props: SpectatorDialogueBoxProps) -> Element {
 
 /// A conversation log entry
 #[derive(Clone, Debug, PartialEq)]
-struct ConversationEntry {
+pub(crate) struct ConversationEntry {
     /// Speaker name
     speaker: String,
     /// Dialogue text

@@ -20,8 +20,4 @@ pub use wasm::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub use desktop::*;
 
-// Always export mock for testing
-pub use mock::{
-    create_mock_platform, MockDocumentProvider, MockLogProvider, MockPlatformBuilder,
-    MockRandomProvider, MockStorageProvider, MockTimeProvider,
-};
+// Mock platform remains available via `crate::infrastructure::platform::mock`.

@@ -30,13 +30,13 @@ pub use session_service::{port_connection_state_to_status, ParticipantRolePort, 
 pub use session_service::{SessionEvent, SessionService};
 
 // Re-export world service types
-pub use world_service::{CreateWorldRequest, CreateWorldResponse, WorldService, WorldSummary};
+pub use world_service::WorldService;
 
 // Re-export character service types
-pub use character_service::{CharacterData, CharacterService, CharacterSheetDataApi, CharacterSummary};
+pub use character_service::{CharacterData, CharacterService, CharacterSheetDataApi};
 
 // Re-export location service types
-pub use location_service::{ConnectionData, LocationData, LocationService, LocationSummary};
+pub use location_service::{LocationData, LocationService};
 
 // Re-export skill service types
 pub use skill_service::{CreateSkillRequest, SkillService, UpdateSkillRequest};
@@ -45,12 +45,10 @@ pub use crate::application::dto::{SkillCategory, SkillData};
 
 // Re-export challenge service types
 pub use challenge_service::ChallengeService;
-// Re-export ChallengeData, ChallengeDifficulty, ChallengeOutcomes from dto (not challenge_service)
-pub use crate::application::dto::{ChallengeData, ChallengeDifficulty, ChallengeOutcomes};
 
 // Re-export story event service types
 pub use story_event_service::{
-    CreateDmMarkerRequest, PaginatedStoryEventsResponse, StoryEventService,
+    CreateDmMarkerRequest, StoryEventService,
 };
 
 // Re-export narrative event service types
@@ -59,12 +57,12 @@ pub use narrative_event_service::NarrativeEventService;
 // Re-export workflow service types
 pub use workflow_service::{
     AnalyzeWorkflowResponse, InputDefault, PromptMapping, WorkflowAnalysis, WorkflowConfig,
-    WorkflowConfigBrief, WorkflowInput, WorkflowService, WorkflowSlotCategory,
-    WorkflowSlotStatus, WorkflowSlotsResponse, TestWorkflowResponse,
+    WorkflowInput, WorkflowService, WorkflowSlotCategory,
+    WorkflowSlotStatus, TestWorkflowResponse,
 };
 
 // Re-export asset service types
-pub use asset_service::{Asset, AssetService, GalleryResponse, GenerateRequest};
+pub use asset_service::{Asset, AssetService, GenerateRequest};
 
 // Re-export suggestion service types
-pub use suggestion_service::{SuggestionContext, SuggestionResponse, SuggestionService};
+pub use suggestion_service::{SuggestionContext, SuggestionService};

@@ -98,7 +98,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
         let slot = slot_id_for_save.clone();
         let defaults = edited_defaults.read().clone();
         let current_config = config.read().clone();
-        let svc = workflow_service_for_save.clone();
+        let _svc = workflow_service_for_save.clone();
 
         spawn(async move {
             is_saving.set(true);

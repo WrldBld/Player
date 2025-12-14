@@ -8,7 +8,7 @@ use crate::application::services::SessionEvent;
 use crate::application::ports::outbound::{ConnectionState as PortConnectionState, Platform};
 use crate::application::services::port_connection_state_to_status;
 use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
-use dioxus::prelude::{WritableExt, ReadableExt};
+use dioxus::prelude::WritableExt;
 use crate::presentation::handlers::handle_server_message;
 
 /// Process a session event and update presentation state

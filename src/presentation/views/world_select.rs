@@ -30,7 +30,7 @@ pub struct WorldSelectViewProps {
 /// World Selection View component
 #[component]
 pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
-    let mut game_state = use_context::<GameState>();
+    let game_state = use_context::<GameState>();
     let world_service = use_world_service();
     let mut worlds: Signal<Vec<WorldSummary>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);

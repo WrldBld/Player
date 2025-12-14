@@ -14,6 +14,5 @@ pub use game_connection_port::{
     ParticipantRole,
 };
 pub use platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
-    storage_keys,
+    Platform, storage_keys,
 };

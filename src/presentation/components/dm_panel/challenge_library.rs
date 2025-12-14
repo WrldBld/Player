@@ -687,7 +687,7 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
                 }
             }
             ChallengeDifficulty::Percentage { value } => {
-                if *value < 0 || *value > 100 {
+                if *value > 100 {
                     errors.push("Percentage must be between 0 and 100".to_string());
                 }
             }

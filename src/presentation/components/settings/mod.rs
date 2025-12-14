@@ -8,11 +8,6 @@ pub mod workflow_slot_list;
 pub mod workflow_config_editor;
 pub mod workflow_upload_modal;
 
-pub use skills_panel::SkillsPanel;
-pub use workflow_slot_list::WorkflowSlotList;
-pub use workflow_config_editor::WorkflowConfigEditor;
-pub use workflow_upload_modal::WorkflowUploadModal;
-
 use dioxus::prelude::*;
 use crate::routes::Route;
 
@@ -124,7 +119,7 @@ fn AssetWorkflowsTab() -> Element {
                 class: "left-panel",
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
 
-                WorkflowSlotList {
+                workflow_slot_list::WorkflowSlotList {
                     selected_slot: selected_slot.read().clone(),
                     on_select: move |slot: String| selected_slot.set(Some(slot)),
                     on_configure: move |slot: String| {
@@ -140,7 +135,7 @@ fn AssetWorkflowsTab() -> Element {
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
 
                 if let Some(slot) = selected_slot.read().clone() {
-                    WorkflowConfigEditor {
+                    workflow_config_editor::WorkflowConfigEditor {
                         slot: slot.clone(),
                         on_close: move |_| selected_slot.set(None),
                         on_reconfigure: move |_| {
@@ -160,7 +155,7 @@ fn AssetWorkflowsTab() -> Element {
             // Upload modal overlay
             if *show_upload_modal.read() {
                 if let Some(slot) = upload_target_slot.read().clone() {
-                    WorkflowUploadModal {
+                    workflow_upload_modal::WorkflowUploadModal {
                         slot: slot.clone(),
                         on_close: move |_| {
                             show_upload_modal.set(false);
@@ -198,7 +193,7 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut show_hidden = use_signal(|| false);
     let mut show_add_form = use_signal(|| false);
-    let mut editing_skill: Signal<Option<String>> = use_signal(|| None);
+    let _editing_skill: Signal<Option<String>> = use_signal(|| None);
 
     // Clone world_id for handlers
     let world_id = props.world_id.clone();

@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 
 use crate::application::dto::{
-    FieldType, FieldValue, SelectOption, SheetField, SheetSection, SheetTemplate,
+    FieldType, FieldValue, SheetField, SheetSection, SheetTemplate,
 };
 
 /// Props for the sheet section renderer
@@ -27,7 +27,7 @@ pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
             "display: flex; flex-direction: column; gap: 0.75rem;"
         }
         crate::application::dto::SectionLayout::Grid { columns } => {
-            let cols = columns.min(4).max(1);
+            let _cols = columns.min(4).max(1);
             // We'll use inline grid
             "display: grid; gap: 0.75rem;"
         }
@@ -158,7 +158,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::Text { multiline, max_length } => {
+                FieldType::Text { multiline, max_length: _ } => {
                     let current = match &props.value {
                         Some(FieldValue::Text(s)) => s.clone(),
                         _ => String::new(),
@@ -239,7 +239,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::Resource { max_field, default_max } => {
+                FieldType::Resource { max_field: _, default_max } => {
                     let (current, max) = match &props.value {
                         Some(FieldValue::Resource { current, max }) => (*current, *max),
                         _ => (default_max.unwrap_or(10), default_max.unwrap_or(10)),
@@ -283,7 +283,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::Derived { formula, depends_on } => {
+                FieldType::Derived { formula: _, depends_on: _ } => {
                     // Derived fields are read-only and calculated
                     let display = match &props.value {
                         Some(FieldValue::Number(n)) => n.to_string(),
@@ -303,7 +303,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::SkillReference { categories, show_attribute } => {
+                FieldType::SkillReference { categories: _, show_attribute: _ } => {
                     // TODO: Add skill picker
                     rsx! {
                         div {
@@ -313,7 +313,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::ItemList { item_type, max_items } => {
+                FieldType::ItemList { item_type: _, max_items: _ } => {
                     // TODO: Add item list editor
                     rsx! {
                         div {
@@ -323,7 +323,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     }
                 }
 
-                FieldType::SkillList { show_modifier, show_proficiency } => {
+                FieldType::SkillList { show_modifier: _, show_proficiency: _ } => {
                     // TODO: Add skill list display
                     rsx! {
                         div {

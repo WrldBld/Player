@@ -7,9 +7,11 @@ use crate::application::ports::outbound::ApprovalDecision;
 use crate::application::services::SessionCommandService;
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::services::{use_challenge_service, use_skill_service};
-use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
+use crate::presentation::components::dm_panel::challenge_library::ChallengeLibrary;
+use crate::presentation::components::dm_panel::trigger_challenge_modal::TriggerChallengeModal;
 use crate::presentation::components::settings::SettingsView;
-use crate::presentation::components::story_arc::{TimelineView, NarrativeEventLibrary};
+use crate::presentation::components::story_arc::timeline_view::TimelineView;
+use crate::presentation::components::story_arc::narrative_event_library::NarrativeEventLibrary;
 use crate::presentation::state::{use_game_state, use_session_state, PendingApproval};
 use crate::routes::Route;
 
@@ -559,7 +561,7 @@ struct ApprovalPopupProps {
 
 #[component]
 fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
-    let mut session_state = use_session_state();
+    let session_state = use_session_state();
     let mut modified_dialogue = use_signal(|| props.approval.proposed_dialogue.clone());
     let mut show_reasoning = use_signal(|| false);
     let mut rejection_feedback = use_signal(|| String::new());

@@ -26,7 +26,7 @@
 //! These are loaded on application startup and saved when changed.
 
 use dioxus::prelude::*;
-use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
+use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
 use crate::presentation::views::dm_view::DMMode;
 // Use port type for ParticipantRole instead of infrastructure type
 use crate::application::services::{ParticipantRolePort as ParticipantRole, SessionService, DEFAULT_ENGINE_URL};

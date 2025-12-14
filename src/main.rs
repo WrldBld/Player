@@ -4,6 +4,11 @@
 //! - PC View: Visual novel gameplay experience for players
 //! - DM View: Directorial control panel for running the game
 
+// NOTE: The Player crate includes a lot of WIP modules/components/services that
+// are compiled but not yet wired into the runtime UI. Until those are exercised
+// (and tested), `dead_code` warnings are mostly noise.
+#![allow(dead_code)]
+
 mod application;
 mod domain;
 mod infrastructure;

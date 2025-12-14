@@ -26,7 +26,6 @@ pub const DEFAULT_ENGINE_URL: &str = "ws://localhost:3000/ws";
 
 // Re-export port types for external use
 pub use crate::application::ports::outbound::{
-    ConnectionState as ConnectionStatePort,
     ParticipantRole as ParticipantRolePort,
 };
 
@@ -75,7 +74,7 @@ impl SessionService {
 
         // On connect, join when Connected is observed.
         {
-            let mut tx = tx.clone();
+            let tx = tx.clone();
             let connection = Arc::clone(&self.connection);
             let user_id_for_join = user_id.clone();
 
@@ -89,7 +88,7 @@ impl SessionService {
 
         // Forward raw messages
         {
-            let mut tx = tx.clone();
+            let tx = tx.clone();
             self.connection.on_message(Box::new(move |value| {
                 let _ = tx.unbounded_send(SessionEvent::MessageReceived(value));
             }));

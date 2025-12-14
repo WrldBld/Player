@@ -4,7 +4,7 @@
 //! updating, and managing challenges. It abstracts away the HTTP client
 //! details from the presentation layer.
 
-use crate::application::dto::{ChallengeData, ChallengeDifficulty, ChallengeOutcomes};
+use crate::application::dto::ChallengeData;
 use crate::application::ports::outbound::{ApiError, ApiPort};
 
 /// Challenge service for managing challenges

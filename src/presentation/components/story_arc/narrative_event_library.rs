@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::NarrativeEventData;
-use crate::presentation::components::story_arc::NarrativeEventCard;
+use crate::presentation::components::story_arc::narrative_event_card::NarrativeEventCard;
 use crate::presentation::services::use_narrative_event_service;
 
 #[derive(Props, Clone, PartialEq)]

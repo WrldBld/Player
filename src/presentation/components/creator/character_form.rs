@@ -1,7 +1,6 @@
 //! Character Form - Create and edit characters
 
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::asset_gallery::AssetGallery;

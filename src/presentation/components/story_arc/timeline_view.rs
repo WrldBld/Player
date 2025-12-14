@@ -3,9 +3,9 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::{StoryEventData, StoryEventTypeData};
-use crate::presentation::components::story_arc::{
-    TimelineEventCard, TimelineFilters, AddDmMarkerModal,
-};
+use crate::presentation::components::story_arc::add_dm_marker::AddDmMarkerModal;
+use crate::presentation::components::story_arc::timeline_event_card::TimelineEventCard;
+use crate::presentation::components::story_arc::timeline_filters::TimelineFilters;
 use crate::presentation::services::use_story_event_service;
 use crate::presentation::state::use_game_state;
 
@@ -30,7 +30,7 @@ pub struct TimelineViewProps {
 
 #[component]
 pub fn TimelineView(props: TimelineViewProps) -> Element {
-    let game_state = use_game_state();
+    let _game_state = use_game_state();
 
     let mut events: Signal<Vec<StoryEventData>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);

@@ -11,21 +11,13 @@ pub mod websocket_messages;
 pub mod world_snapshot;
 
 // Re-export session DTOs
-pub use session_dto::{
-    AppConnectionStatus, AppPendingApproval, AppChallengePromptData,
-    AppChallengeResultData, AppConversationLogEntry,
-};
+pub use session_dto::AppConnectionStatus;
 
 // Re-export WebSocket protocol DTOs (application-owned).
 pub use websocket_messages::*;
 
 // Re-export Engine snapshot contracts (application-owned).
 pub use world_snapshot::{
-    // World snapshot types
-    WorldSnapshot, SnapshotMetadata, WorldData, ActData,
-    SceneData as SnapshotSceneData, CharacterData as SnapshotCharacterData,
-    LocationData, BackdropRegionData, RegionBoundsData,
-    RelationshipData, ConnectionData, WantData,
     // Rule system types
     RuleSystemConfig, RuleSystemType, RuleSystemVariant,
     StatDefinition, DiceSystem, SuccessComparison,
@@ -33,18 +25,15 @@ pub use world_snapshot::{
     SkillData, SkillCategory,
     // Character sheet types
     SheetTemplate, SheetSection, SheetField, SectionLayout,
-    FieldType, SelectOption, ItemListType,
-    CharacterSheetData, FieldValue,
+    FieldType, FieldValue,
     // Challenge types
     ChallengeData, ChallengeType, ChallengeDifficulty,
-    ChallengeOutcomes, Outcome, OutcomeTrigger,
-    TriggerCondition, TriggerType,
+    ChallengeOutcomes, Outcome,
     // Story arc types
-    StoryEventData, StoryEventTypeData, MarkerImportance, DmMarkerType,
-    NarrativeEventData, EventChainData, ChainedEventData,
+    StoryEventData, StoryEventTypeData,
+    NarrativeEventData,
     // Session snapshot types (simplified format from Engine)
-    SessionWorldSnapshot, SessionWorldData, SessionLocationData,
-    SessionCharacterData, SessionSceneData,
+    SessionWorldSnapshot,
 };
 
 // NOTE: Infrastructure asset loader now depends inward on these DTOs.

@@ -4,8 +4,6 @@
 //! allowing application services to manage real-time game sessions without
 //! depending on concrete WebSocket client implementations.
 
-use anyhow::Result;
-
 /// Connection state for the game session
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
@@ -143,7 +141,7 @@ pub trait GameConnectionPort {
     ///
     /// # Errors
     /// Returns an error if the connection cannot be established.
-    fn connect(&self) -> Result<()>;
+    fn connect(&self) -> anyhow::Result<()>;
 
     /// Disconnect from the Engine server
     fn disconnect(&self);
@@ -153,7 +151,7 @@ pub trait GameConnectionPort {
     /// # Arguments
     /// * `user_id` - Unique identifier for this user
     /// * `role` - The role this participant will have in the session
-    fn join_session(&self, user_id: &str, role: ParticipantRole) -> Result<()>;
+    fn join_session(&self, user_id: &str, role: ParticipantRole) -> anyhow::Result<()>;
 
     /// Send a player action
     ///
@@ -166,25 +164,25 @@ pub trait GameConnectionPort {
         action_type: &str,
         target: Option<&str>,
         dialogue: Option<&str>,
-    ) -> Result<()>;
+    ) -> anyhow::Result<()>;
 
     /// Request a scene change
-    fn request_scene_change(&self, scene_id: &str) -> Result<()>;
+    fn request_scene_change(&self, scene_id: &str) -> anyhow::Result<()>;
 
     /// Send directorial context update (DM only)
-    fn send_directorial_update(&self, context: DirectorialContext) -> Result<()>;
+    fn send_directorial_update(&self, context: DirectorialContext) -> anyhow::Result<()>;
 
     /// Send approval decision (DM only)
-    fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> Result<()>;
+    fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> anyhow::Result<()>;
 
     /// Trigger a challenge for a character (DM only)
-    fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> Result<()>;
+    fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;
 
     /// Submit a challenge roll (Player only)
-    fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> Result<()>;
+    fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> anyhow::Result<()>;
 
     /// Send a heartbeat ping
-    fn heartbeat(&self) -> Result<()>;
+    fn heartbeat(&self) -> anyhow::Result<()>;
 
     /// Register a callback for state changes
     ///

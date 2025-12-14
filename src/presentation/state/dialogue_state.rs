@@ -154,9 +154,9 @@ pub fn use_typewriter_effect(dialogue_state: &mut DialogueState) {
     let platform = use_context::<Platform>();
     let is_typing = *dialogue_state.is_typing.read();
     let full_text = dialogue_state.full_text.clone();
-    let mut displayed_text = dialogue_state.displayed_text.clone();
-    let mut is_typing_signal = dialogue_state.is_typing.clone();
-    let mut awaiting_signal = dialogue_state.awaiting_input.clone();
+    let displayed_text = dialogue_state.displayed_text.clone();
+    let is_typing_signal = dialogue_state.is_typing.clone();
+    let awaiting_signal = dialogue_state.awaiting_input.clone();
 
     use_future(move || {
         let platform = platform.clone();
