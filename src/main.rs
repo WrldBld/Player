@@ -44,10 +44,7 @@ fn main() {
 /// Root application component with state providers and router
 #[component]
 fn App() -> Element {
-    // Provide platform services via context (single cfg block for platform selection)
-    #[cfg(target_arch = "wasm32")]
-    let platform = infrastructure::platform::create_platform();
-    #[cfg(not(target_arch = "wasm32"))]
+    // Provide platform services via context
     let platform = infrastructure::platform::create_platform();
 
     use_context_provider(|| platform);
