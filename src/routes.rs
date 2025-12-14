@@ -29,7 +29,9 @@ use dioxus::prelude::*;
 use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
 use crate::presentation::views::dm_view::DMMode;
 // Use port type for ParticipantRole instead of infrastructure type
-use crate::application::services::{ParticipantRolePort as ParticipantRole, SessionService, DEFAULT_ENGINE_URL};
+use crate::application::services::{ParticipantRolePort as ParticipantRole, DEFAULT_ENGINE_URL};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::application::services::SessionService;
 use crate::application::ports::outbound::{Platform, storage_keys};
 
 /// Application routes - each URL maps to a view
@@ -697,18 +699,60 @@ fn initiate_connection(
     dialogue_state: DialogueState,
     platform: Platform,
 ) {
-    let session_service = SessionService::new(&server_url);
+    // Update session state to connecting
+    let mut session_state = session_state.clone();
+    session_state.start_connecting(&server_url);
+    session_state.set_user(user_id.clone(), role);
 
-    if let Err(e) = session_service.connect_and_join(
-        user_id,
-        role,
-        session_state.clone(),
-        game_state,
-        dialogue_state,
-        platform,
-    ) {
+    let mut game_state = game_state;
+    let mut dialogue_state = dialogue_state;
+    let platform_for_handler = platform.clone();
+
+    // Forward incoming server messages into the presentation handler.
+    let on_message = Box::new(move |message| {
+        crate::presentation::handlers::handle_server_message(
+            message,
+            &mut session_state,
+            &mut game_state,
+            &mut dialogue_state,
+            &platform_for_handler,
+        );
+    });
+
+    // Keep connection status in sync; JoinSession is sent by SessionService once connected.
+    let mut session_state_for_state = session_state.clone();
+    let on_state_change = Box::new(move |state| {
+        let app_status = crate::application::services::connection_state_to_status(state);
+        let status = match app_status {
+            crate::application::dto::AppConnectionStatus::Disconnected => ConnectionStatus::Disconnected,
+            crate::application::dto::AppConnectionStatus::Connecting => ConnectionStatus::Connecting,
+            crate::application::dto::AppConnectionStatus::Connected => ConnectionStatus::Connected,
+            crate::application::dto::AppConnectionStatus::Reconnecting => ConnectionStatus::Reconnecting,
+            crate::application::dto::AppConnectionStatus::Failed => ConnectionStatus::Failed,
+        };
+        session_state_for_state.connection_status.set(status);
+
+        if matches!(
+            state,
+            crate::infrastructure::websocket::ConnectionState::Disconnected
+                | crate::infrastructure::websocket::ConnectionState::Failed
+        ) {
+            session_state_for_state.engine_client.set(None);
+        }
+    });
+
+    // WASM uses the infrastructure EngineClient directly for connection establishment.
+    // This is acceptable at the composition boundary; message handling remains in presentation.
+    let client = crate::infrastructure::websocket::EngineClient::new(&server_url);
+    client.set_on_state_change(on_state_change);
+    client.set_on_message(on_message);
+    // Store a send-capable connection handle for UI commands.
+    let connection = crate::infrastructure::websocket::EngineGameConnection::new(client.clone());
+    session_state.set_connection_handle(std::sync::Arc::new(connection));
+
+    if let Err(e) = client.connect() {
         web_sys::console::error_1(&format!("Connection failed: {}", e).into());
-        session_state.clone().set_failed(e.to_string());
+        session_state.set_failed(e.to_string());
     }
 }
 
@@ -732,16 +776,14 @@ fn initiate_connection(
 
     // Spawn async task to handle connection
     spawn(async move {
-        let session_service = SessionService::new(&server_url);
+        // Build a concrete connection (infrastructure) and pass it to the application service.
+        let client = crate::infrastructure::websocket::EngineClient::new(&server_url);
+        let connection = std::sync::Arc::new(crate::infrastructure::websocket::EngineGameConnection::new(client));
+        session_state.set_connection_handle(connection.clone());
+        let session_service = SessionService::new(connection.clone());
 
         match session_service.connect(user_id, role).await {
             Ok(mut rx) => {
-                // Store client reference
-                let connection = crate::infrastructure::websocket::EngineGameConnection::new(
-                    session_service.client().as_ref().clone(),
-                );
-                session_state.set_connected(std::sync::Arc::new(connection));
-
                 // Process events from the channel
                 while let Some(event) = rx.recv().await {
                     handle_session_event(

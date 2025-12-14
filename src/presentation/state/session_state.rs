@@ -184,6 +184,14 @@ impl SessionState {
         self.error_message.set(None);
     }
 
+    /// Store the connection handle without changing UI status.
+    ///
+    /// This is useful on desktop where the connection is established asynchronously
+    /// and status is driven by incoming connection events.
+    pub fn set_connection_handle(&mut self, client: Arc<dyn GameConnectionPort>) {
+        self.engine_client.set(Some(client));
+    }
+
     /// Set the session as joined
     pub fn set_session_joined(&mut self, session_id: String) {
         self.session_id.set(Some(session_id));

@@ -81,6 +81,57 @@ pub struct NpcMotivation {
 /// NOTE: This trait is intentionally **object-safe** so the presentation layer can
 /// store an `Arc<dyn GameConnectionPort>` without depending on concrete
 /// infrastructure types.
+#[cfg(not(target_arch = "wasm32"))]
+pub trait GameConnectionPort: Send + Sync {
+    /// Get the current connection state
+    fn state(&self) -> ConnectionState;
+
+    /// Get the server URL
+    fn url(&self) -> &str;
+
+    /// Connect to the server
+    fn connect(&self) -> anyhow::Result<()>;
+
+    /// Disconnect from the server
+    fn disconnect(&self);
+
+    /// Join a session with the given user ID and role
+    fn join_session(&self, user_id: &str, role: ParticipantRole) -> anyhow::Result<()>;
+
+    /// Send a player action to the server
+    fn send_action(
+        &self,
+        action_type: &str,
+        target: Option<&str>,
+        dialogue: Option<&str>,
+    ) -> anyhow::Result<()>;
+
+    /// Request a scene change (DM only)
+    fn request_scene_change(&self, scene_id: &str) -> anyhow::Result<()>;
+
+    /// Send a directorial context update (DM only)
+    fn send_directorial_update(&self, context: DirectorialContext) -> anyhow::Result<()>;
+
+    /// Send an approval decision (DM only)
+    fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> anyhow::Result<()>;
+
+    /// Trigger a challenge (DM only)
+    fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;
+
+    /// Submit a challenge roll (Player only)
+    fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> anyhow::Result<()>;
+
+    /// Send a heartbeat ping
+    fn heartbeat(&self) -> anyhow::Result<()>;
+
+    /// Register a callback for state changes
+    fn on_state_change(&self, callback: Box<dyn FnMut(ConnectionState) + Send + 'static>);
+
+    /// Register a callback for server messages
+    fn on_message(&self, callback: Box<dyn FnMut(serde_json::Value) + Send + 'static>);
+}
+
+#[cfg(target_arch = "wasm32")]
 pub trait GameConnectionPort {
     /// Get the current connection state
     fn state(&self) -> ConnectionState;

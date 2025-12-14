@@ -4,6 +4,10 @@
 //! rather than the concrete WebSocket client type.
 
 use anyhow::Result;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU8, Ordering},
+};
 
 use crate::application::ports::outbound::{
     ApprovalDecision as PortApprovalDecision, ConnectionState as PortConnectionState,
@@ -22,6 +26,26 @@ fn map_state(state: InfraConnectionState) -> PortConnectionState {
         InfraConnectionState::Connected => PortConnectionState::Connected,
         InfraConnectionState::Reconnecting => PortConnectionState::Reconnecting,
         InfraConnectionState::Failed => PortConnectionState::Failed,
+    }
+}
+
+fn state_to_u8(state: PortConnectionState) -> u8 {
+    match state {
+        PortConnectionState::Disconnected => 0,
+        PortConnectionState::Connecting => 1,
+        PortConnectionState::Connected => 2,
+        PortConnectionState::Reconnecting => 3,
+        PortConnectionState::Failed => 4,
+    }
+}
+
+fn u8_to_state(v: u8) -> PortConnectionState {
+    match v {
+        1 => PortConnectionState::Connecting,
+        2 => PortConnectionState::Connected,
+        3 => PortConnectionState::Reconnecting,
+        4 => PortConnectionState::Failed,
+        _ => PortConnectionState::Disconnected,
     }
 }
 
@@ -72,27 +96,32 @@ fn map_approval_decision(decision: PortApprovalDecision) -> InfraApprovalDecisio
 #[derive(Clone)]
 pub struct EngineGameConnection {
     client: EngineClient,
+    state: Arc<AtomicU8>,
 }
 
 impl EngineGameConnection {
     pub fn new(client: EngineClient) -> Self {
-        Self { client }
+        let initial = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                state_to_u8(map_state(client.state()))
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                state_to_u8(PortConnectionState::Disconnected)
+            }
+        };
+
+        Self {
+            client,
+            state: Arc::new(AtomicU8::new(initial)),
+        }
     }
 }
 
 impl GameConnectionPort for EngineGameConnection {
     fn state(&self) -> PortConnectionState {
-        #[cfg(target_arch = "wasm32")]
-        {
-            map_state(self.client.state())
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            // Desktop EngineClient state() is async; for now, treat it as "best-effort"
-            // and return Disconnected. Connection state changes should be observed via
-            // SessionService events.
-            PortConnectionState::Disconnected
-        }
+        u8_to_state(self.state.load(Ordering::SeqCst))
     }
 
     fn url(&self) -> &str {
@@ -102,14 +131,17 @@ impl GameConnectionPort for EngineGameConnection {
     fn connect(&self) -> Result<()> {
         #[cfg(target_arch = "wasm32")]
         {
+            self.state.store(state_to_u8(PortConnectionState::Connecting), Ordering::SeqCst);
             self.client.connect()
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = self.client.clone();
+            let state = Arc::clone(&self.state);
             tokio::spawn(async move {
                 if let Err(e) = client.connect().await {
                     tracing::error!("Failed to connect to Engine: {}", e);
+                    state.store(state_to_u8(PortConnectionState::Failed), Ordering::SeqCst);
                 }
             });
             Ok(())
@@ -120,12 +152,15 @@ impl GameConnectionPort for EngineGameConnection {
         #[cfg(target_arch = "wasm32")]
         {
             self.client.disconnect();
+            self.state.store(state_to_u8(PortConnectionState::Disconnected), Ordering::SeqCst);
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = self.client.clone();
+            let state = Arc::clone(&self.state);
             tokio::spawn(async move {
                 client.disconnect().await;
+                state.store(state_to_u8(PortConnectionState::Disconnected), Ordering::SeqCst);
             });
         }
     }
@@ -286,18 +321,78 @@ impl GameConnectionPort for EngineGameConnection {
         }
     }
 
-    fn on_state_change(&self, _callback: Box<dyn FnMut(PortConnectionState) + 'static>) {
-        // NOTE:
-        // - Desktop `EngineClient` requires `Send + Sync` callback and is typically wired
-        //   via `SessionService` → `SessionEvent` channel.
-        // - WASM callback wiring is possible but unused in the current refactor step.
-        //
-        // This adapter is currently used as a *send-only* abstraction to remove
-        // `EngineClient` from presentation state and eliminate duplicated cfg-branches.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn on_state_change(&self, callback: Box<dyn FnMut(PortConnectionState) + Send + 'static>) {
+        let state_slot = Arc::clone(&self.state);
+        let cb = Arc::new(tokio::sync::Mutex::new(callback));
+
+        let cb_for_engine = Arc::clone(&cb);
+        let state_for_engine = Arc::clone(&state_slot);
+        let client = self.client.clone();
+
+        tokio::spawn(async move {
+            client
+                .set_on_state_change(move |infra_state| {
+                    let port_state = map_state(infra_state);
+                    state_for_engine.store(state_to_u8(port_state), Ordering::SeqCst);
+
+                    let cb_for_call = Arc::clone(&cb_for_engine);
+                    tokio::spawn(async move {
+                        let mut cb = cb_for_call.lock().await;
+                        (cb)(port_state);
+                    });
+                })
+                .await;
+        });
     }
 
-    fn on_message(&self, _callback: Box<dyn FnMut(serde_json::Value) + 'static>) {
-        // See note in `on_state_change`.
+    #[cfg(target_arch = "wasm32")]
+    fn on_state_change(&self, callback: Box<dyn FnMut(PortConnectionState) + 'static>) {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let state_slot = Arc::clone(&self.state);
+        let cb = Rc::new(RefCell::new(callback));
+
+        let cb_for_engine = Rc::clone(&cb);
+        self.client.set_on_state_change(move |infra_state| {
+            let port_state = map_state(infra_state);
+            state_slot.store(state_to_u8(port_state), Ordering::SeqCst);
+            (cb_for_engine.borrow_mut())(port_state);
+        });
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn on_message(&self, callback: Box<dyn FnMut(serde_json::Value) + Send + 'static>) {
+        let cb = Arc::new(tokio::sync::Mutex::new(callback));
+        let cb_for_engine = Arc::clone(&cb);
+        let client = self.client.clone();
+
+        tokio::spawn(async move {
+            client
+                .set_on_message(move |msg| {
+                    let value = serde_json::to_value(msg).unwrap_or(serde_json::Value::Null);
+                    let cb_for_call = Arc::clone(&cb_for_engine);
+                    tokio::spawn(async move {
+                        let mut cb = cb_for_call.lock().await;
+                        (cb)(value);
+                    });
+                })
+                .await;
+        });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn on_message(&self, callback: Box<dyn FnMut(serde_json::Value) + 'static>) {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let cb = Rc::new(RefCell::new(callback));
+        let cb_for_engine = Rc::clone(&cb);
+        self.client.set_on_message(move |msg| {
+            let value = serde_json::to_value(msg).unwrap_or(serde_json::Value::Null);
+            (cb_for_engine.borrow_mut())(value);
+        });
     }
 }
 

@@ -26,8 +26,7 @@ pub use session_command_service::SessionCommandService;
 
 // Re-export session service types
 pub use session_service::{
-    connection_state_to_status, port_connection_state_to_status,
-    ConnectionStatePort, ParticipantRolePort,
+    port_connection_state_to_status, ParticipantRolePort,
     SessionService, DEFAULT_ENGINE_URL,
 };
 
