@@ -4,7 +4,7 @@
 //! provides these types so that presentation doesn't need to import
 //! directly from infrastructure.
 //!
-//! Phase 8 will move many of these to proper domain entities.
+//! TODO (Phase 16.3): replace infra re-exports with real application DTOs + conversions.
 
 pub mod session_dto;
 
