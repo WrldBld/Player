@@ -23,18 +23,18 @@ pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
     let mut is_collapsed = use_signal(|| props.section.collapsed_by_default);
 
     let section_style = match props.section.layout {
-        crate::infrastructure::asset_loader::SectionLayout::Vertical => {
+        crate::application::dto::SectionLayout::Vertical => {
             "display: flex; flex-direction: column; gap: 0.75rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::Grid { columns } => {
+        crate::application::dto::SectionLayout::Grid { columns } => {
             let cols = columns.min(4).max(1);
             // We'll use inline grid
             "display: grid; gap: 0.75rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::TwoColumn => {
+        crate::application::dto::SectionLayout::TwoColumn => {
             "display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::Flow => {
+        crate::application::dto::SectionLayout::Flow => {
             "display: flex; flex-wrap: wrap; gap: 0.5rem;"
         }
     };

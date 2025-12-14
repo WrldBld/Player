@@ -8,6 +8,7 @@
 
 pub mod session_dto;
 pub mod websocket_messages;
+pub mod world_snapshot;
 
 // Re-export session DTOs
 pub use session_dto::{
@@ -18,9 +19,8 @@ pub use session_dto::{
 // Re-export WebSocket protocol DTOs (application-owned).
 pub use websocket_messages::*;
 
-// Re-export infrastructure types through the application layer
-// This allows presentation to import from application instead of infrastructure
-pub use crate::infrastructure::asset_loader::{
+// Re-export Engine snapshot contracts (application-owned).
+pub use world_snapshot::{
     // World snapshot types
     WorldSnapshot, SnapshotMetadata, WorldData, ActData,
     SceneData as SnapshotSceneData, CharacterData as SnapshotCharacterData,
@@ -47,5 +47,4 @@ pub use crate::infrastructure::asset_loader::{
     SessionCharacterData, SessionSceneData,
 };
 
-// NOTE (Phase 16.3): asset_loader types are still infrastructure-owned for now.
-// Next step is to introduce application-owned snapshot DTOs and make the loader depend inward.
+// NOTE: Infrastructure asset loader now depends inward on these DTOs.

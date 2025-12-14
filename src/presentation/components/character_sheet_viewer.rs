@@ -99,16 +99,16 @@ fn SheetSectionViewer(props: SheetSectionViewerProps) -> Element {
 
     // Determine layout style
     let content_style = match props.section.layout {
-        crate::infrastructure::asset_loader::SectionLayout::Vertical => {
+        crate::application::dto::SectionLayout::Vertical => {
             "display: flex; flex-direction: column; gap: 0.5rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::Grid { columns: _ } => {
+        crate::application::dto::SectionLayout::Grid { columns: _ } => {
             "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::TwoColumn => {
+        crate::application::dto::SectionLayout::TwoColumn => {
             "display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;"
         }
-        crate::infrastructure::asset_loader::SectionLayout::Flow => {
+        crate::application::dto::SectionLayout::Flow => {
             "display: flex; flex-wrap: wrap; gap: 0.75rem;"
         }
     };

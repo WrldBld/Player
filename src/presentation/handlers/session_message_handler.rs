@@ -6,7 +6,7 @@
 
 use crate::application::ports::outbound::Platform;
 use crate::application::dto::ServerMessage;
-use crate::infrastructure::asset_loader::SessionWorldSnapshot;
+use crate::application::dto::SessionWorldSnapshot;
 use dioxus::prelude::{ReadableExt, WritableExt};
 use crate::presentation::state::{
     DialogueState, GameState, PendingApproval, SessionState,
