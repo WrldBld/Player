@@ -12,6 +12,7 @@ use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
+use crate::presentation::services::{use_character_service, use_world_service};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect};
 
 /// Props for PCView
@@ -29,11 +30,17 @@ pub fn PCView(props: PCViewProps) -> Element {
     let mut dialogue_state = use_dialogue_state();
     let session_state = use_session_state();
 
+    // Get services
+    let world_service = use_world_service();
+    let character_service = use_character_service();
+
     // Character sheet viewer state
     let mut show_character_sheet = use_signal(|| false);
-    let character_sheet_template: Signal<Option<SheetTemplate>> = use_signal(|| None);
-    let character_sheet_values: Signal<HashMap<String, FieldValue>> = use_signal(HashMap::new);
+    let mut character_sheet_template: Signal<Option<SheetTemplate>> = use_signal(|| None);
+    let mut character_sheet_values: Signal<HashMap<String, FieldValue>> = use_signal(HashMap::new);
     let mut player_character_name = use_signal(|| "Your Character".to_string());
+    let mut selected_character_id: Signal<Option<String>> = use_signal(|| None);
+    let mut is_loading_sheet = use_signal(|| false);
 
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
@@ -152,15 +159,53 @@ pub fn PCView(props: PCViewProps) -> Element {
                 })),
                 on_character: Some(EventHandler::new({
                     let game_state = game_state.clone();
+                    let world_service = world_service.clone();
+                    let character_service = character_service.clone();
                     move |_| {
                         tracing::info!("Open character sheet");
-                        // TODO: Fetch character data and template from API
-                        // For now, use placeholder data from game state
-                        if let Some(_world) = game_state.world.read().as_ref() {
-                            player_character_name.set("Your Character".to_string());
-                            // Character sheet template and values would come from API
-                            // For now just show the modal
-                            show_character_sheet.set(true);
+                        // Show the modal first (loading state)
+                        show_character_sheet.set(true);
+                        is_loading_sheet.set(true);
+
+                        // Get world ID and first available character
+                        let world_id = game_state.world.read().as_ref()
+                            .map(|w| w.world.id.clone());
+                        let characters = game_state.world.read().as_ref()
+                            .map(|w| w.characters.clone())
+                            .unwrap_or_default();
+
+                        // Auto-select first character if none selected
+                        let char_id = selected_character_id.read().clone()
+                            .or_else(|| characters.first().map(|c| c.id.clone()));
+
+                        if let (Some(wid), Some(cid)) = (world_id, char_id.clone()) {
+                            selected_character_id.set(Some(cid.clone()));
+                            let world_svc = world_service.clone();
+                            let char_svc = character_service.clone();
+                            spawn(async move {
+                                // Load template
+                                match world_svc.get_sheet_template(&wid).await {
+                                    Ok(template_json) => {
+                                        if let Ok(template) = serde_json::from_value::<SheetTemplate>(template_json) {
+                                            character_sheet_template.set(Some(template));
+                                        }
+                                    }
+                                    Err(e) => tracing::warn!("Failed to load sheet template: {}", e),
+                                }
+                                // Load character data
+                                match char_svc.get_character(&wid, &cid).await {
+                                    Ok(char_data) => {
+                                        player_character_name.set(char_data.name);
+                                        if let Some(sheet_data) = char_data.sheet_data {
+                                            character_sheet_values.set(sheet_data.values);
+                                        }
+                                    }
+                                    Err(e) => tracing::warn!("Failed to load character: {}", e),
+                                }
+                                is_loading_sheet.set(false);
+                            });
+                        } else {
+                            is_loading_sheet.set(false);
                         }
                     }
                 })),
@@ -174,15 +219,8 @@ pub fn PCView(props: PCViewProps) -> Element {
 
             // Character sheet viewer modal
             if *show_character_sheet.read() {
-                if let Some(template) = character_sheet_template.read().as_ref() {
-                    CharacterSheetViewer {
-                        character_name: player_character_name.read().clone(),
-                        template: template.clone(),
-                        values: character_sheet_values.read().clone(),
-                        on_close: move |_| show_character_sheet.set(false),
-                    }
-                } else {
-                    // No template loaded - show placeholder
+                if *is_loading_sheet.read() {
+                    // Loading state
                     div {
                         class: "character-sheet-overlay",
                         style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
@@ -192,20 +230,58 @@ pub fn PCView(props: PCViewProps) -> Element {
                             style: "background: #1a1a2e; border-radius: 1rem; padding: 2rem; max-width: 400px; text-align: center;",
                             onclick: move |e| e.stop_propagation(),
 
-                            h2 {
-                                style: "color: #f3f4f6; margin: 0 0 1rem 0;",
-                                "Character Sheet"
+                            div {
+                                style: "color: #9ca3af; font-size: 1.25rem;",
+                                "Loading character sheet..."
                             }
-
-                            p {
-                                style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
-                                "No character sheet template available for this world. The DM may need to configure the rule system."
-                            }
-
-                            button {
+                        }
+                    }
+                } else if let Some(template) = character_sheet_template.read().as_ref() {
+                    CharacterSheetViewer {
+                        character_name: player_character_name.read().clone(),
+                        template: template.clone(),
+                        values: character_sheet_values.read().clone(),
+                        on_close: move |_| show_character_sheet.set(false),
+                    }
+                } else {
+                    // No template loaded - show placeholder with character selection
+                    {
+                        let characters = game_state.world.read().as_ref()
+                            .map(|w| w.characters.clone())
+                            .unwrap_or_default();
+                        rsx! {
+                            div {
+                                class: "character-sheet-overlay",
+                                style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
                                 onclick: move |_| show_character_sheet.set(false),
-                                style: "padding: 0.5rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
-                                "Close"
+
+                                div {
+                                    style: "background: #1a1a2e; border-radius: 1rem; padding: 2rem; max-width: 400px; text-align: center;",
+                                    onclick: move |e| e.stop_propagation(),
+
+                                    h2 {
+                                        style: "color: #f3f4f6; margin: 0 0 1rem 0;",
+                                        "Character Sheet"
+                                    }
+
+                                    if characters.is_empty() {
+                                        p {
+                                            style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
+                                            "No characters available in this world."
+                                        }
+                                    } else {
+                                        p {
+                                            style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
+                                            "No character sheet template available for this world. The DM may need to configure the rule system."
+                                        }
+                                    }
+
+                                    button {
+                                        onclick: move |_| show_character_sheet.set(false),
+                                        style: "padding: 0.5rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                                        "Close"
+                                    }
+                                }
                             }
                         }
                     }
