@@ -720,8 +720,9 @@ fn initiate_connection(
         );
     });
 
-    // Keep connection status in sync; JoinSession is sent by SessionService once connected.
+    // Keep connection status in sync; send JoinSession once connected.
     let mut session_state_for_state = session_state.clone();
+    let user_id_for_join = user_id.clone();
     let on_state_change = Box::new(move |state| {
         let status = match state {
             crate::infrastructure::websocket::ConnectionState::Disconnected => ConnectionStatus::Disconnected,
@@ -731,6 +732,15 @@ fn initiate_connection(
             crate::infrastructure::websocket::ConnectionState::Failed => ConnectionStatus::Failed,
         };
         session_state_for_state.connection_status.set(status);
+
+        if matches!(state, crate::infrastructure::websocket::ConnectionState::Connected) {
+            // Send JoinSession when connected (WASM)
+            if let Some(client) = session_state_for_state.engine_client.read().as_ref() {
+                if let Err(e) = client.join_session(&user_id_for_join, role) {
+                    web_sys::console::error_1(&format!("Failed to send JoinSession: {}", e).into());
+                }
+            }
+        }
 
         if matches!(
             state,
