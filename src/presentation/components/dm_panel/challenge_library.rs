@@ -713,11 +713,11 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
             skill_id: skill_id.read().clone(),
             difficulty: difficulty.read().clone(),
             outcomes: ChallengeOutcomes {
-                success: crate::infrastructure::asset_loader::Outcome {
+                success: crate::application::dto::Outcome {
                     description: success_desc.read().clone(),
                     triggers: vec![],
                 },
-                failure: crate::infrastructure::asset_loader::Outcome {
+                failure: crate::application::dto::Outcome {
                     description: failure_desc.read().clone(),
                     triggers: vec![],
                 },

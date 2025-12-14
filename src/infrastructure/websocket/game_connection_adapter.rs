@@ -15,9 +15,11 @@ use crate::application::ports::outbound::{
     ParticipantRole as PortParticipantRole,
 };
 
-use super::{ClientMessage, EngineClient};
-use super::{ConnectionState as InfraConnectionState, ParticipantRole as InfraParticipantRole};
-use super::{ApprovalDecision as InfraApprovalDecision, DirectorialContext as InfraDirectorialContext, NpcMotivationData as InfraNpcMotivationData};
+use crate::application::dto::{
+    ApprovalDecision as InfraApprovalDecision, ClientMessage, DirectorialContext as InfraDirectorialContext,
+    NpcMotivationData as InfraNpcMotivationData, ParticipantRole as InfraParticipantRole,
+};
+use super::{ConnectionState as InfraConnectionState, EngineClient};
 
 fn map_state(state: InfraConnectionState) -> PortConnectionState {
     match state {
