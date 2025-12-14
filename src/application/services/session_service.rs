@@ -189,7 +189,7 @@ mod desktop {
 
             // Send JoinSession message if connected
             if self.client.state().await == InfraConnectionState::Connected {
-                self.client.join_session(&user_id_clone, infra_role).await?;
+                self.client.join_session(&user_id_clone, infra_role, None).await?;
                 tracing::info!("Sent JoinSession for user: {}", user_id_clone);
             }
 
@@ -311,7 +311,7 @@ mod wasm {
                         InfraConnectionState::Connected => {
                             // Send JoinSession when connected
                             if let Some(ref client) = *client_ref.borrow() {
-                                if let Err(e) = client.join_session(&user_id, infra_role) {
+                                if let Err(e) = client.join_session(&user_id, infra_role, None) {
                                     web_sys::console::error_1(
                                         &format!("Failed to send JoinSession: {}", e).into(),
                                     );
@@ -430,6 +430,8 @@ fn handle_server_message(
     match message {
         ServerMessage::SessionJoined {
             session_id,
+            role: _,
+            participants: _,
             world_snapshot,
         } => {
             log_message("SessionJoined received");
@@ -461,6 +463,48 @@ fn handle_server_message(
                     log_error(&format!("Failed to parse world snapshot: {}", e));
                 }
             }
+        }
+
+        ServerMessage::PlayerJoined {
+            user_id,
+            role,
+            character_name,
+        } => {
+            log_message(&format!("Player joined: {} as {:?}", user_id, role));
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Player {} joined as {:?}{}",
+                    user_id,
+                    role,
+                    character_name.map(|n| format!(" ({})", n)).unwrap_or_default()
+                ),
+                true,
+                platform,
+            );
+        }
+
+        ServerMessage::PlayerLeft { user_id } => {
+            log_message(&format!("Player left: {}", user_id));
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Player {} left", user_id),
+                true,
+                platform,
+            );
+        }
+
+        ServerMessage::ActionReceived {
+            action_id,
+            player_id,
+            action_type,
+        } => {
+            log_message(&format!("Action received: {} from {}", action_type, player_id));
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Action {} received: {}", action_id, action_type),
+                true,
+                platform,
+            );
         }
 
         ServerMessage::SceneUpdate {
@@ -503,6 +547,7 @@ fn handle_server_message(
             internal_reasoning,
             proposed_tools,
             challenge_suggestion,
+            narrative_event_suggestion: _, // TODO: Handle narrative event suggestions
         } => {
             log_message(&format!(
                 "Approval required for {} (request: {})",
@@ -531,11 +576,7 @@ fn handle_server_message(
         }
 
         ServerMessage::Error { message, code } => {
-            let error_msg = if let Some(c) = code {
-                format!("Server error [{}]: {}", c, message)
-            } else {
-                format!("Server error: {}", message)
-            };
+            let error_msg = format!("Server error [{}]: {}", code, message);
             log_error(&error_msg);
             session_state.error_message.set(Some(error_msg));
         }

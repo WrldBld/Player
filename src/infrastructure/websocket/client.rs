@@ -180,10 +180,12 @@ mod desktop {
             &self,
             user_id: &str,
             role: super::super::messages::ParticipantRole,
+            world_id: Option<String>,
         ) -> Result<()> {
             self.send(ClientMessage::JoinSession {
                 user_id: user_id.to_string(),
                 role,
+                world_id,
             })
             .await
         }
@@ -381,10 +383,12 @@ mod wasm {
             &self,
             user_id: &str,
             role: super::super::messages::ParticipantRole,
+            world_id: Option<String>,
         ) -> Result<()> {
             self.send(ClientMessage::JoinSession {
                 user_id: user_id.to_string(),
                 role,
+                world_id,
             })
         }
 

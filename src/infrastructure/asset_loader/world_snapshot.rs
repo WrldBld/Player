@@ -475,11 +475,11 @@ pub struct TriggerCondition {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TriggerType {
     ObjectInteraction { keywords: Vec<String> },
-    EnterArea { keywords: Vec<String> },
-    DialogueTopic { keywords: Vec<String> },
+    EnterArea { area_keywords: Vec<String> },
+    DialogueTopic { topic_keywords: Vec<String> },
     ChallengeComplete { challenge_id: String, requires_success: Option<bool> },
     TimeBased { turns: u32 },
-    NpcPresent { keywords: Vec<String> },
+    NpcPresent { npc_keywords: Vec<String> },
     Custom { description: String },
 }
 
@@ -873,24 +873,23 @@ pub enum StoryEventTypeData {
 
 /// DM marker importance levels
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum MarkerImportance {
     Minor,
-    Normal,
+    Notable,
     Major,
     Critical,
 }
 
 /// DM marker types
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum DmMarkerType {
     Note,
     PlotPoint,
+    CharacterMoment,
+    WorldEvent,
+    PlayerDecision,
     Foreshadowing,
-    SessionBreak,
-    ChapterBreak,
-    Recap,
+    Callback,
     Custom,
 }
 

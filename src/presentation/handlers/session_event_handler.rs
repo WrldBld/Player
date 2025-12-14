@@ -74,6 +74,8 @@ fn handle_server_message(
     match message {
         ServerMessage::SessionJoined {
             session_id,
+            role: _,
+            participants: _,
             world_snapshot,
         } => {
             tracing::info!("SessionJoined received");
@@ -105,6 +107,48 @@ fn handle_server_message(
                     tracing::error!("Failed to parse world snapshot: {}", e);
                 }
             }
+        }
+
+        ServerMessage::PlayerJoined {
+            user_id,
+            role,
+            character_name,
+        } => {
+            tracing::info!("Player joined: {} as {:?}", user_id, role);
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Player {} joined as {:?}{}",
+                    user_id,
+                    role,
+                    character_name.map(|n| format!(" ({})", n)).unwrap_or_default()
+                ),
+                true,
+                platform,
+            );
+        }
+
+        ServerMessage::PlayerLeft { user_id } => {
+            tracing::info!("Player left: {}", user_id);
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Player {} left", user_id),
+                true,
+                platform,
+            );
+        }
+
+        ServerMessage::ActionReceived {
+            action_id,
+            player_id,
+            action_type,
+        } => {
+            tracing::info!("Action received: {} from {}", action_type, player_id);
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Action {} received: {}", action_id, action_type),
+                true,
+                platform,
+            );
         }
 
         ServerMessage::SceneUpdate {
@@ -147,6 +191,7 @@ fn handle_server_message(
             internal_reasoning,
             proposed_tools,
             challenge_suggestion,
+            narrative_event_suggestion: _, // TODO: Handle narrative event suggestions
         } => {
             tracing::info!(
                 "Approval required for {} (request: {})",
@@ -176,11 +221,7 @@ fn handle_server_message(
         }
 
         ServerMessage::Error { message, code } => {
-            let error_msg = if let Some(c) = code {
-                format!("Server error [{}]: {}", c, message)
-            } else {
-                format!("Server error: {}", message)
-            };
+            let error_msg = format!("Server error [{}]: {}", code, message);
             tracing::error!("{}", error_msg);
             session_state.error_message.set(Some(error_msg));
         }

@@ -10,6 +10,9 @@ pub enum ClientMessage {
     JoinSession {
         user_id: String,
         role: ParticipantRole,
+        /// Optional world ID to join (creates demo session if not provided)
+        #[serde(default)]
+        world_id: Option<String>,
     },
     /// Player performs an action
     PlayerAction {
@@ -40,6 +43,20 @@ pub enum ClientMessage {
         challenge_id: String,
         roll: i32,
     },
+    /// DM approves/rejects/modifies a suggested challenge
+    ChallengeSuggestionDecision {
+        request_id: String,
+        approved: bool,
+        modified_difficulty: Option<String>,
+    },
+    /// DM approves/rejects a suggested narrative event trigger
+    NarrativeEventSuggestionDecision {
+        request_id: String,
+        event_id: String,
+        approved: bool,
+        /// Optional selected outcome if DM pre-selects an outcome
+        selected_outcome: Option<String>,
+    },
     /// Heartbeat ping
     Heartbeat,
 }
@@ -48,10 +65,28 @@ pub enum ClientMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ServerMessage {
-    /// Session successfully joined
+    /// Session successfully joined with full details
     SessionJoined {
         session_id: String,
+        role: ParticipantRole,
+        participants: Vec<ParticipantInfo>,
         world_snapshot: serde_json::Value, // WorldSnapshot as JSON
+    },
+    /// A player joined the session (broadcast to others)
+    PlayerJoined {
+        user_id: String,
+        role: ParticipantRole,
+        character_name: Option<String>,
+    },
+    /// A player left the session (broadcast to others)
+    PlayerLeft {
+        user_id: String,
+    },
+    /// Player action was received and is being processed
+    ActionReceived {
+        action_id: String,
+        player_id: String,
+        action_type: String,
     },
     /// Scene update
     SceneUpdate {
@@ -78,20 +113,13 @@ pub enum ServerMessage {
         internal_reasoning: String,
         proposed_tools: Vec<ProposedTool>,
         challenge_suggestion: Option<ChallengeSuggestionInfo>,
+        narrative_event_suggestion: Option<NarrativeEventSuggestionInfo>,
     },
     /// Response was approved and executed
     ResponseApproved {
         npc_dialogue: String,
         executed_tools: Vec<String>,
     },
-    /// Error message
-    Error {
-        message: String,
-        code: Option<String>,
-    },
-    /// Heartbeat response
-    Pong,
-
     /// Challenge prompt sent to player
     ChallengePrompt {
         challenge_id: String,
@@ -101,7 +129,6 @@ pub enum ServerMessage {
         description: String,
         character_modifier: i32,
     },
-
     /// Challenge result broadcast to all
     ChallengeResolved {
         challenge_id: String,
@@ -113,6 +140,13 @@ pub enum ServerMessage {
         outcome: String,  // "success", "failure", "critical_success", etc.
         outcome_description: String,
     },
+    /// Error message
+    Error {
+        code: String,
+        message: String,
+    },
+    /// Heartbeat response
+    Pong,
 
     // Generation events (for Creator Mode)
     /// A generation batch has been queued
@@ -252,4 +286,22 @@ pub struct ChallengeSuggestionInfo {
     pub difficulty_display: String,
     pub confidence: String,
     pub reasoning: String,
+}
+
+/// Information about a session participant
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipantInfo {
+    pub user_id: String,
+    pub role: ParticipantRole,
+    pub character_name: Option<String>,
+}
+
+/// Narrative event suggestion from LLM
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NarrativeEventSuggestionInfo {
+    pub event_id: String,
+    pub event_name: String,
+    pub confidence: String,
+    pub reasoning: String,
+    pub suggested_outcome: Option<String>,
 }
