@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 
-use crate::application::dto::{ApprovalDecision, ChallengeData, ClientMessage, SkillData};
+use crate::application::dto::{ChallengeData, SkillData};
+use crate::application::ports::outbound::ApprovalDecision;
+use crate::application::services::SessionCommandService;
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::services::{use_challenge_service, use_skill_service};
 use crate::presentation::components::dm_panel::{ChallengeLibrary, TriggerChallengeModal};
@@ -578,20 +580,9 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
         decision: ApprovalDecision,
     ) {
         if let Some(client) = session_state.engine_client.read().as_ref() {
-            let msg = ClientMessage::ApprovalDecision {
-                request_id: request_id.clone(),
-                decision,
-            };
-            #[cfg(target_arch = "wasm32")]
-            {
-                let _ = client.send(msg);
-            }
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let client = std::sync::Arc::clone(client);
-                spawn(async move {
-                    let _ = client.send(msg).await;
-                });
+            let svc = SessionCommandService::new(std::sync::Arc::clone(client));
+            if let Err(e) = svc.send_approval_decision(&request_id, decision) {
+                tracing::error!("Failed to send approval decision: {}", e);
             }
         }
         // Remove from pending approvals

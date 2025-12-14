@@ -737,7 +737,10 @@ fn initiate_connection(
         match session_service.connect(user_id, role).await {
             Ok(mut rx) => {
                 // Store client reference
-                session_state.set_connected(std::sync::Arc::clone(session_service.client()));
+                let connection = crate::infrastructure::websocket::EngineGameConnection::new(
+                    session_service.client().as_ref().clone(),
+                );
+                session_state.set_connected(std::sync::Arc::new(connection));
 
                 // Process events from the channel
                 while let Some(event) = rx.recv().await {
@@ -768,19 +771,7 @@ fn handle_disconnect(
 ) {
     // Disconnect client if present
     if let Some(client) = session_state.engine_client.read().as_ref() {
-        #[cfg(target_arch = "wasm32")]
-        {
-            // WASM client disconnect is synchronous
-            let _ = client;
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let client = std::sync::Arc::clone(client);
-            spawn(async move {
-                client.disconnect().await;
-            });
-        }
+        client.disconnect();
     }
 
     // Clear all state

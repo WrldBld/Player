@@ -247,33 +247,9 @@ fn send_player_action(
 ) {
     let client_binding = session_state.engine_client.read();
     if let Some(ref client) = *client_binding {
-        let action_type = action.action_type.as_str();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let client = client.clone();
-            let target = action.target.clone();
-            let dialogue = action.dialogue.clone();
-
-            tokio::spawn(async move {
-                if let Err(e) = client
-                    .send_action(action_type, target.as_deref(), dialogue.as_deref())
-                    .await
-                {
-                    tracing::error!("Failed to send action: {}", e);
-                }
-            });
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Err(e) = client.send_action(
-                action_type,
-                action.target.as_deref(),
-                action.dialogue.as_deref(),
-            ) {
-                tracing::error!("Failed to send action: {}", e);
-            }
+        let svc = crate::application::services::ActionService::new(std::sync::Arc::clone(client));
+        if let Err(e) = svc.send_action(action) {
+            tracing::error!("Failed to send action: {}", e);
         }
     } else {
         tracing::warn!("Cannot send action: not connected to server");
@@ -360,30 +336,11 @@ fn send_challenge_roll(
     challenge_id: &str,
     roll: i32,
 ) {
-    use crate::application::dto::ClientMessage;
-
     let client_binding = session_state.engine_client.read();
     if let Some(ref client) = *client_binding {
-        let message = ClientMessage::ChallengeRoll {
-            challenge_id: challenge_id.to_string(),
-            roll,
-        };
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let client = client.clone();
-            tokio::spawn(async move {
-                if let Err(e) = client.send(message).await {
-                    tracing::error!("Failed to send challenge roll: {}", e);
-                }
-            });
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Err(e) = client.send(message) {
-                tracing::error!("Failed to send challenge roll: {}", e);
-            }
+        let svc = crate::application::services::SessionCommandService::new(std::sync::Arc::clone(client));
+        if let Err(e) = svc.submit_challenge_roll(challenge_id, roll) {
+            tracing::error!("Failed to send challenge roll: {}", e);
         }
     } else {
         tracing::warn!("Cannot send challenge roll: not connected to server");

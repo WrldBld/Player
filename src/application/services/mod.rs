@@ -11,6 +11,7 @@ pub mod character_service;
 pub mod location_service;
 pub mod narrative_event_service;
 pub mod session_service;
+pub mod session_command_service;
 pub mod skill_service;
 pub mod story_event_service;
 pub mod suggestion_service;
@@ -19,6 +20,9 @@ pub mod world_service;
 
 // Re-export action service
 pub use action_service::ActionService;
+
+// Re-export session command service
+pub use session_command_service::SessionCommandService;
 
 // Re-export session service types
 pub use session_service::{

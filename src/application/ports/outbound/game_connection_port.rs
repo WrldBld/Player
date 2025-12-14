@@ -78,8 +78,10 @@ pub struct NpcMotivation {
 /// - **Desktop (tokio)**: Uses async/await with Send + Sync requirements
 /// - **WASM**: Uses callbacks and single-threaded model
 ///
-/// The trait provides both sync and async variants where needed.
-pub trait GameConnectionPort: Clone {
+/// NOTE: This trait is intentionally **object-safe** so the presentation layer can
+/// store an `Arc<dyn GameConnectionPort>` without depending on concrete
+/// infrastructure types.
+pub trait GameConnectionPort {
     /// Get the current connection state
     fn state(&self) -> ConnectionState;
 
@@ -136,16 +138,12 @@ pub trait GameConnectionPort: Clone {
     /// Register a callback for state changes
     ///
     /// The callback will be invoked whenever the connection state changes.
-    fn on_state_change<F>(&self, callback: F)
-    where
-        F: FnMut(ConnectionState) + 'static;
+    fn on_state_change(&self, callback: Box<dyn FnMut(ConnectionState) + 'static>);
 
     /// Register a callback for server messages
     ///
     /// The callback will be invoked for each message received from the server.
     /// The raw JSON value allows the presentation layer to handle specific
     /// message types as needed.
-    fn on_message<F>(&self, callback: F)
-    where
-        F: FnMut(serde_json::Value) + 'static;
+    fn on_message(&self, callback: Box<dyn FnMut(serde_json::Value) + 'static>);
 }

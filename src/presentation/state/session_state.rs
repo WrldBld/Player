@@ -6,11 +6,8 @@ use dioxus::prelude::*;
 use std::sync::Arc;
 
 // Use port types and application DTOs instead of infrastructure types
-use crate::application::ports::outbound::{ParticipantRole, Platform};
+use crate::application::ports::outbound::{GameConnectionPort, ParticipantRole, Platform};
 use crate::application::dto::{ProposedTool, ChallengeSuggestionInfo};
-// NOTE: EngineClient is still needed here for the client reference.
-// This will be fully abstracted when we implement a proper connection service.
-use crate::infrastructure::websocket::EngineClient;
 use crate::presentation::components::tactical::PlayerSkillData;
 
 /// Connection status to the Engine server
@@ -138,8 +135,8 @@ pub struct SessionState {
     pub user_role: Signal<Option<ParticipantRole>>,
     /// Server URL we're connected to
     pub server_url: Signal<Option<String>>,
-    /// WebSocket client reference (if connected)
-    pub engine_client: Signal<Option<Arc<EngineClient>>>,
+    /// Game connection handle (if connected)
+    pub engine_client: Signal<Option<Arc<dyn GameConnectionPort>>>,
     /// Error message if connection failed
     pub error_message: Signal<Option<String>>,
     /// Pending approval requests (for DM)
@@ -181,7 +178,7 @@ impl SessionState {
     }
 
     /// Set the connection to connected state
-    pub fn set_connected(&mut self, client: Arc<EngineClient>) {
+    pub fn set_connected(&mut self, client: Arc<dyn GameConnectionPort>) {
         self.connection_status.set(ConnectionStatus::Connected);
         self.engine_client.set(Some(client));
         self.error_message.set(None);

@@ -6,6 +6,8 @@
 
 use anyhow::Result;
 
+use std::sync::Arc;
+
 use crate::application::ports::outbound::GameConnectionPort;
 use crate::domain::entities::PlayerAction;
 
@@ -13,13 +15,13 @@ use crate::domain::entities::PlayerAction;
 ///
 /// This service uses the GameConnectionPort trait to abstract the actual
 /// connection implementation, allowing for different backends or testing.
-pub struct ActionService<C: GameConnectionPort> {
-    connection: C,
+pub struct ActionService {
+    connection: Arc<dyn GameConnectionPort>,
 }
 
-impl<C: GameConnectionPort> ActionService<C> {
+impl ActionService {
     /// Create a new ActionService with the given connection
-    pub fn new(connection: C) -> Self {
+    pub fn new(connection: Arc<dyn GameConnectionPort>) -> Self {
         Self { connection }
     }
 
@@ -71,7 +73,7 @@ impl<C: GameConnectionPort> ActionService<C> {
     }
 
     /// Get a reference to the underlying connection
-    pub fn connection(&self) -> &C {
-        &self.connection
+    pub fn connection(&self) -> &dyn GameConnectionPort {
+        self.connection.as_ref()
     }
 }
