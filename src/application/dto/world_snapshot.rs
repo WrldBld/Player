@@ -992,6 +992,51 @@ pub struct NarrativeEventData {
     pub updated_at: String,
 }
 
+/// Request to create a new narrative event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateNarrativeEventRequest {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub scene_direction: String,
+    #[serde(default)]
+    pub suggested_opening: Option<String>,
+    #[serde(default)]
+    pub is_repeatable: bool,
+    #[serde(default)]
+    pub delay_turns: u32,
+    #[serde(default)]
+    pub expires_after_turns: Option<u32>,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default = "default_active")]
+    pub is_active: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+fn default_active() -> bool {
+    true
+}
+
+impl Default for CreateNarrativeEventRequest {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            description: String::new(),
+            scene_direction: String::new(),
+            suggested_opening: None,
+            is_repeatable: false,
+            delay_turns: 0,
+            expires_after_turns: None,
+            priority: 0,
+            is_active: true,
+            tags: Vec::new(),
+        }
+    }
+}
+
 /// Event chain data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventChainData {

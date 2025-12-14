@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::application::dto::NarrativeEventData;
+use crate::application::dto::{CreateNarrativeEventRequest, NarrativeEventData};
 use crate::presentation::components::story_arc::narrative_event_card::NarrativeEventCard;
 use crate::presentation::services::use_narrative_event_service;
 
@@ -20,6 +20,7 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
     let mut filter_status = use_signal(|| "all".to_string());
     let mut show_favorites_only = use_signal(|| false);
     let mut selected_event: Signal<Option<NarrativeEventData>> = use_signal(|| None);
+    let mut show_create_form = use_signal(|| false);
 
     // Get narrative event service
     let narrative_event_service = use_narrative_event_service();
@@ -101,10 +102,7 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                 h2 { style: "color: white; margin: 0; font-size: 1.25rem;", "Narrative Events" }
 
                 button {
-                    onclick: move |_| {
-                        // TODO: Open create event modal
-                        tracing::info!("Create new narrative event");
-                    },
+                    onclick: move |_| show_create_form.set(true),
                     style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;",
                     span { "+" }
                     span { "New Event" }
@@ -242,6 +240,178 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                                 },
                             }
                         }
+                    }
+                }
+            }
+
+            // Create form modal
+            if *show_create_form.read() {
+                NarrativeEventFormModal {
+                    world_id: props.world_id.clone(),
+                    on_save: {
+                        let mut events = events.clone();
+                        move |new_event: NarrativeEventData| {
+                            events.write().push(new_event);
+                            show_create_form.set(false);
+                        }
+                    },
+                    on_close: move |_| show_create_form.set(false),
+                }
+            }
+        }
+    }
+}
+
+/// Modal form for creating a new narrative event
+#[derive(Props, Clone, PartialEq)]
+struct NarrativeEventFormModalProps {
+    world_id: String,
+    on_save: EventHandler<NarrativeEventData>,
+    on_close: EventHandler<()>,
+}
+
+#[component]
+fn NarrativeEventFormModal(props: NarrativeEventFormModalProps) -> Element {
+    let narrative_event_service = use_narrative_event_service();
+
+    let mut name = use_signal(|| String::new());
+    let mut description = use_signal(|| String::new());
+    let mut scene_direction = use_signal(|| String::new());
+    let mut is_saving = use_signal(|| false);
+    let mut save_error: Signal<Option<String>> = use_signal(|| None);
+
+    let save_event = {
+        let world_id = props.world_id.clone();
+        let service = narrative_event_service.clone();
+        let on_save = props.on_save.clone();
+        move |_| {
+            let world_id = world_id.clone();
+            let service = service.clone();
+            let on_save = on_save.clone();
+            let name_val = name.read().clone();
+            let desc_val = description.read().clone();
+            let direction_val = scene_direction.read().clone();
+
+            if name_val.trim().is_empty() {
+                save_error.set(Some("Name is required".to_string()));
+                return;
+            }
+
+            is_saving.set(true);
+            save_error.set(None);
+
+            spawn(async move {
+                let request = CreateNarrativeEventRequest {
+                    name: name_val,
+                    description: desc_val,
+                    scene_direction: direction_val,
+                    ..Default::default()
+                };
+
+                match service.create_narrative_event(&world_id, request).await {
+                    Ok(new_event) => {
+                        on_save.call(new_event);
+                    }
+                    Err(e) => {
+                        save_error.set(Some(format!("Failed to create event: {}", e)));
+                        is_saving.set(false);
+                    }
+                }
+            });
+        }
+    };
+
+    rsx! {
+        div {
+            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            onclick: move |_| props.on_close.call(()),
+
+            div {
+                style: "background: #1a1a2e; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;",
+                onclick: move |e| e.stop_propagation(),
+
+                // Header
+                div {
+                    style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #374151;",
+                    h3 { style: "color: white; margin: 0;", "New Narrative Event" }
+                    button {
+                        onclick: move |_| props.on_close.call(()),
+                        style: "background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer;",
+                        "×"
+                    }
+                }
+
+                // Form
+                div {
+                    style: "padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;",
+
+                    // Name field
+                    div {
+                        label {
+                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            "Event Name *"
+                        }
+                        input {
+                            r#type: "text",
+                            placeholder: "Enter event name...",
+                            value: "{name}",
+                            oninput: move |e| name.set(e.value()),
+                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; box-sizing: border-box;",
+                        }
+                    }
+
+                    // Description field
+                    div {
+                        label {
+                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            "Description"
+                        }
+                        textarea {
+                            placeholder: "What happens when this event triggers?",
+                            value: "{description}",
+                            oninput: move |e| description.set(e.value()),
+                            style: "width: 100%; min-height: 80px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; resize: vertical; box-sizing: border-box;",
+                        }
+                    }
+
+                    // Scene direction field
+                    div {
+                        label {
+                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            "Scene Direction"
+                        }
+                        textarea {
+                            placeholder: "How should the DM/AI present this event?",
+                            value: "{scene_direction}",
+                            oninput: move |e| scene_direction.set(e.value()),
+                            style: "width: 100%; min-height: 60px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; resize: vertical; box-sizing: border-box;",
+                        }
+                    }
+
+                    // Error message
+                    if let Some(err) = save_error.read().as_ref() {
+                        div {
+                            style: "background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; padding: 0.75rem; color: #ef4444; font-size: 0.875rem;",
+                            "{err}"
+                        }
+                    }
+                }
+
+                // Footer
+                div {
+                    style: "display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid #374151;",
+
+                    button {
+                        onclick: move |_| props.on_close.call(()),
+                        style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        "Cancel"
+                    }
+
+                    button {
+                        onclick: save_event,
+                        disabled: *is_saving.read(),
+                        style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        if *is_saving.read() { "Creating..." } else { "Create Event" }
                     }
                 }
             }

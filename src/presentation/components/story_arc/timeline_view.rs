@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::application::dto::{StoryEventData, StoryEventTypeData};
 use crate::presentation::components::story_arc::add_dm_marker::AddDmMarkerModal;
 use crate::presentation::components::story_arc::timeline_event_card::TimelineEventCard;
-use crate::presentation::components::story_arc::timeline_filters::TimelineFilters;
+use crate::presentation::components::story_arc::timeline_filters::{CharacterOption, LocationOption, TimelineFilters};
 use crate::presentation::services::use_story_event_service;
 use crate::presentation::state::use_game_state;
 
@@ -30,7 +30,7 @@ pub struct TimelineViewProps {
 
 #[component]
 pub fn TimelineView(props: TimelineViewProps) -> Element {
-    let _game_state = use_game_state();
+    let game_state = use_game_state();
 
     let mut events: Signal<Vec<StoryEventData>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
@@ -131,9 +131,31 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
             }
 
             // Filters
-            TimelineFilters {
-                filters: filters.clone(),
-                on_filter_change: move |new_filters: TimelineFilterState| filters.set(new_filters),
+            {
+                // Extract character and location options from game state
+                let (characters, locations) = {
+                    let world = game_state.world.read();
+                    if let Some(ref snapshot) = *world {
+                        let chars = snapshot.characters.iter()
+                            .map(|c| CharacterOption { id: c.id.clone(), name: c.name.clone() })
+                            .collect::<Vec<_>>();
+                        let locs = snapshot.locations.iter()
+                            .map(|l| LocationOption { id: l.id.clone(), name: l.name.clone() })
+                            .collect::<Vec<_>>();
+                        (chars, locs)
+                    } else {
+                        (Vec::new(), Vec::new())
+                    }
+                };
+
+                rsx! {
+                    TimelineFilters {
+                        filters: filters.clone(),
+                        on_filter_change: move |new_filters: TimelineFilterState| filters.set(new_filters),
+                        characters: characters,
+                        locations: locations,
+                    }
+                }
             }
 
             // Event list

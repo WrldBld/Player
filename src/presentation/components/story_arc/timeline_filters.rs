@@ -4,10 +4,28 @@ use dioxus::prelude::*;
 
 use crate::presentation::components::story_arc::timeline_view::TimelineFilterState;
 
+/// Simple character option for dropdown
+#[derive(Debug, Clone, PartialEq)]
+pub struct CharacterOption {
+    pub id: String,
+    pub name: String,
+}
+
+/// Simple location option for dropdown
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocationOption {
+    pub id: String,
+    pub name: String,
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct TimelineFiltersProps {
     pub filters: Signal<TimelineFilterState>,
     pub on_filter_change: EventHandler<TimelineFilterState>,
+    #[props(default)]
+    pub characters: Vec<CharacterOption>,
+    #[props(default)]
+    pub locations: Vec<LocationOption>,
 }
 
 #[component]
@@ -182,9 +200,10 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         }
                     }
 
-                    // Character filter (TODO: populate from world data)
+                    // Character filter
                     {
                         let char_id = current_filters.character_id.clone().unwrap_or_default();
+                        let characters = props.characters.clone();
                         rsx! {
                             div {
                                 label {
@@ -204,15 +223,18 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                     style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
 
                                     option { value: "", "All Characters" }
-                                    // TODO: Populate with actual characters from world
+                                    for character in characters.iter() {
+                                        option { value: "{character.id}", "{character.name}" }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Location filter (TODO: populate from world data)
+                    // Location filter
                     {
                         let loc_id = current_filters.location_id.clone().unwrap_or_default();
+                        let locations = props.locations.clone();
                         rsx! {
                             div {
                                 label {
@@ -232,7 +254,9 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                     style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
 
                                     option { value: "", "All Locations" }
-                                    // TODO: Populate with actual locations from world
+                                    for location in locations.iter() {
+                                        option { value: "{location.id}", "{location.name}" }
+                                    }
                                 }
                             }
                         }

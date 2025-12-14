@@ -7,7 +7,7 @@
 use crate::application::services::SessionEvent;
 use crate::application::ports::outbound::{ConnectionState as PortConnectionState, Platform};
 use crate::application::services::port_connection_state_to_status;
-use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
+use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
 use dioxus::prelude::WritableExt;
 use crate::presentation::handlers::handle_server_message;
 
@@ -20,6 +20,7 @@ pub fn handle_session_event(
     session_state: &mut SessionState,
     game_state: &mut GameState,
     dialogue_state: &mut DialogueState,
+    generation_state: &mut GenerationState,
     platform: &Platform,
 ) {
     match event {
@@ -44,7 +45,7 @@ pub fn handle_session_event(
         }
         SessionEvent::MessageReceived(message) => {
             match serde_json::from_value::<crate::application::dto::ServerMessage>(message) {
-                Ok(msg) => handle_server_message(msg, session_state, game_state, dialogue_state, platform),
+                Ok(msg) => handle_server_message(msg, session_state, game_state, dialogue_state, generation_state, platform),
                 Err(e) => tracing::warn!("Failed to parse server message JSON: {}", e),
             }
         }

@@ -456,6 +456,66 @@ impl HttpClient {
         }
     }
 
+    /// PATCH request with JSON body
+    pub async fn patch<T: DeserializeOwned, B: Serialize>(
+        path: &str,
+        body: &B,
+    ) -> Result<T, ApiError> {
+        let url = Self::build_url(path);
+        let json_body =
+            serde_json::to_string(body).map_err(|e| ApiError::SerializeError(e.to_string()))?;
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            use gloo_net::http::Request;
+
+            let response = Request::patch(&url)
+                .header("Content-Type", "application/json")
+                .body(&json_body)
+                .map_err(|e| ApiError::RequestFailed(e.to_string()))?
+                .send()
+                .await
+                .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
+
+            if response.ok() {
+                response
+                    .json::<T>()
+                    .await
+                    .map_err(|e| ApiError::ParseError(e.to_string()))
+            } else {
+                Err(ApiError::HttpError(
+                    response.status(),
+                    format!("PATCH {} failed", path),
+                ))
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = reqwest::Client::new();
+            let response = client
+                .patch(&url)
+                .header("Content-Type", "application/json")
+                .body(json_body)
+                .send()
+                .await
+                .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
+
+            let status = response.status().as_u16();
+            if response.status().is_success() {
+                response
+                    .json::<T>()
+                    .await
+                    .map_err(|e| ApiError::ParseError(e.to_string()))
+            } else {
+                Err(ApiError::HttpError(
+                    status,
+                    format!("PATCH {} failed", path),
+                ))
+            }
+        }
+    }
+
     /// DELETE request
     pub async fn delete(path: &str) -> Result<(), ApiError> {
         let url = Self::build_url(path);
@@ -641,6 +701,14 @@ impl ApiPort for ApiAdapter {
         path: &str,
     ) -> Result<T, PortApiError> {
         HttpClient::put_empty_with_response(path).await.map_err(to_port_error)
+    }
+
+    async fn patch<T: DeserializeOwned, B: Serialize + Send + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, PortApiError> {
+        HttpClient::patch(path, body).await.map_err(to_port_error)
     }
 
     async fn delete(&self, path: &str) -> Result<(), PortApiError> {

@@ -31,7 +31,7 @@ pub use world_snapshot::{
     ChallengeOutcomes, Outcome,
     // Story arc types
     StoryEventData, StoryEventTypeData,
-    NarrativeEventData,
+    NarrativeEventData, CreateNarrativeEventRequest,
     // Session snapshot types (simplified format from Engine)
     SessionWorldSnapshot,
 };

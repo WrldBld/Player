@@ -4,7 +4,7 @@
 //! updating, and managing narrative events (future story events). It abstracts
 //! away the HTTP client details from the presentation layer.
 
-use crate::application::dto::NarrativeEventData;
+use crate::application::dto::{CreateNarrativeEventRequest, NarrativeEventData};
 use crate::application::ports::outbound::{ApiError, ApiPort};
 
 /// Narrative event service for managing narrative events
@@ -62,6 +62,16 @@ impl<A: ApiPort> NarrativeEventService<A> {
     pub async fn set_active(&self, event_id: &str, active: bool) -> Result<(), ApiError> {
         let path = format!("/api/narrative-events/{}/active", event_id);
         self.api.put_no_response(&path, &active).await
+    }
+
+    /// Create a new narrative event
+    pub async fn create_narrative_event(
+        &self,
+        world_id: &str,
+        request: CreateNarrativeEventRequest,
+    ) -> Result<NarrativeEventData, ApiError> {
+        let path = format!("/api/worlds/{}/narrative-events", world_id);
+        self.api.post(&path, &request).await
     }
 }
 

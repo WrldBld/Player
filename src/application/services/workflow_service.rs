@@ -218,6 +218,26 @@ impl<A: ApiPort> WorkflowService<A> {
         let body = serde_json::json!({ "workflow_json": workflow_json });
         self.api.post("/api/workflows/analyze", &body).await
     }
+
+    /// Update just the defaults of a workflow (without re-uploading the workflow JSON)
+    ///
+    /// # Arguments
+    /// * `slot_id` - The slot identifier
+    /// * `input_defaults` - New default values for inputs
+    /// * `locked_inputs` - Optional list of locked input identifiers
+    pub async fn update_workflow_defaults(
+        &self,
+        slot_id: &str,
+        input_defaults: Vec<InputDefault>,
+        locked_inputs: Option<Vec<String>>,
+    ) -> Result<WorkflowConfig, ApiError> {
+        let path = format!("/api/workflows/{}/defaults", slot_id);
+        let body = serde_json::json!({
+            "input_defaults": input_defaults,
+            "locked_inputs": locked_inputs,
+        });
+        self.api.patch(&path, &body).await
+    }
 }
 
 impl<A: ApiPort + Clone> Clone for WorkflowService<A> {

@@ -98,17 +98,23 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
         let slot = slot_id_for_save.clone();
         let defaults = edited_defaults.read().clone();
         let current_config = config.read().clone();
-        let _svc = workflow_service_for_save.clone();
+        let svc = workflow_service_for_save.clone();
 
         spawn(async move {
             is_saving.set(true);
+            error.set(None);
 
-            if let Some(cfg) = current_config {
-                // For now, just save defaults (TODO: implement full save in service)
-                // This is a simplified version - we'd need to add a method to service
-                // to update just the defaults
-                let _ = (slot, cfg.name, defaults);
-                // TODO: Add update_workflow_defaults method to WorkflowService
+            if current_config.is_some() {
+                match svc.update_workflow_defaults(&slot, defaults, None).await {
+                    Ok(updated_config) => {
+                        config.set(Some(updated_config));
+                        tracing::info!("Workflow defaults saved successfully");
+                    }
+                    Err(e) => {
+                        error.set(Some(format!("Failed to save: {}", e)));
+                        tracing::error!("Failed to save workflow defaults: {}", e);
+                    }
+                }
             }
 
             is_saving.set(false);

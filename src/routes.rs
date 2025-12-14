@@ -26,7 +26,7 @@
 //! These are loaded on application startup and saved when changed.
 
 use dioxus::prelude::*;
-use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
+use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, GenerationState, SessionState};
 use crate::presentation::views::dm_view::DMMode;
 // Use port type for ParticipantRole instead of infrastructure type
 use crate::application::services::{ParticipantRolePort as ParticipantRole, SessionService, DEFAULT_ENGINE_URL};
@@ -134,6 +134,7 @@ pub fn WorldSelectRoute() -> Element {
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
+    let generation_state = use_context::<GenerationState>();
 
     // Clone platform for different closures
     let platform_title = platform.clone();
@@ -175,6 +176,7 @@ pub fn WorldSelectRoute() -> Element {
                         session_state.clone(),
                         game_state.clone(),
                         dialogue_state.clone(),
+                        generation_state.clone(),
                         platform_connection.clone(),
                     );
 
@@ -691,6 +693,7 @@ fn initiate_connection(
     mut session_state: SessionState,
     mut game_state: GameState,
     mut dialogue_state: DialogueState,
+    mut generation_state: GenerationState,
     platform: Platform,
 ) {
     // Update session state to connecting
@@ -716,6 +719,7 @@ fn initiate_connection(
                         &mut session_state,
                         &mut game_state,
                         &mut dialogue_state,
+                        &mut generation_state,
                         &platform,
                     );
                 }

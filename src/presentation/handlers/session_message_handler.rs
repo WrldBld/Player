@@ -9,7 +9,7 @@ use crate::application::dto::ServerMessage;
 use crate::application::dto::SessionWorldSnapshot;
 use dioxus::prelude::{ReadableExt, WritableExt};
 use crate::presentation::state::{
-    DialogueState, GameState, PendingApproval, SessionState,
+    DialogueState, GameState, GenerationState, PendingApproval, SessionState,
     session_state::{ChallengePromptData, ChallengeResultData},
 };
 
@@ -19,6 +19,7 @@ pub fn handle_server_message(
     session_state: &mut SessionState,
     game_state: &mut GameState,
     dialogue_state: &mut DialogueState,
+    generation_state: &mut GenerationState,
     platform: &Platform,
 ) {
     match message {
@@ -165,7 +166,7 @@ pub fn handle_server_message(
 
         // Generation events (Creator Mode)
         ServerMessage::GenerationQueued {
-            batch_id: _,
+            batch_id,
             entity_type,
             entity_id,
             asset_type,
@@ -178,18 +179,28 @@ pub fn handle_server_message(
                 asset_type,
                 position
             );
+            generation_state.batch_queued(
+                batch_id,
+                entity_type,
+                entity_id,
+                asset_type,
+                position,
+            );
         }
 
         ServerMessage::GenerationProgress { batch_id, progress } => {
             tracing::info!("Generation progress: {} at {}%", batch_id, progress);
+            generation_state.batch_progress(&batch_id, progress);
         }
 
         ServerMessage::GenerationComplete { batch_id, asset_count } => {
             tracing::info!("Generation complete: {} ({} assets)", batch_id, asset_count);
+            generation_state.batch_complete(&batch_id, asset_count);
         }
 
         ServerMessage::GenerationFailed { batch_id, error } => {
             tracing::error!("Generation failed: {} - {}", batch_id, error);
+            generation_state.batch_failed(&batch_id, error);
         }
 
         ServerMessage::ChallengePrompt {

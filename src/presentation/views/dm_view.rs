@@ -539,8 +539,15 @@ fn DirectorModeContent() -> Element {
                                 challenges: active_challenges,
                                 scene_characters: chars,
                                 on_trigger: move |(challenge_id, character_id): (String, String)| {
-                                    // TODO: Send TriggerChallenge message via WebSocket
                                     tracing::info!("Triggering challenge {} for character {}", challenge_id, character_id);
+                                    if let Some(client) = session_state.engine_client.read().as_ref() {
+                                        let svc = SessionCommandService::new(std::sync::Arc::clone(client));
+                                        if let Err(e) = svc.trigger_challenge(&challenge_id, &character_id) {
+                                            tracing::error!("Failed to trigger challenge: {}", e);
+                                        }
+                                    } else {
+                                        tracing::warn!("No engine client available to trigger challenge");
+                                    }
                                     show_trigger_challenge.set(false);
                                 },
                                 on_close: move |_| show_trigger_challenge.set(false),

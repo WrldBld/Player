@@ -16,6 +16,7 @@ enum Method {
     PutNoResponse,
     PutEmpty,
     PutEmptyWithResponse,
+    Patch,
     Delete,
 }
 
@@ -328,6 +329,19 @@ impl ApiPort for MockApiPort {
         self.record("PUT_EMPTY_WITH_RESPONSE", path, None);
         let resp = self.take_response(Key {
             method: Method::PutEmptyWithResponse,
+            path: path.to_string(),
+        })?;
+        Self::decode(resp)
+    }
+
+    async fn patch<T: DeserializeOwned, B: Serialize + Send + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, ApiError> {
+        self.record("PATCH", path, Some(body));
+        let resp = self.take_response(Key {
+            method: Method::Patch,
             path: path.to_string(),
         })?;
         Self::decode(resp)

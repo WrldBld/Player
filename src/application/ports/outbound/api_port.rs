@@ -101,6 +101,13 @@ pub trait ApiPort {
         path: &str,
     ) -> Result<T, ApiError>;
 
+    /// PATCH request with JSON body, returns deserialized JSON response
+    async fn patch<T: DeserializeOwned, B: Serialize + Send + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, ApiError>;
+
     /// DELETE request
     async fn delete(&self, path: &str) -> Result<(), ApiError>;
 }
