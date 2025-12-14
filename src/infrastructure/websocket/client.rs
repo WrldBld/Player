@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 
-use super::messages::{ClientMessage, ServerMessage};
+use crate::application::dto::{ClientMessage, ParticipantRole, ServerMessage};
 
 /// Connection state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -179,7 +179,7 @@ mod desktop {
         pub async fn join_session(
             &self,
             user_id: &str,
-            role: super::super::messages::ParticipantRole,
+            role: ParticipantRole,
             world_id: Option<String>,
         ) -> Result<()> {
             self.send(ClientMessage::JoinSession {
@@ -382,7 +382,7 @@ mod wasm {
         pub fn join_session(
             &self,
             user_id: &str,
-            role: super::super::messages::ParticipantRole,
+            role: ParticipantRole,
             world_id: Option<String>,
         ) -> Result<()> {
             self.send(ClientMessage::JoinSession {
