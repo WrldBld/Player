@@ -7,12 +7,16 @@
 //! TODO (Phase 16.3): replace infra re-exports with real application DTOs + conversions.
 
 pub mod session_dto;
+pub mod websocket_messages;
 
 // Re-export session DTOs
 pub use session_dto::{
     AppConnectionStatus, AppPendingApproval, AppChallengePromptData,
     AppChallengeResultData, AppConversationLogEntry,
 };
+
+// Re-export WebSocket protocol DTOs (application-owned).
+pub use websocket_messages::*;
 
 // Re-export infrastructure types through the application layer
 // This allows presentation to import from application instead of infrastructure
@@ -43,16 +47,5 @@ pub use crate::infrastructure::asset_loader::{
     SessionCharacterData, SessionSceneData,
 };
 
-// Re-export websocket message types through the application layer
-pub use crate::infrastructure::websocket::{
-    // Server message types (for message handling)
-    ServerMessage,
-    // Scene display types
-    SceneData, CharacterData, InteractionData,
-    CharacterPosition, DialogueChoice,
-    // DM types
-    DirectorialContext, NpcMotivationData,
-    ApprovalDecision, ProposedTool, ChallengeSuggestionInfo,
-    // Client messages
-    ClientMessage,
-};
+// NOTE (Phase 16.3): asset_loader types are still infrastructure-owned for now.
+// Next step is to introduce application-owned snapshot DTOs and make the loader depend inward.
