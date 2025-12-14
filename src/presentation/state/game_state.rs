@@ -5,13 +5,13 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::application::dto::{WorldSnapshot, CharacterData, InteractionData, SceneData};
+use crate::application::dto::{SessionWorldSnapshot, CharacterData, InteractionData, SceneData};
 
 /// Central game state stored as Dioxus signals
 #[derive(Clone)]
 pub struct GameState {
-    /// Loaded world data (from WorldSnapshot)
-    pub world: Signal<Option<Arc<WorldSnapshot>>>,
+    /// Loaded world data (from session snapshot)
+    pub world: Signal<Option<Arc<SessionWorldSnapshot>>>,
     /// Current scene data (from server SceneUpdate)
     pub current_scene: Signal<Option<SceneData>>,
     /// Characters in the current scene
@@ -31,8 +31,8 @@ impl GameState {
         }
     }
 
-    /// Load a world snapshot
-    pub fn load_world(&mut self, snapshot: WorldSnapshot) {
+    /// Load a session world snapshot
+    pub fn load_world(&mut self, snapshot: SessionWorldSnapshot) {
         self.world.set(Some(Arc::new(snapshot)));
     }
 

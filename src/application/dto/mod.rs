@@ -38,6 +38,9 @@ pub use crate::infrastructure::asset_loader::{
     // Story arc types
     StoryEventData, StoryEventTypeData, MarkerImportance, DmMarkerType,
     NarrativeEventData, EventChainData, ChainedEventData,
+    // Session snapshot types (simplified format from Engine)
+    SessionWorldSnapshot, SessionWorldData, SessionLocationData,
+    SessionCharacterData, SessionSceneData,
 };
 
 // Re-export websocket message types through the application layer

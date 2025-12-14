@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 
 use crate::application::dto::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
-    SuccessComparison, WorldSnapshot,
+    SuccessComparison, SessionWorldSnapshot,
 };
 use crate::application::services::world_service::WorldSummary;
 use crate::presentation::services::use_world_service;
@@ -71,8 +71,8 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                 is_loading.set(true);
                 match svc.load_world_snapshot(&world_id).await {
                     Ok(snapshot_json) => {
-                        // Parse the JSON value into WorldSnapshot
-                        match serde_json::from_value::<WorldSnapshot>(snapshot_json) {
+                        // Parse the JSON value into SessionWorldSnapshot
+                        match serde_json::from_value::<SessionWorldSnapshot>(snapshot_json) {
                             Ok(snapshot) => {
                                 game_state.load_world(snapshot);
                                 // Signal that world is loaded - parent will navigate

@@ -90,6 +90,96 @@ impl WorldSnapshot {
     }
 }
 
+// ============================================================================
+// Session World Snapshot - Simplified format sent by Engine during sessions
+// ============================================================================
+
+/// Simplified world snapshot for Player clients during sessions
+///
+/// This is sent when a client joins a session and contains the essential
+/// data needed to render the game world. It matches Engine's PlayerWorldSnapshot.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionWorldSnapshot {
+    /// The world metadata
+    pub world: SessionWorldData,
+    /// All locations in the world
+    pub locations: Vec<SessionLocationData>,
+    /// All characters in the world
+    pub characters: Vec<SessionCharacterData>,
+    /// All scenes in the world
+    pub scenes: Vec<SessionSceneData>,
+    /// The current active scene (if any)
+    pub current_scene: Option<SessionSceneData>,
+}
+
+impl SessionWorldSnapshot {
+    /// Get a location by ID
+    pub fn get_location(&self, id: &str) -> Option<&SessionLocationData> {
+        self.locations.iter().find(|l| l.id == id)
+    }
+
+    /// Get a character by ID
+    pub fn get_character(&self, id: &str) -> Option<&SessionCharacterData> {
+        self.characters.iter().find(|c| c.id == id)
+    }
+
+    /// Get a scene by ID
+    pub fn get_scene(&self, id: &str) -> Option<&SessionSceneData> {
+        self.scenes.iter().find(|s| s.id == id)
+    }
+}
+
+/// World metadata for session snapshots
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionWorldData {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub rule_system: RuleSystemConfig,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Location data for session snapshots (simplified)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionLocationData {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub location_type: String,
+    pub backdrop_asset: Option<String>,
+    pub parent_id: Option<String>,
+}
+
+/// Character data for session snapshots (simplified)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionCharacterData {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub archetype: String,
+    pub sprite_asset: Option<String>,
+    pub portrait_asset: Option<String>,
+    pub is_alive: bool,
+    pub is_active: bool,
+}
+
+/// Scene data for session snapshots (simplified)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSceneData {
+    pub id: String,
+    pub name: String,
+    pub location_id: String,
+    pub time_context: String,
+    pub backdrop_override: Option<String>,
+    pub featured_characters: Vec<String>,
+    pub directorial_notes: String,
+}
+
+// ============================================================================
+// Full World Snapshot - Complete format for world file exports
+// ============================================================================
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnapshotMetadata {
     pub version: String,

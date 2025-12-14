@@ -412,7 +412,7 @@ use crate::presentation::state::{
     session_state::{ChallengePromptData, ChallengeResultData},
 };
 #[cfg(target_arch = "wasm32")]
-use crate::infrastructure::asset_loader::WorldSnapshot;
+use crate::infrastructure::asset_loader::SessionWorldSnapshot;
 
 /// Handle incoming server messages and update application state
 ///
@@ -447,8 +447,8 @@ fn handle_server_message(
                 platform,
             );
 
-            // Parse and load world snapshot
-            match serde_json::from_value::<WorldSnapshot>(world_snapshot) {
+            // Parse and load session world snapshot
+            match serde_json::from_value::<SessionWorldSnapshot>(world_snapshot) {
                 Ok(snapshot) => {
                     game_state.load_world(snapshot);
                     log_message(&format!("World loaded for session: {}", session_id));

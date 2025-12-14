@@ -15,7 +15,7 @@ use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, Ses
 #[cfg(not(target_arch = "wasm32"))]
 use crate::infrastructure::websocket::ServerMessage;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::infrastructure::asset_loader::WorldSnapshot;
+use crate::infrastructure::asset_loader::SessionWorldSnapshot;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::presentation::state::{PendingApproval, session_state::{ChallengePromptData, ChallengeResultData}};
 #[cfg(not(target_arch = "wasm32"))]
@@ -91,8 +91,8 @@ fn handle_server_message(
                 platform,
             );
 
-            // Parse and load world snapshot
-            match serde_json::from_value::<WorldSnapshot>(world_snapshot) {
+            // Parse and load session world snapshot
+            match serde_json::from_value::<SessionWorldSnapshot>(world_snapshot) {
                 Ok(snapshot) => {
                     game_state.load_world(snapshot);
                     tracing::info!("World loaded for session: {}", session_id);

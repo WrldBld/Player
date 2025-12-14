@@ -21,4 +21,7 @@ pub use world_snapshot::{
     // Story Arc types (Phase 17)
     StoryEventData, StoryEventTypeData, MarkerImportance, DmMarkerType,
     NarrativeEventData, EventChainData, ChainedEventData,
+    // Session snapshot types (simplified format from Engine)
+    SessionWorldSnapshot, SessionWorldData, SessionLocationData,
+    SessionCharacterData, SessionSceneData,
 };
