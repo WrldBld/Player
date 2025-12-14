@@ -704,6 +704,7 @@ fn initiate_connection(
     session_state.start_connecting(&server_url);
     session_state.set_user(user_id.clone(), role);
 
+    let mut session_state_for_message = session_state.clone();
     let mut game_state = game_state;
     let mut dialogue_state = dialogue_state;
     let platform_for_handler = platform.clone();
@@ -712,7 +713,7 @@ fn initiate_connection(
     let on_message = Box::new(move |message| {
         crate::presentation::handlers::handle_server_message(
             message,
-            &mut session_state,
+            &mut session_state_for_message,
             &mut game_state,
             &mut dialogue_state,
             &platform_for_handler,
@@ -722,13 +723,12 @@ fn initiate_connection(
     // Keep connection status in sync; JoinSession is sent by SessionService once connected.
     let mut session_state_for_state = session_state.clone();
     let on_state_change = Box::new(move |state| {
-        let app_status = crate::application::services::connection_state_to_status(state);
-        let status = match app_status {
-            crate::application::dto::AppConnectionStatus::Disconnected => ConnectionStatus::Disconnected,
-            crate::application::dto::AppConnectionStatus::Connecting => ConnectionStatus::Connecting,
-            crate::application::dto::AppConnectionStatus::Connected => ConnectionStatus::Connected,
-            crate::application::dto::AppConnectionStatus::Reconnecting => ConnectionStatus::Reconnecting,
-            crate::application::dto::AppConnectionStatus::Failed => ConnectionStatus::Failed,
+        let status = match state {
+            crate::infrastructure::websocket::ConnectionState::Disconnected => ConnectionStatus::Disconnected,
+            crate::infrastructure::websocket::ConnectionState::Connecting => ConnectionStatus::Connecting,
+            crate::infrastructure::websocket::ConnectionState::Connected => ConnectionStatus::Connected,
+            crate::infrastructure::websocket::ConnectionState::Reconnecting => ConnectionStatus::Reconnecting,
+            crate::infrastructure::websocket::ConnectionState::Failed => ConnectionStatus::Failed,
         };
         session_state_for_state.connection_status.set(status);
 
