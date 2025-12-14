@@ -1,27 +1,20 @@
-//! Session event handler for desktop platform
+//! Session event handler
 //!
 //! This module handles SessionEvent from the application layer and updates
 //! presentation state accordingly. This is where the application-to-presentation
 //! boundary is properly maintained.
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::application::services::SessionEvent;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::application::ports::outbound::{ConnectionState as PortConnectionState, Platform};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::application::services::port_connection_state_to_status;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::presentation::state::{ConnectionStatus, DialogueState, GameState, SessionState};
-#[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::{WritableExt, ReadableExt};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::presentation::handlers::handle_server_message;
 
 /// Process a session event and update presentation state
 ///
 /// This function receives events from the application layer's SessionService
 /// and updates the presentation layer's state signals accordingly.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn handle_session_event(
     event: SessionEvent,
     session_state: &mut SessionState,

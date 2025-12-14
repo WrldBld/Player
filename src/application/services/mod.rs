@@ -27,8 +27,6 @@ pub use session_command_service::SessionCommandService;
 // Re-export session service types
 pub use session_service::{port_connection_state_to_status, ParticipantRolePort, DEFAULT_ENGINE_URL};
 
-// Desktop-only session service (uses tokio channels)
-#[cfg(not(target_arch = "wasm32"))]
 pub use session_service::{SessionEvent, SessionService};
 
 // Re-export world service types
