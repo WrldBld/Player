@@ -5,6 +5,7 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::DialogueChoice;
+use crate::application::ports::outbound::Platform;
 
 /// Dialogue state for the visual novel UI
 #[derive(Clone)]
@@ -149,8 +150,8 @@ impl Default for DialogueState {
 ///
 /// Call this in a component to drive the typewriter animation.
 /// Returns true while typing is in progress.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn use_typewriter_effect(dialogue_state: &mut DialogueState) {
+    let platform = use_context::<Platform>();
     let is_typing = *dialogue_state.is_typing.read();
     let full_text = dialogue_state.full_text.clone();
     let mut displayed_text = dialogue_state.displayed_text.clone();
@@ -158,6 +159,7 @@ pub fn use_typewriter_effect(dialogue_state: &mut DialogueState) {
     let mut awaiting_signal = dialogue_state.awaiting_input.clone();
 
     use_future(move || {
+        let platform = platform.clone();
         let full_text = full_text.clone();
         let mut displayed_text = displayed_text.clone();
         let mut is_typing_signal = is_typing_signal.clone();
@@ -187,56 +189,7 @@ pub fn use_typewriter_effect(dialogue_state: &mut DialogueState) {
                     _ => 30,
                 };
 
-                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-            }
-
-            // Mark as complete
-            is_typing_signal.set(false);
-            awaiting_signal.set(true);
-        }
-    });
-}
-
-/// Hook for running the typewriter effect (WASM version)
-#[cfg(target_arch = "wasm32")]
-pub fn use_typewriter_effect(dialogue_state: &mut DialogueState) {
-    let is_typing = *dialogue_state.is_typing.read();
-    let full_text = dialogue_state.full_text.clone();
-    let mut displayed_text = dialogue_state.displayed_text.clone();
-    let mut is_typing_signal = dialogue_state.is_typing.clone();
-    let mut awaiting_signal = dialogue_state.awaiting_input.clone();
-
-    use_future(move || {
-        let full_text = full_text.clone();
-        let mut displayed_text = displayed_text.clone();
-        let mut is_typing_signal = is_typing_signal.clone();
-        let mut awaiting_signal = awaiting_signal.clone();
-
-        async move {
-            if !is_typing {
-                return;
-            }
-
-            let text = full_text.read().clone();
-            let mut current = String::new();
-
-            for ch in text.chars() {
-                // Check if we should stop (user skipped)
-                if !*is_typing_signal.read() {
-                    break;
-                }
-
-                current.push(ch);
-                displayed_text.set(current.clone());
-
-                // Variable delay based on punctuation
-                let delay = match ch {
-                    '.' | '!' | '?' => 150,
-                    ',' | ';' | ':' => 80,
-                    _ => 30,
-                };
-
-                gloo_timers::future::TimeoutFuture::new(delay).await;
+                platform.sleep_ms(delay).await;
             }
 
             // Mark as complete

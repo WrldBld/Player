@@ -4,8 +4,10 @@
 //! js_sys and web_sys crates.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
+    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
+    TimeProvider,
 };
+use std::{future::Future, pin::Pin};
 
 /// WASM time provider using js_sys::Date
 #[derive(Clone, Default)]
@@ -102,10 +104,23 @@ impl DocumentProvider for WasmDocumentProvider {
     }
 }
 
+/// WASM sleep provider using gloo timers
+#[derive(Clone, Default)]
+pub struct WasmSleepProvider;
+
+impl SleepProvider for WasmSleepProvider {
+    fn sleep_ms(&self, ms: u64) -> Pin<Box<dyn Future<Output = ()> + 'static>> {
+        Box::pin(async move {
+            gloo_timers::future::TimeoutFuture::new(ms as u32).await;
+        })
+    }
+}
+
 /// Create platform services for WASM
 pub fn create_platform() -> Platform {
     Platform::new(
         WasmTimeProvider,
+        WasmSleepProvider,
         WasmRandomProvider,
         WasmStorageProvider,
         WasmLogProvider,

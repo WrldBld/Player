@@ -4,9 +4,11 @@
 //! standard library and native crates.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
+    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
+    TimeProvider,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{future::Future, pin::Pin};
 
 /// Desktop time provider using std::time
 #[derive(Clone, Default)]
@@ -100,10 +102,23 @@ impl DocumentProvider for DesktopDocumentProvider {
     }
 }
 
+/// Desktop sleep provider using tokio timer
+#[derive(Clone, Default)]
+pub struct DesktopSleepProvider;
+
+impl SleepProvider for DesktopSleepProvider {
+    fn sleep_ms(&self, ms: u64) -> Pin<Box<dyn Future<Output = ()> + 'static>> {
+        Box::pin(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+        })
+    }
+}
+
 /// Create platform services for desktop
 pub fn create_platform() -> Platform {
     Platform::new(
         DesktopTimeProvider,
+        DesktopSleepProvider,
         DesktopRandomProvider,
         DesktopStorageProvider,
         DesktopLogProvider,

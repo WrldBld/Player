@@ -4,10 +4,12 @@
 //! for deterministic testing.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, StorageProvider, TimeProvider,
+    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
+    TimeProvider,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::{future::Future, pin::Pin};
 
 /// Mock time provider with controllable time
 #[derive(Clone)]
@@ -236,10 +238,21 @@ impl DocumentProvider for MockDocumentProvider {
     }
 }
 
+/// Mock sleep provider (immediate)
+#[derive(Clone, Default)]
+pub struct MockSleepProvider;
+
+impl SleepProvider for MockSleepProvider {
+    fn sleep_ms(&self, _ms: u64) -> Pin<Box<dyn Future<Output = ()> + 'static>> {
+        Box::pin(async move {})
+    }
+}
+
 /// Create a mock platform with default settings for testing
 pub fn create_mock_platform() -> Platform {
     Platform::new(
         MockTimeProvider::default(),
+        MockSleepProvider::default(),
         MockRandomProvider::default(),
         MockStorageProvider::default(),
         MockLogProvider::default(),
@@ -250,6 +263,7 @@ pub fn create_mock_platform() -> Platform {
 /// Builder for creating customized mock platforms
 pub struct MockPlatformBuilder {
     time: MockTimeProvider,
+    sleep: MockSleepProvider,
     random: MockRandomProvider,
     storage: MockStorageProvider,
     log: MockLogProvider,
@@ -266,6 +280,7 @@ impl MockPlatformBuilder {
     pub fn new() -> Self {
         Self {
             time: MockTimeProvider::default(),
+            sleep: MockSleepProvider::default(),
             random: MockRandomProvider::default(),
             storage: MockStorageProvider::default(),
             log: MockLogProvider::default(),
@@ -289,6 +304,6 @@ impl MockPlatformBuilder {
     }
 
     pub fn build(self) -> Platform {
-        Platform::new(self.time, self.random, self.storage, self.log, self.document)
+        Platform::new(self.time, self.sleep, self.random, self.storage, self.log, self.document)
     }
 }
