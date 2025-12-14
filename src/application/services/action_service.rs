@@ -77,3 +77,24 @@ impl ActionService {
         self.connection.as_ref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::infrastructure::testing::MockGameConnectionPort;
+    use crate::infrastructure::testing::fixtures::action_custom;
+
+    #[test]
+    fn send_action_records_outbound_call() {
+        let conn = Arc::new(MockGameConnectionPort::new("ws://test/ws"));
+        let conn_dyn: Arc<dyn GameConnectionPort> = conn.clone();
+        let svc = ActionService::new(conn_dyn);
+
+        svc.send_action(action_custom("hello")).unwrap();
+
+        let sent = conn.sent_actions();
+        assert_eq!(sent.len(), 1);
+        assert_eq!(sent[0].action_type, "custom");
+        assert_eq!(sent[0].dialogue.as_deref(), Some("hello"));
+    }
+}

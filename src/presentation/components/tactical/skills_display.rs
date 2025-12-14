@@ -169,3 +169,26 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn skills_display_smoke_renders() {
+        #[component]
+        fn App() -> Element {
+            rsx! {
+                SkillsDisplay {
+                    skills: vec![],
+                    on_close: move |_| {},
+                }
+            }
+        }
+
+        let mut dom = VirtualDom::new(App);
+        let mut muts = NoOpMutations;
+        dom.rebuild(&mut muts);
+    }
+}

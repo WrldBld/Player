@@ -79,3 +79,27 @@ impl<A: ApiPort + Clone> Clone for ChallengeService<A> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::infrastructure::testing::MockApiPort;
+    use crate::infrastructure::testing::fixtures::api_request_failed;
+
+    #[tokio::test]
+    async fn list_challenges_hits_expected_path() {
+        let api = MockApiPort::new();
+        api.when_get_err(
+            "/api/worlds/world-1/challenges",
+            api_request_failed("boom"),
+        );
+
+        let svc = ChallengeService::new(api.clone());
+        let _ = svc.list_challenges("world-1").await;
+
+        let reqs = api.requests();
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].method, "GET");
+        assert_eq!(reqs[0].path, "/api/worlds/world-1/challenges");
+    }
+}
