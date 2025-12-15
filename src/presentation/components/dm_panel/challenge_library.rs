@@ -682,7 +682,7 @@ fn ChallengeFormModal(props: ChallengeFormModalProps) -> Element {
         // Validate difficulty-specific values
         match &*difficulty.read() {
             ChallengeDifficulty::Dc { value } => {
-                if *value <= 0 {
+                if *value == 0 {
                     errors.push("DC value must be greater than 0".to_string());
                 }
             }
