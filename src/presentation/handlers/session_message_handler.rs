@@ -283,7 +283,7 @@ pub fn handle_server_message(
         }
 
         ServerMessage::NarrativeEventTriggered {
-            event_id,
+            event_id: _,
             event_name,
             outcome_description,
             scene_direction,

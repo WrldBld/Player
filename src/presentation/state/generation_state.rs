@@ -39,6 +39,7 @@ pub struct GenerationBatch {
     pub entity_id: String,
     pub asset_type: String,
     pub status: BatchStatus,
+    pub is_read: bool,
 }
 
 /// A suggestion task in the queue (for text suggestions)
@@ -48,6 +49,7 @@ pub struct SuggestionTask {
     pub field_type: String,
     pub entity_id: Option<String>,
     pub status: SuggestionStatus,
+    pub is_read: bool,
 }
 
 /// State for managing asset generation and suggestions
@@ -95,6 +97,7 @@ impl GenerationState {
             entity_id,
             asset_type,
             status: BatchStatus::Queued { position },
+            is_read: false,
         };
         self.add_batch(batch);
     }
@@ -206,6 +209,7 @@ impl GenerationState {
             field_type,
             entity_id,
             status: SuggestionStatus::Queued,
+            is_read: false,
         };
         self.suggestions.write().push(task);
         self.update_ready_flag();
@@ -230,6 +234,7 @@ impl GenerationState {
                     field_type,
                     entity_id,
                     status: SuggestionStatus::Queued,
+                    is_read: false,
                 });
                 true
             }
@@ -309,6 +314,30 @@ impl GenerationState {
                 )
             })
             .count()
+    }
+
+    /// Mark a batch as read
+    pub fn mark_batch_read(&mut self, batch_id: &str) {
+        let mut batches = self.batches.write();
+        if let Some(batch) = batches.iter_mut().find(|b| b.batch_id == batch_id) {
+            batch.is_read = true;
+        }
+    }
+
+    /// Mark a suggestion as read
+    pub fn mark_suggestion_read(&mut self, request_id: &str) {
+        let mut suggestions = self.suggestions.write();
+        if let Some(task) = suggestions.iter_mut().find(|s| s.request_id == request_id) {
+            task.is_read = true;
+        }
+    }
+
+    /// Clear all batches and suggestions (used when hydrating from snapshot)
+    pub fn clear(&mut self) {
+        self.batches.set(Vec::new());
+        self.suggestions.set(Vec::new());
+        self.has_ready_batches.set(false);
+        self.has_ready_suggestions.set(false);
     }
 }
 

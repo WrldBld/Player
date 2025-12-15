@@ -12,3 +12,4 @@ pub mod npc_motivation;
 pub mod scene_preview;
 pub mod tone_selector;
 pub mod trigger_challenge_modal;
+pub mod decision_queue;

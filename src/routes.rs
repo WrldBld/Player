@@ -81,22 +81,36 @@ pub fn MainMenuRoute() -> Element {
     let navigator = use_navigator();
     let platform = use_context::<Platform>();
 
-    // Clone platform for different closures
-    let platform_title = platform.clone();
-    let platform_storage = platform.clone();
-
-    // Set page title for this view
+    // On web, automatically connect to the default (or last-used) server and
+    // skip the manual "Connect to Server" modal. This keeps the flow:
+    // MainMenu → RoleSelect → WorldSelect, without an extra click.
+    let platform_for_effect = platform.clone();
+    let navigator_for_effect = navigator.clone();
     use_effect(move || {
-        platform_title.set_page_title("Main Menu");
+        // Load last-used server URL or fall back to the default WS URL
+        let server_url = platform_for_effect
+            .storage_load(storage_keys::SERVER_URL)
+            .unwrap_or_else(|| DEFAULT_ENGINE_URL.to_string());
+
+        // Persist it so subsequent screens can read it
+        platform_for_effect.storage_save(storage_keys::SERVER_URL, &server_url);
+
+        // Configure Engine HTTP base URL from the WebSocket URL (WASM only)
+        #[cfg(target_arch = "wasm32")]
+        {
+            use crate::infrastructure::api::{set_engine_url, ws_to_http};
+            set_engine_url(&ws_to_http(&server_url));
+        }
+
+        // Go straight to role selection
+        navigator_for_effect.push(Route::RoleSelectRoute {});
     });
 
+    // Minimal placeholder while the effect redirects
     rsx! {
-        crate::presentation::views::main_menu::MainMenu {
-            on_connect: move |server_url: String| {
-                // Save server URL preference
-                platform_storage.storage_save(storage_keys::SERVER_URL, &server_url);
-                navigator.push(Route::RoleSelectRoute {});
-            }
+        div {
+            style: "display: flex; align-items: center; justify-content: center; height: 100%; color: white; background: #0f0f23;",
+            "Loading WrldBldr..."
         }
     }
 }
@@ -165,8 +179,10 @@ pub fn WorldSelectRoute() -> Element {
                         crate::UserRole::Spectator => ParticipantRole::Spectator,
                     };
 
-                    // Initiate connection to the Engine
-                    let server_url = DEFAULT_ENGINE_URL.to_string();
+                    // Determine server URL: prefer stored value from Main Menu, fall back to default
+                    let server_url = platform_connection
+                        .storage_load(storage_keys::SERVER_URL)
+                        .unwrap_or_else(|| DEFAULT_ENGINE_URL.to_string());
                     let user_id = format!("user-{}", uuid::Uuid::new_v4());
 
                     initiate_connection(
@@ -397,6 +413,28 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
+    let generation_state = use_context::<GenerationState>();
+
+    // On mount, ensure we have an active DM connection for this world if we're disconnected.
+    // This covers deep links like `/worlds/:id/dm` that skip the WorldSelectRoute.
+    {
+        let platform = platform.clone();
+        let session_state = session_state.clone();
+        let game_state = game_state.clone();
+        let dialogue_state = dialogue_state.clone();
+        let generation_state = generation_state.clone();
+        let world_id = props.world_id.clone();
+        use_effect(move || {
+            ensure_dm_connection(
+                &world_id,
+                session_state.clone(),
+                game_state.clone(),
+                dialogue_state.clone(),
+                generation_state.clone(),
+                platform.clone(),
+            );
+        });
+    }
 
     rsx! {
         div {
@@ -408,6 +446,24 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
                 world_id: props.world_id.clone(),
                 connection_status: *session_state.connection_status.read(),
                 dm_mode: props.dm_mode,
+                on_connection_click: {
+                    let platform = platform.clone();
+                    let session_state = session_state.clone();
+                    let game_state = game_state.clone();
+                    let dialogue_state = dialogue_state.clone();
+                    let generation_state = generation_state.clone();
+                    let world_id = props.world_id.clone();
+                    move |_| {
+                        ensure_dm_connection(
+                            &world_id,
+                            session_state.clone(),
+                            game_state.clone(),
+                            dialogue_state.clone(),
+                            generation_state.clone(),
+                            platform.clone(),
+                        );
+                    }
+                },
                 on_back: {
                     let session_state = session_state.clone();
                     let game_state = game_state.clone();
@@ -516,6 +572,7 @@ struct DMViewHeaderProps {
     world_id: String,
     connection_status: ConnectionStatus,
     dm_mode: DMMode,
+    on_connection_click: EventHandler<()>,
     on_back: EventHandler<()>,
 }
 
@@ -585,7 +642,11 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
                 // Connection status
                 div {
                     class: "connection-status",
-                    style: "display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;",
+                    style: "display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;",
+                    onclick: move |_| {
+                        // Allow manual retry by clicking the status indicator
+                        props.on_connection_click.call(());
+                    },
 
                     span {
                         class: "status-indicator",
@@ -599,6 +660,65 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
             }
         }
     }
+}
+
+/// Ensure a DM WebSocket connection is established for the current world.
+///
+/// If the session is already connecting/connected, this is a no-op. Otherwise it
+/// will read the server URL from storage (or use the default), persist it, and
+/// initiate a new connection as a Dungeon Master.
+fn ensure_dm_connection(
+    _world_id: &str,
+    session_state: SessionState,
+    game_state: GameState,
+    dialogue_state: DialogueState,
+    generation_state: GenerationState,
+    platform: Platform,
+) {
+    let status = *session_state.connection_status.read();
+    // Only attempt a new connection if we're not already in the process / connected.
+    if matches!(
+        status,
+        ConnectionStatus::Connecting
+            | ConnectionStatus::Connected
+            | ConnectionStatus::Reconnecting
+    ) {
+        return;
+    }
+
+    // Load last-used server URL or fall back to default
+    let server_url = platform
+        .storage_load(storage_keys::SERVER_URL)
+        .unwrap_or_else(|| DEFAULT_ENGINE_URL.to_string());
+    platform.storage_save(storage_keys::SERVER_URL, &server_url);
+
+    // Configure Engine HTTP base URL from the WebSocket URL (WASM only)
+    #[cfg(target_arch = "wasm32")]
+    {
+        use crate::infrastructure::api::{set_engine_url, ws_to_http};
+        set_engine_url(&ws_to_http(&server_url));
+    }
+
+    // Reuse existing user_id if present, otherwise generate a new one
+    let user_id = session_state
+        .user_id
+        .read()
+        .clone()
+        .unwrap_or_else(|| format!("user-{}", uuid::Uuid::new_v4()));
+
+    // For DM routes we always connect as DungeonMaster
+    let role = ParticipantRole::DungeonMaster;
+
+    initiate_connection(
+        server_url,
+        user_id,
+        role,
+        session_state,
+        game_state,
+        dialogue_state,
+        generation_state,
+        platform,
+    );
 }
 
 /// Header tab link for DM View - uses router navigation

@@ -8,6 +8,7 @@ use crate::application::services::SessionCommandService;
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::services::{use_challenge_service, use_skill_service};
 use crate::presentation::components::dm_panel::challenge_library::ChallengeLibrary;
+use crate::presentation::components::dm_panel::decision_queue::DecisionQueuePanel;
 use crate::presentation::components::dm_panel::trigger_challenge_modal::TriggerChallengeModal;
 use crate::presentation::components::settings::SettingsView;
 use crate::presentation::components::story_arc::timeline_view::TimelineView;
@@ -382,6 +383,14 @@ fn DirectorModeContent() -> Element {
                     }
                 }
 
+                // Decision queue (pending approvals + recent decisions)
+                div {
+                    class: "panel-section",
+                    style: "background: #1a1a2e; border-radius: 0.5rem; padding: 1rem;",
+
+                    DecisionQueuePanel {}
+                }
+
                 // Scene notes
                 div {
                     class: "panel-section",
@@ -581,19 +590,44 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
     let request_id = props.approval.request_id.clone();
     let npc_name = props.approval.npc_name.clone();
-
     // Helper function to send approval decision
     fn send_approval_decision(
         mut session_state: crate::presentation::state::SessionState,
         request_id: String,
-        decision: ApprovalDecision,
+        decision: &ApprovalDecision,
     ) {
         if let Some(client) = session_state.engine_client.read().as_ref() {
             let svc = SessionCommandService::new(std::sync::Arc::clone(client));
-            if let Err(e) = svc.send_approval_decision(&request_id, decision) {
+            if let Err(e) = svc.send_approval_decision(&request_id, decision.clone()) {
                 tracing::error!("Failed to send approval decision: {}", e);
             }
         }
+        // Record decision in local history
+        let outcome_label = match decision {
+            ApprovalDecision::Accept => "accepted",
+            ApprovalDecision::AcceptWithModification { .. } => "modified",
+            ApprovalDecision::Reject { .. } => "rejected",
+            ApprovalDecision::TakeOver { .. } => "takeover",
+        }
+        .to_string();
+
+        // Try to resolve NPC name from current pending approvals
+        let npc_name = session_state
+            .pending_approvals
+            .read()
+            .iter()
+            .find(|a| a.request_id == request_id)
+            .map(|a| a.npc_name.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let entry = crate::presentation::state::ApprovalHistoryEntry {
+            request_id: request_id.clone(),
+            npc_name,
+            outcome: outcome_label,
+            timestamp: 0,
+        };
+        session_state.add_approval_history_entry(entry);
+
         // Remove from pending approvals
         session_state.remove_pending_approval(&request_id);
     }
@@ -728,13 +762,14 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                             let feedback = rejection_feedback.read().clone();
                             let request_id = request_id.clone();
                             let session_state = session_state.clone();
+                            let npc_name = npc_name.clone();
                             rsx! {
                                 button {
                                     onclick: move |_| {
                                         send_approval_decision(
                                             session_state.clone(),
                                             request_id.clone(),
-                                            ApprovalDecision::Reject { feedback: feedback.clone() },
+                                            &ApprovalDecision::Reject { feedback: feedback.clone() },
                                         );
                                     },
                                     style: "flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
@@ -767,10 +802,11 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                         div { style: "display: flex; gap: 0.5rem;",
                             button {
                                 onclick: move |_| {
+                                    let npc_name = npc_name.clone();
                                     send_approval_decision(
                                         session_state_accept.clone(),
                                         request_id_accept.clone(),
-                                        ApprovalDecision::Accept,
+                                        &ApprovalDecision::Accept,
                                     );
                                 },
                                 style: "flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;",
@@ -798,7 +834,7 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                                             send_approval_decision(
                                                 session_state.clone(),
                                                 request_id.clone(),
-                                                ApprovalDecision::AcceptWithModification {
+                                                &ApprovalDecision::AcceptWithModification {
                                                     modified_dialogue: dialogue.clone(),
                                                     approved_tools: approved_list,
                                                     rejected_tools: rejected_list,
@@ -808,7 +844,7 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                                             send_approval_decision(
                                                 session_state.clone(),
                                                 request_id.clone(),
-                                                ApprovalDecision::Accept,
+                                                &ApprovalDecision::Accept,
                                             );
                                         }
                                     }

@@ -73,6 +73,19 @@ pub struct PendingApproval {
     pub narrative_event_suggestion: Option<NarrativeEventSuggestionInfo>,
 }
 
+/// A past approval decision for lightweight decision history in the DM view
+#[derive(Debug, Clone, PartialEq)]
+pub struct ApprovalHistoryEntry {
+    /// Request ID this decision relates to
+    pub request_id: String,
+    /// NPC name involved in the decision
+    pub npc_name: String,
+    /// Outcome label (e.g. "accepted", "modified", "rejected", "takeover")
+    pub outcome: String,
+    /// Unix timestamp (seconds) when the decision was made
+    pub timestamp: u64,
+}
+
 /// Challenge prompt data shown to player
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChallengePromptData {
@@ -151,6 +164,8 @@ pub struct SessionState {
     pub challenge_results: Signal<Vec<ChallengeResultData>>,
     /// Player character skills with modifiers
     pub player_skills: Signal<Vec<PlayerSkillData>>,
+    /// Recent approval decisions for DM decision history
+    pub decision_history: Signal<Vec<ApprovalHistoryEntry>>,
 }
 
 impl SessionState {
@@ -169,6 +184,7 @@ impl SessionState {
             active_challenge: Signal::new(None),
             challenge_results: Signal::new(Vec::new()),
             player_skills: Signal::new(Vec::new()),
+            decision_history: Signal::new(Vec::new()),
         }
     }
 
@@ -238,6 +254,7 @@ impl SessionState {
         self.active_challenge.set(None);
         self.challenge_results.set(Vec::new());
         self.player_skills.set(Vec::new());
+        self.decision_history.set(Vec::new());
     }
 
     /// Add a pending approval request
@@ -289,6 +306,16 @@ impl SessionState {
     /// Add a player skill
     pub fn add_player_skill(&mut self, skill: PlayerSkillData) {
         self.player_skills.write().push(skill);
+    }
+
+    /// Add an entry to the approval decision history
+    pub fn add_approval_history_entry(&mut self, entry: ApprovalHistoryEntry) {
+        self.decision_history.write().push(entry);
+    }
+
+    /// Get a snapshot of the approval decision history
+    pub fn get_approval_history(&self) -> Vec<ApprovalHistoryEntry> {
+        self.decision_history.read().clone()
     }
 }
 

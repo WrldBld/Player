@@ -10,7 +10,6 @@ use crate::application::dto::{FieldValue, SheetTemplate};
 use crate::application::ports::outbound::Platform;
 use crate::application::services::{CharacterData, CharacterSheetDataApi};
 use crate::presentation::services::{use_character_service, use_world_service};
-use crate::presentation::state::GameState;
 
 /// Character archetypes
 const ARCHETYPES: &[&str] = &[
@@ -89,14 +88,12 @@ pub fn CharacterForm(
     {
         let char_id_for_effect = character_id.clone();
         let char_svc = char_service.clone();
-        let world_id_for_effect = world_id.clone();
         use_effect(move || {
             let char_id = char_id_for_effect.clone();
             let svc = char_svc.clone();
-            let world_id_clone = world_id_for_effect.clone();
             if !char_id.is_empty() {
                 spawn(async move {
-                    match svc.get_character(&world_id_clone, &char_id).await {
+                    match svc.get_character(&char_id).await {
                             Ok(char_data) => {
                                 name.set(char_data.name);
                                 description.set(char_data.description.unwrap_or_default());

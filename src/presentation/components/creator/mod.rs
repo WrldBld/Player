@@ -12,6 +12,9 @@ pub mod suggestion_button;
 pub mod sheet_field_input;
 
 use dioxus::prelude::*;
+use crate::application::ports::outbound::Platform;
+use crate::presentation::state::use_session_state;
+use crate::presentation::state::use_generation_state;
 
 /// Props for CreatorMode
 #[derive(Props, Clone, PartialEq)]
@@ -86,6 +89,29 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                     locations_error.set(Some(e.to_string()));
                     locations_loading.set(false);
                 }
+            }
+        });
+    });
+
+    // Hydrate generation queue from Engine on mount
+    let platform = use_context::<Platform>();
+    let mut generation_state = use_generation_state();
+    let session_state = use_session_state();
+    use_effect(move || {
+        let platform = platform.clone();
+        let user_id = session_state.user_id.read().clone();
+        spawn(async move {
+            if let Err(e) = crate::presentation::services::hydrate_generation_queue(
+                &platform,
+                &mut generation_state,
+                user_id,
+            )
+            .await
+            {
+                platform.log_error(&format!(
+                    "Failed to hydrate generation queue from Engine: {}",
+                    e
+                ));
             }
         });
     });

@@ -124,3 +124,169 @@ pub fn use_suggestion_service() -> Arc<SuggestionSvc> {
     let services = use_context::<Services>();
     services.suggestion.clone()
 }
+
+use crate::presentation::state::{BatchStatus, GenerationState, SuggestionStatus};
+use crate::infrastructure::storage;
+use crate::application::ports::outbound::Platform;
+use anyhow::Result;
+
+/// Hydrate GenerationState from the Engine's unified generation queue endpoint.
+pub async fn hydrate_generation_queue(
+    _platform: &Platform,
+    generation_state: &mut GenerationState,
+    user_id: Option<String>,
+) -> Result<()> {
+    let snapshot: GenerationQueueSnapshotDto =
+        if let Some(uid) = user_id {
+            crate::infrastructure::http_client::HttpClient::get(&format!(
+                "/api/generation/queue?user_id={}",
+                uid
+            ))
+            .await?
+        } else {
+            crate::infrastructure::http_client::HttpClient::get("/api/generation/queue").await?
+        };
+
+    #[derive(serde::Deserialize)]
+    struct GenerationQueueSnapshotDto {
+        batches: Vec<BatchDto>,
+        suggestions: Vec<SuggestionDto>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct BatchDto {
+        batch_id: String,
+        entity_type: String,
+        entity_id: String,
+        asset_type: String,
+        status: String,
+        position: Option<u32>,
+        progress: Option<u8>,
+        asset_count: Option<u32>,
+        error: Option<String>,
+        #[serde(default)]
+        is_read: bool,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct SuggestionDto {
+        request_id: String,
+        field_type: String,
+        entity_id: Option<String>,
+        status: String,
+        suggestions: Option<Vec<String>>,
+        error: Option<String>,
+        #[serde(default)]
+        is_read: bool,
+    }
+
+    // Clear existing state and repopulate from snapshot
+    generation_state.clear();
+
+    for b in snapshot.batches {
+        let status = match b.status.as_str() {
+            "queued" => BatchStatus::Queued {
+                position: b.position.unwrap_or(0),
+            },
+            "generating" => BatchStatus::Generating {
+                progress: b.progress.unwrap_or(0),
+            },
+            "ready" => BatchStatus::Ready {
+                asset_count: b.asset_count.unwrap_or(0),
+            },
+            "failed" => BatchStatus::Failed {
+                error: b.error.unwrap_or_else(|| "Unknown error".to_string()),
+            },
+            _ => BatchStatus::Queued { position: 0 },
+        };
+
+        generation_state.add_batch(crate::presentation::state::GenerationBatch {
+            batch_id: b.batch_id,
+            entity_type: b.entity_type,
+            entity_id: b.entity_id,
+            asset_type: b.asset_type,
+            status,
+            is_read: b.is_read,
+        });
+    }
+
+    for s in snapshot.suggestions {
+        let status = match s.status.as_str() {
+            "queued" => SuggestionStatus::Queued,
+            "processing" => SuggestionStatus::Processing,
+            "ready" => SuggestionStatus::Ready {
+                suggestions: s.suggestions.unwrap_or_default(),
+            },
+            "failed" => SuggestionStatus::Failed {
+                error: s.error.unwrap_or_else(|| "Unknown error".to_string()),
+            },
+            _ => SuggestionStatus::Queued,
+        };
+
+        generation_state.add_suggestion_task(
+            s.request_id.clone(),
+            s.field_type,
+            s.entity_id,
+        );
+        // Override status if needed using the same request_id
+        let req_id = s.request_id;
+        match status {
+            SuggestionStatus::Queued => {}
+            SuggestionStatus::Processing => {
+                generation_state.suggestion_progress(&req_id, "processing");
+            }
+            SuggestionStatus::Ready { suggestions } => {
+                generation_state.suggestion_complete(&req_id, suggestions);
+            }
+            SuggestionStatus::Failed { error } => {
+                generation_state.suggestion_failed(&req_id, error);
+            }
+        }
+    }
+
+    // Re-apply persisted read/unread state based on local storage (secondary layer)
+    apply_generation_read_state(generation_state);
+
+    Ok(())
+}
+
+const STORAGE_KEY_GEN_READ_BATCHES: &str = "wrldbldr_gen_read_batches";
+const STORAGE_KEY_GEN_READ_SUGGESTIONS: &str = "wrldbldr_gen_read_suggestions";
+
+/// Persist the read/unread state of generation queue items to local storage
+pub fn persist_generation_read_state(state: &GenerationState) {
+    // Persist read batch IDs
+    let read_batch_ids: Vec<String> = state
+        .get_batches()
+        .into_iter()
+        .filter(|b| b.is_read)
+        .map(|b| b.batch_id)
+        .collect();
+    let batch_value = read_batch_ids.join(",");
+    storage::save(STORAGE_KEY_GEN_READ_BATCHES, &batch_value);
+
+    // Persist read suggestion IDs
+    let read_suggestion_ids: Vec<String> = state
+        .get_suggestions()
+        .into_iter()
+        .filter(|s| s.is_read)
+        .map(|s| s.request_id)
+        .collect();
+    let suggestion_value = read_suggestion_ids.join(",");
+    storage::save(STORAGE_KEY_GEN_READ_SUGGESTIONS, &suggestion_value);
+}
+
+/// Apply persisted read/unread state from local storage to the current GenerationState
+fn apply_generation_read_state(state: &mut GenerationState) {
+    if let Some(batch_str) = storage::load(STORAGE_KEY_GEN_READ_BATCHES) {
+        for id in batch_str.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            state.mark_batch_read(id);
+        }
+    }
+
+    if let Some(sugg_str) = storage::load(STORAGE_KEY_GEN_READ_SUGGESTIONS) {
+        for id in sugg_str.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            state.mark_suggestion_read(id);
+        }
+    }
+}

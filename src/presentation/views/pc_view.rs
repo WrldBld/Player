@@ -193,7 +193,7 @@ pub fn PCView(props: PCViewProps) -> Element {
                                     Err(e) => tracing::warn!("Failed to load sheet template: {}", e),
                                 }
                                 // Load character data
-                                match char_svc.get_character(&wid, &cid).await {
+                                match char_svc.get_character(&cid).await {
                                     Ok(char_data) => {
                                         player_character_name.set(char_data.name);
                                         if let Some(sheet_data) = char_data.sheet_data {

@@ -73,10 +73,10 @@ impl<A: ApiPort> CharacterService<A> {
     /// Get a single character by ID
     pub async fn get_character(
         &self,
-        world_id: &str,
         character_id: &str,
     ) -> Result<CharacterData, ApiError> {
-        let path = format!("/api/worlds/{}/characters/{}", world_id, character_id);
+        // Engine exposes GET /api/characters/{id} for single-character fetch
+        let path = format!("/api/characters/{}", character_id);
         self.api.get(&path).await
     }
 

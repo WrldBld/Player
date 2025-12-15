@@ -6,7 +6,6 @@ use super::asset_gallery::AssetGallery;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
 use crate::application::services::LocationData;
 use crate::presentation::services::use_location_service;
-use crate::presentation::state::GameState;
 
 /// Location types
 const LOCATION_TYPES: &[&str] = &[
