@@ -8,6 +8,7 @@ use dioxus::prelude::*;
 pub use crate::application::services::SuggestionContext;
 use crate::application::ports::outbound::Platform;
 use crate::presentation::services::use_suggestion_service;
+use crate::presentation::state::use_generation_state;
 
 /// Types of suggestions that can be requested
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,6 +25,24 @@ pub enum SuggestionType {
     LocationSecrets,
 }
 
+impl SuggestionType {
+    /// Convert to field type string for API
+    fn to_field_type(&self) -> &'static str {
+        match self {
+            SuggestionType::CharacterName => "character_name",
+            SuggestionType::CharacterDescription => "character_description",
+            SuggestionType::CharacterWants => "character_wants",
+            SuggestionType::CharacterFears => "character_fears",
+            SuggestionType::CharacterBackstory => "character_backstory",
+            SuggestionType::LocationName => "location_name",
+            SuggestionType::LocationDescription => "location_description",
+            SuggestionType::LocationAtmosphere => "location_atmosphere",
+            SuggestionType::LocationFeatures => "location_features",
+            SuggestionType::LocationSecrets => "location_secrets",
+        }
+    }
+}
+
 /// Suggestion button component with dropdown
 ///
 /// Fetches suggestions from the API when clicked and displays them
@@ -36,10 +55,39 @@ pub fn SuggestionButton(
 ) -> Element {
     let platform = use_context::<Platform>();
     let suggestion_service = use_suggestion_service();
+    let mut generation_state = use_generation_state();
     let mut loading = use_signal(|| false);
+    let mut request_id: Signal<Option<String>> = use_signal(|| None);
     let mut suggestions: Signal<Vec<String>> = use_signal(Vec::new);
     let mut show_dropdown = use_signal(|| false);
     let mut error: Signal<Option<String>> = use_signal(|| None);
+
+    // Watch for suggestion completion from queue
+    let field_type = suggestion_type.to_field_type();
+    use_effect(move || {
+        if let Some(req_id) = request_id.read().as_ref() {
+            // Check if this suggestion is ready
+            let all_suggestions = generation_state.get_suggestions();
+            if let Some(task) = all_suggestions.iter().find(|s| s.request_id == *req_id) {
+                match &task.status {
+                    crate::presentation::state::SuggestionStatus::Ready { suggestions: results } => {
+                        if !results.is_empty() {
+                            suggestions.set(results.clone());
+                            show_dropdown.set(true);
+                            loading.set(false);
+                        }
+                    }
+                    crate::presentation::state::SuggestionStatus::Failed { error: err } => {
+                        error.set(Some(err.clone()));
+                        loading.set(false);
+                    }
+                    _ => {
+                        // Still processing
+                    }
+                }
+            }
+        }
+    });
 
     // Close dropdown when clicking outside
     let close_dropdown = move |_| {
@@ -49,9 +97,10 @@ pub fn SuggestionButton(
     let fetch_suggestions = {
         let svc = suggestion_service.clone();
         let plat = platform.clone();
+        let field_type_str = field_type.to_string();
         move |_| {
             let context = context.clone();
-            let suggestion_type = suggestion_type;
+            let field_type = field_type_str.clone();
             let service = svc.clone();
             let platform = plat.clone();
 
@@ -60,40 +109,27 @@ pub fn SuggestionButton(
                 error.set(None);
                 suggestions.set(Vec::new());
 
-                platform.log_info(&format!("Fetching suggestions for {:?}", suggestion_type));
+                platform.log_info(&format!("Enqueueing suggestion request for {}", field_type));
 
-                let result = match suggestion_type {
-                    SuggestionType::CharacterName => service.suggest_character_name(&context).await,
-                    SuggestionType::CharacterDescription => service.suggest_character_description(&context).await,
-                    SuggestionType::CharacterWants => service.suggest_character_wants(&context).await,
-                    SuggestionType::CharacterFears => service.suggest_character_fears(&context).await,
-                    SuggestionType::CharacterBackstory => service.suggest_character_backstory(&context).await,
-                    SuggestionType::LocationName => service.suggest_location_name(&context).await,
-                    SuggestionType::LocationDescription => service.suggest_location_description(&context).await,
-                    SuggestionType::LocationAtmosphere => service.suggest_location_atmosphere(&context).await,
-                    SuggestionType::LocationFeatures => service.suggest_location_features(&context).await,
-                    SuggestionType::LocationSecrets => service.suggest_location_secrets(&context).await,
-                };
-
-                match result {
-                    Ok(results) => {
-                        platform.log_info(&format!("Got {} suggestions: {:?}", results.len(), results));
-
-                        if results.is_empty() {
-                            error.set(Some("No suggestions returned".to_string()));
-                        } else {
-                            suggestions.set(results);
-                            show_dropdown.set(true);
-                        }
+                // Enqueue the suggestion request
+                match service.enqueue_suggestion(&field_type, &context).await {
+                    Ok(req_id) => {
+                        platform.log_info(&format!("Suggestion request queued: {}", req_id));
+                        request_id.set(Some(req_id.clone()));
+                        
+                        // Add to generation state
+                        generation_state.add_suggestion_task(
+                            req_id,
+                            field_type,
+                            None, // entity_id not available here
+                        );
                     }
                     Err(e) => {
-                        platform.log_error(&format!("Suggestion error: {}", e));
-
+                        platform.log_error(&format!("Failed to enqueue suggestion: {}", e));
                         error.set(Some(e.to_string()));
+                        loading.set(false);
                     }
                 }
-
-                loading.set(false);
             });
         }
     };
@@ -106,11 +142,11 @@ pub fn SuggestionButton(
             // The button
             button {
                 onclick: fetch_suggestions,
-                disabled: *loading.read(),
+                disabled: *loading.read() || request_id.read().is_some(),
                 style: "padding: 0.5rem 0.75rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem; white-space: nowrap; transition: background 0.2s;",
                 onmouseenter: move |_| {},  // Could add hover state
-                if *loading.read() {
-                    "..."
+                if *loading.read() || request_id.read().is_some() {
+                    "Queued..."
                 } else {
                     "Suggest"
                 }

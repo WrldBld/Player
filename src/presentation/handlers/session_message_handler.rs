@@ -137,7 +137,7 @@ pub fn handle_server_message(
             internal_reasoning,
             proposed_tools,
             challenge_suggestion,
-            narrative_event_suggestion: _, // TODO: Surface narrative event suggestion in UI
+            narrative_event_suggestion,
         } => {
             session_state.add_pending_approval(PendingApproval {
                 request_id,
@@ -146,6 +146,7 @@ pub fn handle_server_message(
                 internal_reasoning,
                 proposed_tools,
                 challenge_suggestion,
+                narrative_event_suggestion,
             });
         }
 
@@ -203,6 +204,33 @@ pub fn handle_server_message(
             generation_state.batch_failed(&batch_id, error);
         }
 
+        ServerMessage::SuggestionQueued {
+            request_id,
+            field_type,
+            entity_id,
+        } => {
+            tracing::info!("Suggestion queued: {} ({})", request_id, field_type);
+            generation_state.suggestion_queued(request_id, field_type, entity_id);
+        }
+
+        ServerMessage::SuggestionProgress { request_id, status } => {
+            tracing::info!("Suggestion progress: {} - {}", request_id, status);
+            generation_state.suggestion_progress(&request_id, &status);
+        }
+
+        ServerMessage::SuggestionComplete {
+            request_id,
+            suggestions,
+        } => {
+            tracing::info!("Suggestion complete: {} ({} suggestions)", request_id, suggestions.len());
+            generation_state.suggestion_complete(&request_id, suggestions);
+        }
+
+        ServerMessage::SuggestionFailed { request_id, error } => {
+            tracing::error!("Suggestion failed: {} - {}", request_id, error);
+            generation_state.suggestion_failed(&request_id, error);
+        }
+
         ServerMessage::ChallengePrompt {
             challenge_id,
             challenge_name,
@@ -252,6 +280,23 @@ pub fn handle_server_message(
                 timestamp,
             };
             session_state.add_challenge_result(result);
+        }
+
+        ServerMessage::NarrativeEventTriggered {
+            event_id,
+            event_name,
+            outcome_description,
+            scene_direction,
+        } => {
+            // Log the narrative event trigger for DMs
+            tracing::info!(
+                "Narrative event '{}' triggered: {} ({})",
+                event_name,
+                outcome_description,
+                scene_direction
+            );
+            // TODO (Phase 17 Story Arc UI): Update Story Arc timeline when the tab is implemented
+            // For now, this is logged to console for DM awareness
         }
     }
 }

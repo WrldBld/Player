@@ -23,7 +23,7 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
 
-    // Fetch assets on mount
+    // Fetch assets on mount (only if entity_id is not empty)
     {
         let entity_type_clone = entity_type.clone();
         let entity_id_clone = entity_id.clone();
@@ -34,6 +34,13 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
             let ei = entity_id_clone.clone();
             let svc = asset_svc.clone();
             spawn(async move {
+                // Skip API call if entity_id is empty (new entity being created)
+                if ei.is_empty() {
+                    assets.set(Vec::new());
+                    is_loading.set(false);
+                    return;
+                }
+
                 match svc.get_assets(&et, &ei).await {
                     Ok(fetched_assets) => {
                         assets.set(fetched_assets);
@@ -99,7 +106,13 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                 class: "asset-grid",
                 style: "display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 80px;",
 
-                if *is_loading.read() {
+                if entity_id.is_empty() {
+                    // New entity - show message about generating assets after creation
+                    div {
+                        style: "width: 100%; text-align: center; color: #6b7280; font-size: 0.875rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 0.25rem; border: 1px dashed #8b5cf6;",
+                        "Save the {entity_type} first to generate assets"
+                    }
+                } else if *is_loading.read() {
                     div {
                         style: "width: 100%; text-align: center; color: #6b7280; font-size: 0.875rem; padding: 1rem;",
                         "Loading assets..."
@@ -149,12 +162,14 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                     }
                 }
 
-                // Generate button
-                button {
-                    onclick: move |_| show_generate_modal.set(true),
-                    style: "width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); border: 2px dashed #8b5cf6; border-radius: 0.5rem; cursor: pointer; color: #8b5cf6; font-size: 0.75rem;",
-                    span { style: "font-size: 1.5rem;", "+" }
-                    span { "Generate" }
+                // Generate button (only show if entity_id exists)
+                if !entity_id.is_empty() {
+                    button {
+                        onclick: move |_| show_generate_modal.set(true),
+                        style: "width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); border: 2px dashed #8b5cf6; border-radius: 0.5rem; cursor: pointer; color: #8b5cf6; font-size: 0.75rem;",
+                        span { style: "font-size: 1.5rem;", "+" }
+                        span { "Generate" }
+                    }
                 }
             }
 

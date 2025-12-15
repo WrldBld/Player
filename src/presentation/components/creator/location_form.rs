@@ -26,9 +26,13 @@ const LOCATION_TYPES: &[&str] = &[
 
 /// Location form for creating/editing locations
 #[component]
-pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element {
+pub fn LocationForm(
+    location_id: String,
+    world_id: String,
+    locations_signal: Signal<Vec<crate::application::services::location_service::LocationSummary>>,
+    on_close: EventHandler<()>,
+) -> Element {
     let is_new = location_id.is_empty();
-    let game_state = use_context::<GameState>();
     let loc_service = use_location_service();
 
     // Form state
@@ -49,16 +53,16 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
     {
         let loc_id_for_effect = location_id.clone();
         let loc_svc = loc_service.clone();
+        let world_id_for_effect = world_id.clone();
         use_effect(move || {
             let loc_id = loc_id_for_effect.clone();
             let load_existing = !loc_id.is_empty();
-            let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
+            let world_id_clone = world_id_for_effect.clone();
             let svc = loc_svc.clone();
 
             spawn(async move {
-                if let Some(world_id) = world_id {
-                    // Load parent locations list
-                    if let Ok(parents) = svc.list_locations(&world_id).await {
+                // Load parent locations list
+                if let Ok(parents) = svc.list_locations(&world_id_clone).await {
                         // Convert LocationSummary to LocationData for the dropdown
                         let parent_data: Vec<LocationData> = parents.iter().map(|summary| {
                             LocationData {
@@ -79,7 +83,7 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
 
                     // Load location data if editing
                     if load_existing {
-                        match svc.get_location(&world_id, &loc_id).await {
+                        match svc.get_location(&world_id_clone, &loc_id).await {
                         Ok(loc_data) => {
                             name.set(loc_data.name);
                             description.set(loc_data.description.unwrap_or_default());
@@ -98,7 +102,6 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
                 } else {
                     is_loading.set(false);
                 }
-            }
             });
         });
     }
@@ -379,12 +382,10 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
                             let loc_id = location_id.clone();
                             let on_close = on_close.clone();
                             let svc = loc_svc.clone();
+                            let world_id_clone = world_id.clone();
 
                             spawn(async move {
-                                let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                                if let Some(world_id) = world_id {
-                                    let loc_data = LocationData {
+                                let loc_data = LocationData {
                                         id: if is_new { None } else { Some(loc_id.clone()) },
                                         name: name.read().clone(),
                                         description: {
@@ -413,11 +414,31 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
                                     };
 
                                     match if is_new {
-                                        svc.create_location(&world_id, &loc_data).await
+                                        svc.create_location(&world_id_clone, &loc_data).await
                                     } else {
                                         svc.update_location(&loc_id, &loc_data).await
                                     } {
-                                        Ok(_) => {
+                                        Ok(saved_location) => {
+                                            // Update the locations signal reactively
+                                            if is_new {
+                                                // Add new location to list
+                                                let summary = crate::application::services::location_service::LocationSummary {
+                                                    id: saved_location.id.clone().unwrap_or_default(),
+                                                    name: saved_location.name.clone(),
+                                                    location_type: saved_location.location_type.clone(),
+                                                };
+                                                locations_signal.write().push(summary);
+                                            } else {
+                                                // Update existing location in list
+                                                if let Some(id) = &saved_location.id {
+                                                    let mut locs = locations_signal.write();
+                                                    if let Some(existing) = locs.iter_mut().find(|l| l.id == *id) {
+                                                        existing.name = saved_location.name.clone();
+                                                        existing.location_type = saved_location.location_type.clone();
+                                                    }
+                                                }
+                                            }
+                                            
                                             success_message.set(Some(if is_new {
                                                 "Location created successfully".to_string()
                                             } else {
@@ -432,10 +453,6 @@ pub fn LocationForm(location_id: String, on_close: EventHandler<()>) -> Element 
                                             is_saving.set(false);
                                         }
                                     }
-                                } else {
-                                    error_message.set(Some("No world loaded".to_string()));
-                                    is_saving.set(false);
-                                }
                             });
                         }
                     },

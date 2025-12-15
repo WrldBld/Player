@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 // Use port types and application DTOs instead of infrastructure types
 use crate::application::ports::outbound::{GameConnectionPort, ParticipantRole, Platform};
-use crate::application::dto::{ProposedTool, ChallengeSuggestionInfo};
+use crate::application::dto::{ProposedTool, ChallengeSuggestionInfo, NarrativeEventSuggestionInfo};
 use crate::presentation::components::tactical::PlayerSkillData;
 
 /// Connection status to the Engine server
@@ -69,6 +69,8 @@ pub struct PendingApproval {
     pub proposed_tools: Vec<ProposedTool>,
     /// Optional challenge suggestion from the Engine
     pub challenge_suggestion: Option<ChallengeSuggestionInfo>,
+    /// Optional narrative event suggestion from the Engine
+    pub narrative_event_suggestion: Option<NarrativeEventSuggestionInfo>,
 }
 
 /// Challenge prompt data shown to player

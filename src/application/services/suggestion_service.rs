@@ -28,10 +28,17 @@ pub struct SuggestionContext {
     pub additional_context: Option<String>,
 }
 
-/// Response from suggestion API
+/// Response from suggestion API (synchronous)
 #[derive(Clone, Debug, Deserialize)]
 pub struct SuggestionResponse {
     pub suggestions: Vec<String>,
+}
+
+/// Response from queued suggestion API
+#[derive(Clone, Debug, Deserialize)]
+pub struct SuggestionQueuedResponse {
+    pub request_id: String,
+    pub status: String,
 }
 
 /// Suggestion service for fetching AI-powered content suggestions
@@ -167,6 +174,35 @@ impl<A: ApiPort> SuggestionService<A> {
             .post("/api/suggest/location/secrets", context)
             .await?;
         Ok(response.suggestions)
+    }
+
+    /// Enqueue a suggestion request (async, returns request_id)
+    /// 
+    /// This method queues the suggestion request instead of waiting for results.
+    /// Results will be delivered via WebSocket events.
+    pub async fn enqueue_suggestion(
+        &self,
+        field_type: &str,
+        context: &SuggestionContext,
+    ) -> Result<String, ApiError> {
+        #[derive(Serialize)]
+        struct UnifiedRequest {
+            #[serde(rename = "suggestion_type")]
+            suggestion_type: String,
+            #[serde(flatten)]
+            context: SuggestionContext,
+        }
+        
+        let request = UnifiedRequest {
+            suggestion_type: field_type.to_string(),
+            context: context.clone(),
+        };
+        
+        let response: SuggestionQueuedResponse = self
+            .api
+            .post("/api/suggest", &request)
+            .await?;
+        Ok(response.request_id)
     }
 }
 

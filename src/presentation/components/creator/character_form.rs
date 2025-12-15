@@ -26,10 +26,14 @@ const ARCHETYPES: &[&str] = &[
 
 /// Character form for creating/editing characters
 #[component]
-pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Element {
+pub fn CharacterForm(
+    character_id: String,
+    world_id: String,
+    characters_signal: Signal<Vec<crate::application::services::character_service::CharacterSummary>>,
+    on_close: EventHandler<()>,
+) -> Element {
     let is_new = character_id.is_empty();
     let platform = use_context::<Platform>();
-    let game_state = use_context::<GameState>();
     let char_service = use_character_service();
     let world_service = use_world_service();
 
@@ -54,29 +58,27 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
     {
         let world_svc = world_service.clone();
         let plat = platform.clone();
+        let world_id_for_template = world_id.clone();
         use_effect(move || {
             let svc = world_svc.clone();
             let platform = plat.clone();
+            let world_id_clone = world_id_for_template.clone();
             spawn(async move {
-                let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                if let Some(world_id) = world_id {
-                    match svc.get_sheet_template(&world_id).await {
-                        Ok(template_json) => {
-                            // Parse the JSON into SheetTemplate
-                            match serde_json::from_value::<SheetTemplate>(template_json) {
-                                Ok(template) => {
-                                    sheet_template.set(Some(template));
-                                }
-                                Err(_e) => {
-                                    platform.log_warn(&format!("Failed to parse sheet template: {}", _e));
-                                }
+                match svc.get_sheet_template(&world_id_clone).await {
+                    Ok(template_json) => {
+                        // Parse the JSON into SheetTemplate
+                        match serde_json::from_value::<SheetTemplate>(template_json) {
+                            Ok(template) => {
+                                sheet_template.set(Some(template));
+                            }
+                            Err(_e) => {
+                                platform.log_warn(&format!("Failed to parse sheet template: {}", _e));
                             }
                         }
-                        Err(_e) => {
-                            // Template fetch failure is not critical - sheet section just won't appear
-                            platform.log_warn(&format!("Failed to load sheet template: {}", _e));
-                        }
+                    }
+                    Err(_e) => {
+                        // Template fetch failure is not critical - sheet section just won't appear
+                        platform.log_warn(&format!("Failed to load sheet template: {}", _e));
                     }
                 }
             });
@@ -87,15 +89,14 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
     {
         let char_id_for_effect = character_id.clone();
         let char_svc = char_service.clone();
+        let world_id_for_effect = world_id.clone();
         use_effect(move || {
             let char_id = char_id_for_effect.clone();
             let svc = char_svc.clone();
+            let world_id_clone = world_id_for_effect.clone();
             if !char_id.is_empty() {
                 spawn(async move {
-                    let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                    if let Some(world_id) = world_id {
-                        match svc.get_character(&world_id, &char_id).await {
+                    match svc.get_character(&world_id_clone, &char_id).await {
                             Ok(char_data) => {
                                 name.set(char_data.name);
                                 description.set(char_data.description.unwrap_or_default());
@@ -114,10 +115,6 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                                 is_loading.set(false);
                             }
                         }
-                    } else {
-                        error_message.set(Some("No world loaded".to_string()));
-                        is_loading.set(false);
-                    }
                 });
             }
         });
@@ -409,12 +406,10 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                             let char_id = character_id.clone();
                             let on_close = on_close.clone();
                             let svc = char_svc.clone();
+                            let world_id_clone = world_id.clone();
 
                             spawn(async move {
-                                let world_id = game_state.world.read().as_ref().map(|w| w.world.id.clone());
-
-                                if let Some(world_id) = world_id {
-                                    // Get sheet values
+                                // Get sheet values
                                     let sheet_data_to_save = {
                                         let values = sheet_values.read().clone();
                                         if values.is_empty() {
@@ -453,11 +448,31 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                                     };
 
                                     match if is_new {
-                                        svc.create_character(&world_id, &char_data).await
+                                        svc.create_character(&world_id_clone, &char_data).await
                                     } else {
                                         svc.update_character(&char_id, &char_data).await
                                     } {
-                                        Ok(_) => {
+                                        Ok(saved_character) => {
+                                            // Update the characters signal reactively
+                                            if is_new {
+                                                // Add new character to list
+                                                let summary = crate::application::services::character_service::CharacterSummary {
+                                                    id: saved_character.id.clone().unwrap_or_default(),
+                                                    name: saved_character.name.clone(),
+                                                    archetype: saved_character.archetype.clone(),
+                                                };
+                                                characters_signal.write().push(summary);
+                                            } else {
+                                                // Update existing character in list
+                                                if let Some(id) = &saved_character.id {
+                                                    let mut chars = characters_signal.write();
+                                                    if let Some(existing) = chars.iter_mut().find(|c| c.id == *id) {
+                                                        existing.name = saved_character.name.clone();
+                                                        existing.archetype = saved_character.archetype.clone();
+                                                    }
+                                                }
+                                            }
+                                            
                                             success_message.set(Some(if is_new {
                                                 "Character created successfully".to_string()
                                             } else {
@@ -472,10 +487,6 @@ pub fn CharacterForm(character_id: String, on_close: EventHandler<()>) -> Elemen
                                             is_saving.set(false);
                                         }
                                     }
-                                } else {
-                                    error_message.set(Some("No world loaded".to_string()));
-                                    is_saving.set(false);
-                                }
                             });
                         }
                     },

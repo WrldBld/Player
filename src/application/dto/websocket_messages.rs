@@ -133,6 +133,13 @@ pub enum ServerMessage {
         outcome: String, // "success", "failure", "critical_success", etc.
         outcome_description: String,
     },
+    /// Narrative event has been triggered
+    NarrativeEventTriggered {
+        event_id: String,
+        event_name: String,
+        outcome_description: String,
+        scene_direction: String,
+    },
     /// Error message
     Error { code: String, message: String },
     /// Heartbeat response
@@ -153,6 +160,27 @@ pub enum ServerMessage {
     GenerationComplete { batch_id: String, asset_count: u32 },
     /// Generation batch failed
     GenerationFailed { batch_id: String, error: String },
+    /// A suggestion request has been queued
+    SuggestionQueued {
+        request_id: String,
+        field_type: String,
+        entity_id: Option<String>,
+    },
+    /// A suggestion request is being processed
+    SuggestionProgress {
+        request_id: String,
+        status: String,
+    },
+    /// A suggestion request has completed
+    SuggestionComplete {
+        request_id: String,
+        suggestions: Vec<String>,
+    },
+    /// A suggestion request has failed
+    SuggestionFailed {
+        request_id: String,
+        error: String,
+    },
 }
 
 /// Participant role in the session

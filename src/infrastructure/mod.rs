@@ -1,7 +1,6 @@
 //! Infrastructure layer - External adapters
 
 pub mod api;
-pub mod audio;
 pub mod http_client;
 pub mod platform;
 pub mod storage;

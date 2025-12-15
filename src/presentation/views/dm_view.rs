@@ -671,6 +671,48 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                 }
             }
 
+            // Narrative event suggestion section
+            if let Some(suggestion) = &props.approval.narrative_event_suggestion {
+                div {
+                    style: "margin-bottom: 1rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 0.5rem;",
+
+                    h4 {
+                        style: "color: #8b5cf6; margin: 0 0 0.75rem 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
+                        "📖 Narrative Event Suggested"
+                    }
+
+                    div {
+                        style: "margin-bottom: 0.5rem;",
+                        span {
+                            style: "color: white; font-weight: bold; font-size: 0.875rem;",
+                            "{suggestion.event_name}"
+                        }
+                    }
+
+                    p {
+                        style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.5rem 0;",
+                        "Confidence: {suggestion.confidence}"
+                    }
+
+                    p {
+                        style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                        "\"{suggestion.reasoning}\""
+                    }
+
+                    if let Some(outcome) = &suggestion.suggested_outcome {
+                        p {
+                            style: "color: #a78bfa; font-size: 0.75rem; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                            "Suggested Outcome: {outcome}"
+                        }
+                    }
+
+                    p {
+                        style: "color: #9ca3af; font-size: 0.65rem; margin: 0;",
+                        "Note: Narrative event triggers are handled separately via the NarrativeEventSuggestionDecision message"
+                    }
+                }
+            }
+
             // Rejection feedback input
             if *show_reject_input.read() {
                 div { style: "margin-bottom: 1rem;",

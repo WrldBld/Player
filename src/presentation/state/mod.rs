@@ -9,7 +9,7 @@ pub mod session_state;
 
 pub use dialogue_state::{use_typewriter_effect, DialogueState};
 pub use game_state::GameState;
-pub use generation_state::{BatchStatus, GenerationBatch, GenerationState};
+pub use generation_state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};
 pub use session_state::{ConnectionStatus, PendingApproval, SessionState};
 
 use dioxus::prelude::*;

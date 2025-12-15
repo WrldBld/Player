@@ -37,6 +37,58 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
 
     // Track the currently selected entity ID for editing
     let mut selected_entity_id: Signal<Option<String>> = use_signal(|| None);
+    
+    // Entity lists - stored as reactive signals (single source of truth)
+    let mut characters: Signal<Vec<crate::application::services::character_service::CharacterSummary>> = use_signal(Vec::new);
+    let mut locations: Signal<Vec<crate::application::services::location_service::LocationSummary>> = use_signal(Vec::new);
+    
+    // Loading and error states
+    let mut characters_loading = use_signal(|| true);
+    let mut locations_loading = use_signal(|| true);
+    let mut characters_error: Signal<Option<String>> = use_signal(|| None);
+    let mut locations_error: Signal<Option<String>> = use_signal(|| None);
+    
+    // Initial data fetching on mount
+    let character_service = crate::presentation::services::use_character_service();
+    let location_service = crate::presentation::services::use_location_service();
+    let world_id_for_fetch = props.world_id.clone();
+    
+    // Fetch characters on mount
+    use_effect(move || {
+        let world_id = world_id_for_fetch.clone();
+        let svc = character_service.clone();
+        spawn(async move {
+            match svc.list_characters(&world_id).await {
+                Ok(fetched) => {
+                    characters.set(fetched);
+                    characters_loading.set(false);
+                }
+                Err(e) => {
+                    characters_error.set(Some(e.to_string()));
+                    characters_loading.set(false);
+                }
+            }
+        });
+    });
+    
+    // Fetch locations on mount
+    let world_id_for_locations = props.world_id.clone();
+    use_effect(move || {
+        let world_id = world_id_for_locations.clone();
+        let svc = location_service.clone();
+        spawn(async move {
+            match svc.list_locations(&world_id).await {
+                Ok(fetched) => {
+                    locations.set(fetched);
+                    locations_loading.set(false);
+                }
+                Err(e) => {
+                    locations_error.set(Some(e.to_string()));
+                    locations_loading.set(false);
+                }
+            }
+        });
+    });
 
     rsx! {
         div {
@@ -53,6 +105,12 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                     world_id: props.world_id.clone(),
                     selected_type: selected_entity_type,
                     selected_id: selected_entity_id.read().clone(),
+                    characters: characters,
+                    locations: locations,
+                    characters_loading: characters_loading,
+                    locations_loading: locations_loading,
+                    characters_error: characters_error,
+                    locations_error: locations_error,
                     on_select: move |id| selected_entity_id.set(Some(id)),
                 }
 
@@ -69,24 +127,32 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                     (EntityTypeTab::Characters, Some(id)) => rsx! {
                         character_form::CharacterForm {
                             character_id: id,
+                            world_id: props.world_id.clone(),
+                            characters_signal: characters,
                             on_close: move |_| selected_entity_id.set(None),
                         }
                     },
                     (EntityTypeTab::Characters, None) => rsx! {
                         character_form::CharacterForm {
                             character_id: String::new(),
+                            world_id: props.world_id.clone(),
+                            characters_signal: characters,
                             on_close: move |_| {},
                         }
                     },
                     (EntityTypeTab::Locations, Some(id)) => rsx! {
                         location_form::LocationForm {
                             location_id: id,
+                            world_id: props.world_id.clone(),
+                            locations_signal: locations,
                             on_close: move |_| selected_entity_id.set(None),
                         }
                     },
                     (EntityTypeTab::Locations, None) => rsx! {
                         location_form::LocationForm {
                             location_id: String::new(),
+                            world_id: props.world_id.clone(),
+                            locations_signal: locations,
                             on_close: move |_| {},
                         }
                     },

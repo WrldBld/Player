@@ -83,10 +83,10 @@ impl<A: ApiPort> LocationService<A> {
     /// Get a single location by ID
     pub async fn get_location(
         &self,
-        world_id: &str,
+        _world_id: &str, // Not used in API endpoint, but kept for API compatibility
         location_id: &str,
     ) -> Result<LocationData, ApiError> {
-        let path = format!("/api/worlds/{}/locations/{}", world_id, location_id);
+        let path = format!("/api/locations/{}", location_id);
         self.api.get(&path).await
     }
 

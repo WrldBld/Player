@@ -3,7 +3,7 @@
 //! Shows proposed NPC dialogue and actions for DM approval before execution.
 
 use dioxus::prelude::*;
-use crate::application::dto::ChallengeSuggestionInfo;
+use crate::application::dto::{ChallengeSuggestionInfo, NarrativeEventSuggestionInfo};
 
 /// A proposed action/tool call from the LLM
 #[derive(Clone, PartialEq)]
@@ -27,6 +27,8 @@ pub struct ApprovalPopupProps {
     pub proposed_actions: Vec<ProposedAction>,
     /// Optional challenge suggestion from Engine
     pub challenge_suggestion: Option<ChallengeSuggestionInfo>,
+    /// Optional narrative event suggestion from Engine
+    pub narrative_event_suggestion: Option<NarrativeEventSuggestionInfo>,
     /// Handler when Accept is clicked
     pub on_accept: EventHandler<Vec<ProposedAction>>,
     /// Handler when Modify is clicked
@@ -132,6 +134,66 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                         button {
                             style: "flex: 1; padding: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
                             "Skip Challenge"
+                        }
+                    }
+                }
+            }
+
+            // Narrative event suggestion section
+            if let Some(suggestion) = &props.narrative_event_suggestion {
+                div {
+                    style: "margin-bottom: 1rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 0.5rem;",
+
+                    h4 {
+                        style: "color: #8b5cf6; margin: 0 0 0.75rem 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
+                        "Narrative Event Suggested"
+                    }
+
+                    div {
+                        style: "margin-bottom: 0.75rem;",
+
+                        div {
+                            style: "display: flex; justify-content: space-between; align-items: baseline;",
+
+                            span {
+                                style: "color: white; font-weight: bold; font-size: 0.875rem;",
+                                "{suggestion.event_name}"
+                            }
+                        }
+
+                        if let Some(outcome) = &suggestion.suggested_outcome {
+                            p {
+                                style: "color: #9ca3af; font-size: 0.75rem; margin: 0.5rem 0 0 0;",
+                                "Suggested Outcome: {outcome}"
+                            }
+                        }
+                    }
+
+                    div {
+                        style: "margin-bottom: 0.5rem;",
+
+                        p {
+                            style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.25rem 0;",
+                            "Confidence: {suggestion.confidence}"
+                        }
+                    }
+
+                    p {
+                        style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                        "\"{suggestion.reasoning}\""
+                    }
+
+                    div {
+                        style: "display: flex; gap: 0.5rem;",
+
+                        button {
+                            style: "flex: 1; padding: 0.5rem; background: rgba(139, 92, 246, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                            "Trigger Event"
+                        }
+
+                        button {
+                            style: "flex: 1; padding: 0.5rem; background: rgba(107, 114, 128, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                            "Skip Event"
                         }
                     }
                 }

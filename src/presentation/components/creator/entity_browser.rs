@@ -5,7 +5,6 @@ use dioxus::prelude::*;
 use super::EntityTypeTab;
 use crate::application::services::character_service::CharacterSummary;
 use crate::application::services::location_service::LocationSummary;
-use crate::presentation::services::{use_character_service, use_location_service};
 use crate::routes::Route;
 
 /// Props for the EntityBrowser component
@@ -14,6 +13,12 @@ pub fn EntityBrowser(
     world_id: String,
     selected_type: EntityTypeTab,
     selected_id: Option<String>,
+    characters: Signal<Vec<CharacterSummary>>,
+    locations: Signal<Vec<LocationSummary>>,
+    characters_loading: Signal<bool>,
+    locations_loading: Signal<bool>,
+    characters_error: Signal<Option<String>>,
+    locations_error: Signal<Option<String>>,
     on_select: EventHandler<String>,
 ) -> Element {
     rsx! {
@@ -68,15 +73,19 @@ pub fn EntityBrowser(
                 match selected_type {
                     EntityTypeTab::Characters => rsx! {
                         CharacterList {
-                            world_id: world_id.clone(),
+                            characters: characters,
                             selected_id: selected_id.clone(),
+                            loading: characters_loading,
+                            error: characters_error,
                             on_select: move |id| on_select.call(id),
                         }
                     },
                     EntityTypeTab::Locations => rsx! {
                         LocationList {
-                            world_id: world_id.clone(),
+                            locations: locations,
                             selected_id: selected_id.clone(),
+                            loading: locations_loading,
+                            error: locations_error,
                             on_select: move |id| on_select.call(id),
                         }
                     },
@@ -140,37 +149,17 @@ fn EntityTypeTabLink(world_id: String, tab: EntityTypeTab, active: bool) -> Elem
     }
 }
 
-/// Character list with API data
+/// Character list - renders from reactive signal
 #[component]
-fn CharacterList(world_id: String, selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
-    let character_service = use_character_service();
-
-    // Track loading and error states
-    let mut is_loading = use_signal(|| true);
-    let mut error: Signal<Option<String>> = use_signal(|| None);
-    let mut characters: Signal<Vec<CharacterSummary>> = use_signal(Vec::new);
-
-    // Fetch characters on mount using world_id from props
-    let world_id_for_fetch = world_id.clone();
-    use_effect(move || {
-        let world_id = world_id_for_fetch.clone();
-        let svc = character_service.clone();
-        spawn(async move {
-            match svc.list_characters(&world_id).await {
-                Ok(fetched) => {
-                    characters.set(fetched);
-                    is_loading.set(false);
-                }
-                Err(e) => {
-                    error.set(Some(e.to_string()));
-                    is_loading.set(false);
-                }
-            }
-        });
-    });
-
+fn CharacterList(
+    characters: Signal<Vec<CharacterSummary>>,
+    selected_id: Option<String>,
+    loading: Signal<bool>,
+    error: Signal<Option<String>>,
+    on_select: EventHandler<String>,
+) -> Element {
     rsx! {
-        if *is_loading.read() {
+        if *loading.read() {
             div {
                 style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
                 "Loading characters..."
@@ -208,37 +197,17 @@ fn CharacterList(world_id: String, selected_id: Option<String>, on_select: Event
     }
 }
 
-/// Location list with API data
+/// Location list - renders from reactive signal
 #[component]
-fn LocationList(world_id: String, selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
-    let location_service = use_location_service();
-
-    // Track loading and error states
-    let mut is_loading = use_signal(|| true);
-    let mut error: Signal<Option<String>> = use_signal(|| None);
-    let mut locations: Signal<Vec<LocationSummary>> = use_signal(Vec::new);
-
-    // Fetch locations on mount using world_id from props
-    let world_id_for_fetch = world_id.clone();
-    use_effect(move || {
-        let world_id = world_id_for_fetch.clone();
-        let svc = location_service.clone();
-        spawn(async move {
-            match svc.list_locations(&world_id).await {
-                Ok(fetched) => {
-                    locations.set(fetched);
-                    is_loading.set(false);
-                }
-                Err(e) => {
-                    error.set(Some(e.to_string()));
-                    is_loading.set(false);
-                }
-            }
-        });
-    });
-
+fn LocationList(
+    locations: Signal<Vec<LocationSummary>>,
+    selected_id: Option<String>,
+    loading: Signal<bool>,
+    error: Signal<Option<String>>,
+    on_select: EventHandler<String>,
+) -> Element {
     rsx! {
-        if *is_loading.read() {
+        if *loading.read() {
             div {
                 style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
                 "Loading locations..."
