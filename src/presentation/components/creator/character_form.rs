@@ -65,20 +65,20 @@ pub fn CharacterForm(
             let world_id_clone = world_id_for_template.clone();
             spawn(async move {
                 match svc.get_sheet_template(&world_id_clone).await {
-                    Ok(template_json) => {
-                        // Parse the JSON into SheetTemplate
-                        match serde_json::from_value::<SheetTemplate>(template_json) {
-                            Ok(template) => {
-                                sheet_template.set(Some(template));
-                            }
-                            Err(_e) => {
-                                platform.log_warn(&format!("Failed to parse sheet template: {}", _e));
+                        Ok(template_json) => {
+                            // Parse the JSON into SheetTemplate
+                            match serde_json::from_value::<SheetTemplate>(template_json) {
+                                Ok(template) => {
+                                    sheet_template.set(Some(template));
+                                }
+                                Err(_e) => {
+                                    platform.log_warn(&format!("Failed to parse sheet template: {}", _e));
+                                }
                             }
                         }
-                    }
-                    Err(_e) => {
-                        // Template fetch failure is not critical - sheet section just won't appear
-                        platform.log_warn(&format!("Failed to load sheet template: {}", _e));
+                        Err(_e) => {
+                            // Template fetch failure is not critical - sheet section just won't appear
+                            platform.log_warn(&format!("Failed to load sheet template: {}", _e));
                     }
                 }
             });
@@ -114,7 +114,7 @@ pub fn CharacterForm(
                                 error_message.set(Some(format!("Failed to load character: {}", e)));
                                 is_loading.set(false);
                             }
-                        }
+                    }
                 });
             }
         });
@@ -409,7 +409,7 @@ pub fn CharacterForm(
                             let world_id_clone = world_id.clone();
 
                             spawn(async move {
-                                // Get sheet values
+                                    // Get sheet values
                                     let sheet_data_to_save = {
                                         let values = sheet_values.read().clone();
                                         if values.is_empty() {
@@ -486,7 +486,7 @@ pub fn CharacterForm(
                                             error_message.set(Some(format!("Save failed: {}", e)));
                                             is_saving.set(false);
                                         }
-                                    }
+                                }
                             });
                         }
                     },

@@ -37,7 +37,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
 
     // Track the currently selected entity ID for editing
     let mut selected_entity_id: Signal<Option<String>> = use_signal(|| None);
-    
+
     // Entity lists - stored as reactive signals (single source of truth)
     let mut characters: Signal<Vec<crate::application::services::character_service::CharacterSummary>> = use_signal(Vec::new);
     let mut locations: Signal<Vec<crate::application::services::location_service::LocationSummary>> = use_signal(Vec::new);

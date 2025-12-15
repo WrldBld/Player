@@ -164,11 +164,11 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
 
                 // Generate button (only show if entity_id exists)
                 if !entity_id.is_empty() {
-                    button {
-                        onclick: move |_| show_generate_modal.set(true),
-                        style: "width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); border: 2px dashed #8b5cf6; border-radius: 0.5rem; cursor: pointer; color: #8b5cf6; font-size: 0.75rem;",
-                        span { style: "font-size: 1.5rem;", "+" }
-                        span { "Generate" }
+                button {
+                    onclick: move |_| show_generate_modal.set(true),
+                    style: "width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); border: 2px dashed #8b5cf6; border-radius: 0.5rem; cursor: pointer; color: #8b5cf6; font-size: 0.75rem;",
+                    span { style: "font-size: 1.5rem;", "+" }
+                    span { "Generate" }
                     }
                 }
             }

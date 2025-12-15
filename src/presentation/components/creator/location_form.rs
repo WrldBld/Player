@@ -61,7 +61,7 @@ pub fn LocationForm(
             let svc = loc_svc.clone();
 
             spawn(async move {
-                // Load parent locations list
+                    // Load parent locations list
                 if let Ok(parents) = svc.list_locations(&world_id_clone).await {
                         // Convert LocationSummary to LocationData for the dropdown
                         let parent_data: Vec<LocationData> = parents.iter().map(|summary| {
@@ -101,7 +101,7 @@ pub fn LocationForm(
                     }
                 } else {
                     is_loading.set(false);
-                }
+            }
             });
         });
     }
@@ -385,7 +385,7 @@ pub fn LocationForm(
                             let world_id_clone = world_id.clone();
 
                             spawn(async move {
-                                let loc_data = LocationData {
+                                    let loc_data = LocationData {
                                         id: if is_new { None } else { Some(loc_id.clone()) },
                                         name: name.read().clone(),
                                         description: {
@@ -452,7 +452,7 @@ pub fn LocationForm(
                                             error_message.set(Some(format!("Save failed: {}", e)));
                                             is_saving.set(false);
                                         }
-                                    }
+                                }
                             });
                         }
                     },
