@@ -167,18 +167,24 @@ impl GameConnectionPort for EngineGameConnection {
         }
     }
 
-    fn join_session(&self, user_id: &str, role: PortParticipantRole) -> Result<()> {
+    fn join_session(
+        &self,
+        user_id: &str,
+        role: PortParticipantRole,
+        world_id: Option<String>,
+    ) -> Result<()> {
         let role = map_role(role);
         #[cfg(target_arch = "wasm32")]
         {
-            self.client.join_session(user_id, role, None)
+            self.client.join_session(user_id, role, world_id)
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = self.client.clone();
             let user_id = user_id.to_string();
+            let world_id = world_id.clone();
             tokio::spawn(async move {
-                if let Err(e) = client.join_session(&user_id, role, None).await {
+                if let Err(e) = client.join_session(&user_id, role, world_id).await {
                     tracing::error!("Failed to join session: {}", e);
                 }
             });

@@ -6,12 +6,15 @@
 //! - Spectator: Can watch existing worlds
 
 use dioxus::prelude::*;
+use serde::Deserialize;
 
 use crate::application::dto::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
     SuccessComparison, SessionWorldSnapshot,
 };
 use crate::application::services::world_service::WorldSummary;
+use crate::application::ports::outbound::Platform;
+use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::services::use_world_service;
 use crate::presentation::state::GameState;
 use crate::UserRole;
@@ -31,8 +34,10 @@ pub struct WorldSelectViewProps {
 #[component]
 pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
     let game_state = use_context::<GameState>();
+    let platform = use_context::<Platform>();
     let world_service = use_world_service();
     let mut worlds: Signal<Vec<WorldSummary>> = use_signal(Vec::new);
+    let mut sessions: Signal<Vec<SessionInfoDto>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut show_create_form = use_signal(|| false);
@@ -56,6 +61,21 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                 Err(e) => {
                     error.set(Some(e.to_string()));
                     is_loading.set(false);
+                }
+            }
+        });
+    });
+
+    // Fetch active sessions for all worlds (for DM "Continue" and Player/Spectator views)
+    let user_id = platform.get_user_id();
+    use_effect(move || {
+        spawn(async move {
+            match HttpClient::get::<Vec<SessionInfoDto>>("/api/sessions").await {
+                Ok(list) => {
+                    sessions.set(list);
+                }
+                Err(e) => {
+                    tracing::error!("Failed to load sessions: {}", e);
                 }
             }
         });
@@ -111,6 +131,22 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
         UserRole::DungeonMaster => "Continue",
         UserRole::Player => "Join",
         UserRole::Spectator => "Watch",
+    };
+
+    // Snapshot worlds and sessions for rendering
+    let worlds_val_snapshot = worlds.read().clone();
+    let sessions_val_snapshot = sessions.read().clone();
+
+    // For Players/Spectators, only show worlds that currently have an active session.
+    // For DMs, show all worlds (they can start new sessions).
+    let filtered_worlds: Vec<WorldSummary> = if is_dm {
+        worlds_val_snapshot.clone()
+    } else {
+        worlds_val_snapshot
+            .iter()
+            .filter(|w| sessions_val_snapshot.iter().any(|s| s.world_id == w.id))
+            .cloned()
+            .collect()
     };
 
     rsx! {
@@ -186,7 +222,7 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                         div {
                             style: "max-height: 400px; overflow-y: auto;",
 
-                            if worlds.read().is_empty() {
+                            if filtered_worlds.is_empty() {
                                 div {
                                     style: "padding: 2rem; text-align: center; color: #6b7280;",
                                     if is_dm {
@@ -199,13 +235,45 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                                 }
                             }
 
-                            for world in worlds.read().iter() {
+                            for world in filtered_worlds.iter() {
                                 WorldCard {
                                     key: "{world.id}",
                                     world: world.clone(),
                                     action_label: action_label,
                                     is_dm: is_dm,
-                                    on_select: move |id: String| world_to_load.set(Some(id)),
+                                    has_dm_session: if is_dm {
+                                        sessions_val_snapshot.iter().any(|s| {
+                                            s.world_id == world.id && s.dm_user_id == user_id
+                                        })
+                                    } else {
+                                        false
+                                    },
+                                    on_select: {
+                                        let mut world_to_load = world_to_load.clone();
+                                        let user_id = user_id.clone();
+                                        move |id: String| {
+                                            if is_dm {
+                                                // For DMs, ensure there is an active deterministic session
+                                                // for this world. We optimistically start loading the world,
+                                                // and fire-and-forget the session POST.
+                                                world_to_load.set(Some(id.clone()));
+                                                let body = serde_json::json!({ "dm_user_id": user_id.clone() });
+                                                let path = format!("/api/worlds/{}/sessions", id);
+                                                spawn(async move {
+                                                    if let Err(e) =
+                                                        HttpClient::post_no_response(&path, &body).await
+                                                    {
+                                                        tracing::error!(
+                                                            "Failed to create/resume DM session: {}",
+                                                            e
+                                                        );
+                                                    }
+                                                });
+                                            } else {
+                                                world_to_load.set(Some(id));
+                                            }
+                                        }
+                                    },
                                 }
                             }
                         }
@@ -222,9 +290,20 @@ fn WorldCard(
     world: WorldSummary,
     action_label: &'static str,
     is_dm: bool,
+    has_dm_session: bool,
     on_select: EventHandler<String>,
 ) -> Element {
     let world_id = world.id.clone();
+
+    let button_label = if is_dm {
+        if has_dm_session {
+            "Continue Session →"
+        } else {
+            "Start Session →"
+        }
+    } else {
+        action_label
+    };
 
     rsx! {
         div {
@@ -241,10 +320,20 @@ fn WorldCard(
             button {
                 onclick: move |_| on_select.call(world_id.clone()),
                 style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; white-space: nowrap;",
-                "{action_label} →"
+                "{button_label}"
             }
         }
     }
+}
+
+/// Lightweight SessionInfo DTO matching the Engine API for /api/sessions.
+#[derive(Debug, Clone, Deserialize)]
+struct SessionInfoDto {
+    pub session_id: String,
+    pub world_id: String,
+    pub dm_user_id: String,
+    pub active_player_count: usize,
+    pub created_at: i64,
 }
 
 /// Form for creating a new world (DM only)

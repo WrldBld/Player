@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use crate::application::services::{
     AssetService, CharacterService, ChallengeService, LocationService, NarrativeEventService,
-    SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
+    PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
 use crate::infrastructure::http_client::ApiAdapter;
 
@@ -17,6 +17,7 @@ use crate::infrastructure::http_client::ApiAdapter;
 pub type WorldSvc = WorldService<ApiAdapter>;
 pub type CharacterSvc = CharacterService<ApiAdapter>;
 pub type LocationSvc = LocationService<ApiAdapter>;
+pub type PlayerCharacterSvc = PlayerCharacterService<ApiAdapter>;
 pub type SkillSvc = SkillService<ApiAdapter>;
 pub type ChallengeSvc = ChallengeService<ApiAdapter>;
 pub type StoryEventSvc = StoryEventService<ApiAdapter>;
@@ -31,6 +32,7 @@ pub struct Services {
     pub world: Arc<WorldSvc>,
     pub character: Arc<CharacterSvc>,
     pub location: Arc<LocationSvc>,
+    pub player_character: Arc<PlayerCharacterSvc>,
     pub skill: Arc<SkillSvc>,
     pub challenge: Arc<ChallengeSvc>,
     pub story_event: Arc<StoryEventSvc>,
@@ -54,6 +56,7 @@ impl Services {
             world: Arc::new(WorldService::new(api.clone())),
             character: Arc::new(CharacterService::new(api.clone())),
             location: Arc::new(LocationService::new(api.clone())),
+            player_character: Arc::new(PlayerCharacterService::new(api.clone())),
             skill: Arc::new(SkillService::new(api.clone())),
             challenge: Arc::new(ChallengeService::new(api.clone())),
             story_event: Arc::new(StoryEventService::new(api.clone())),
@@ -81,6 +84,12 @@ pub fn use_character_service() -> Arc<CharacterSvc> {
 pub fn use_location_service() -> Arc<LocationSvc> {
     let services = use_context::<Services>();
     services.location.clone()
+}
+
+/// Hook to access the PlayerCharacterService from context
+pub fn use_player_character_service() -> Arc<PlayerCharacterSvc> {
+    let services = use_context::<Services>();
+    services.player_character.clone()
 }
 
 /// Hook to access the SkillService from context
@@ -125,8 +134,9 @@ pub fn use_suggestion_service() -> Arc<SuggestionSvc> {
     services.suggestion.clone()
 }
 
-use crate::presentation::state::{BatchStatus, GenerationState, SuggestionStatus};
+use crate::presentation::state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};
 use crate::infrastructure::storage;
+use crate::infrastructure::http_client::HttpClient;
 use crate::application::ports::outbound::Platform;
 use anyhow::Result;
 
@@ -289,4 +299,101 @@ fn apply_generation_read_state(state: &mut GenerationState) {
             state.mark_suggestion_read(id);
         }
     }
+}
+
+/// Sync generation read state to the backend.
+///
+/// This helper collects all read batches and suggestions from the given state
+/// and sends them to the Engine's `/api/generation/read-state` endpoint.
+/// The `X-User-Id` header is automatically attached by HttpClient.
+///
+/// # Arguments
+/// * `state` - The GenerationState to sync read markers from
+/// * `world_id` - Optional world ID to scope read markers (if None, uses "GLOBAL")
+pub async fn sync_generation_read_state(
+    state: &GenerationState,
+    world_id: Option<&str>,
+) -> Result<()> {
+    let read_batches: Vec<String> = state
+        .get_batches()
+        .into_iter()
+        .filter(|b| b.is_read)
+        .map(|b| b.batch_id)
+        .collect();
+
+    let read_suggestions: Vec<String> = state
+        .get_suggestions()
+        .into_iter()
+        .filter(|s| s.is_read)
+        .map(|s| s.request_id)
+        .collect();
+
+    // Only sync if there are read items
+    if read_batches.is_empty() && read_suggestions.is_empty() {
+        return Ok(());
+    }
+
+    let mut body = serde_json::json!({
+        "read_batches": read_batches,
+        "read_suggestions": read_suggestions,
+    });
+
+    // Add world_id if provided
+    if let Some(wid) = world_id {
+        body["world_id"] = serde_json::Value::String(wid.to_string());
+    }
+
+    HttpClient::post_no_response("/api/generation/read-state", &body)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to sync generation read state: {}", e))?;
+
+    Ok(())
+}
+
+/// View-model helpers for generation queue filtering and actions
+
+/// Get visible batches based on show_read filter
+pub fn visible_batches(
+    state: &GenerationState,
+    show_read: bool,
+) -> Vec<GenerationBatch> {
+    state
+        .get_batches()
+        .into_iter()
+        .filter(|b| show_read || !b.is_read)
+        .collect()
+}
+
+/// Get visible suggestions based on show_read filter
+pub fn visible_suggestions(
+    state: &GenerationState,
+    show_read: bool,
+) -> Vec<SuggestionTask> {
+    state
+        .get_suggestions()
+        .into_iter()
+        .filter(|s| show_read || !s.is_read)
+        .collect()
+}
+
+/// Mark a batch as read and sync to backend
+pub async fn mark_batch_read_and_sync(
+    state: &mut GenerationState,
+    batch_id: &str,
+    world_id: Option<&str>,
+) -> Result<()> {
+    state.mark_batch_read(batch_id);
+    persist_generation_read_state(state);
+    sync_generation_read_state(state, world_id).await
+}
+
+/// Mark a suggestion as read and sync to backend
+pub async fn mark_suggestion_read_and_sync(
+    state: &mut GenerationState,
+    request_id: &str,
+    world_id: Option<&str>,
+) -> Result<()> {
+    state.mark_suggestion_read(request_id);
+    persist_generation_read_state(state);
+    sync_generation_read_state(state, world_id).await
 }

@@ -21,6 +21,71 @@ pub struct TimelineFilterState {
     pub date_to: Option<String>,
 }
 
+/// Simple view-model/helper that encapsulates filtering logic for the
+/// timeline so the component can stay mostly declarative and ready for
+/// future event-bus-backed projections.
+pub struct TimelineViewModel<'a> {
+    events: &'a [StoryEventData],
+    filters: &'a TimelineFilterState,
+}
+
+impl<'a> TimelineViewModel<'a> {
+    pub fn new(events: &'a [StoryEventData], filters: &'a TimelineFilterState) -> Self {
+        Self { events, filters }
+    }
+
+    /// Return events that are visible under the current filters.
+    pub fn filtered_events(&self) -> Vec<StoryEventData> {
+        let filter_state = self.filters;
+
+        self.events
+            .iter()
+            .cloned()
+            .filter(|event| {
+                // Hide hidden events unless show_hidden is true
+                if event.is_hidden && !filter_state.show_hidden {
+                    return false;
+                }
+
+                // Filter by event type
+                if let Some(ref type_filter) = filter_state.event_type {
+                    let event_type_name = get_event_type_name(&event.event_type);
+                    if &event_type_name != type_filter {
+                        return false;
+                    }
+                }
+
+                // Filter by character
+                if let Some(ref char_id) = filter_state.character_id {
+                    if !event.involved_characters.contains(char_id) {
+                        return false;
+                    }
+                }
+
+                // Filter by location
+                if let Some(ref loc_id) = filter_state.location_id {
+                    if event.location_id.as_ref() != Some(loc_id) {
+                        return false;
+                    }
+                }
+
+                // Filter by search text
+                if !filter_state.search_text.is_empty() {
+                    let search = filter_state.search_text.to_lowercase();
+                    let matches_summary = event.summary.to_lowercase().contains(&search);
+                    let matches_tags =
+                        event.tags.iter().any(|t| t.to_lowercase().contains(&search));
+                    if !matches_summary && !matches_tags {
+                        return false;
+                    }
+                }
+
+                true
+            })
+            .collect()
+    }
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct TimelineViewProps {
     pub world_id: String,
@@ -64,51 +129,12 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
         });
     });
 
-    // Filter events based on current filter state
+    // Filter events based on current filter state via view-model helper
     let filtered_events = {
         let filter_state = filters.read().clone();
         let all_events = events.read().clone();
-
-        all_events.into_iter().filter(|event| {
-            // Hide hidden events unless show_hidden is true
-            if event.is_hidden && !filter_state.show_hidden {
-                return false;
-            }
-
-            // Filter by event type
-            if let Some(ref type_filter) = filter_state.event_type {
-                let event_type_name = get_event_type_name(&event.event_type);
-                if &event_type_name != type_filter {
-                    return false;
-                }
-            }
-
-            // Filter by character
-            if let Some(ref char_id) = filter_state.character_id {
-                if !event.involved_characters.contains(char_id) {
-                    return false;
-                }
-            }
-
-            // Filter by location
-            if let Some(ref loc_id) = filter_state.location_id {
-                if event.location_id.as_ref() != Some(loc_id) {
-                    return false;
-                }
-            }
-
-            // Filter by search text
-            if !filter_state.search_text.is_empty() {
-                let search = filter_state.search_text.to_lowercase();
-                let matches_summary = event.summary.to_lowercase().contains(&search);
-                let matches_tags = event.tags.iter().any(|t| t.to_lowercase().contains(&search));
-                if !matches_summary && !matches_tags {
-                    return false;
-                }
-            }
-
-            true
-        }).collect::<Vec<_>>()
+        let vm = TimelineViewModel::new(&all_events, &filter_state);
+        vm.filtered_events()
     };
 
     rsx! {

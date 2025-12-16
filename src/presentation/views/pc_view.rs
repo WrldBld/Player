@@ -77,11 +77,24 @@ pub fn PCView(props: PCViewProps) -> Element {
                 "< Back"
             }
 
-            // Connection status indicator
-            if !is_connected {
-                div {
-                    style: "position: absolute; top: 1rem; right: 1rem; z-index: 100; padding: 0.5rem 1rem; background: rgba(239,68,68,0.8); color: white; border-radius: 0.5rem; font-size: 0.75rem;",
-                    "Disconnected"
+            // Connection status and location indicator
+            div {
+                style: "position: absolute; top: 1rem; right: 1rem; z-index: 100; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;",
+                
+                // Location name
+                if let Some(scene) = game_state.current_scene.read().as_ref() {
+                    div {
+                        style: "padding: 0.5rem 1rem; background: rgba(0,0,0,0.7); color: white; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;",
+                        "📍 {scene.location_name}"
+                    }
+                }
+                
+                // Connection status
+                if !is_connected {
+                    div {
+                        style: "padding: 0.5rem 1rem; background: rgba(239,68,68,0.8); color: white; border-radius: 0.5rem; font-size: 0.75rem;",
+                        "Disconnected"
+                    }
                 }
             }
 

@@ -67,6 +67,9 @@ pub enum Route {
     #[route("/worlds/:world_id/play")]
     PCViewRoute { world_id: String },
 
+    #[route("/worlds/:world_id/play/create-character")]
+    PCCreationRoute { world_id: String },
+
     #[route("/worlds/:world_id/watch")]
     SpectatorViewRoute { world_id: String },
 
@@ -162,6 +165,9 @@ pub fn WorldSelectRoute() -> Element {
     // Load selected role from localStorage
     let role = load_role_from_storage(&platform);
 
+    // Ensure an anonymous user ID exists early in the flow
+    let _ = platform.get_user_id();
+
     rsx! {
         crate::presentation::views::world_select::WorldSelectView {
             role: role,
@@ -183,12 +189,13 @@ pub fn WorldSelectRoute() -> Element {
                     let server_url = platform_connection
                         .storage_load(storage_keys::SERVER_URL)
                         .unwrap_or_else(|| DEFAULT_ENGINE_URL.to_string());
-                    let user_id = format!("user-{}", uuid::Uuid::new_v4());
+                    let user_id = platform_connection.get_user_id();
 
                     initiate_connection(
                         server_url,
                         user_id,
                         participant_role,
+                        Some(world_id.clone()),
                         session_state.clone(),
                         game_state.clone(),
                         dialogue_state.clone(),
@@ -237,6 +244,7 @@ pub fn PCViewRoute(world_id: String) -> Element {
     let session_state = use_context::<SessionState>();
     let game_state = use_context::<GameState>();
     let dialogue_state = use_context::<DialogueState>();
+    let pc_service = crate::presentation::services::use_player_character_service();
 
     // Clone platform for different closures
     let platform_title = platform.clone();
@@ -247,6 +255,36 @@ pub fn PCViewRoute(world_id: String) -> Element {
         platform_title.set_page_title("Playing");
     });
 
+    // Check for existing PC on mount
+    {
+        let session_id = session_state.session_id.read().clone();
+        let world_id_clone = world_id.clone();
+        let nav = navigator.clone();
+        let pc_svc = pc_service.clone();
+        use_effect(move || {
+            if let Some(sid) = session_id.as_ref() {
+                let sid_clone = sid.clone();
+                let wid = world_id_clone.clone();
+                let nav_clone = nav.clone();
+                spawn(async move {
+                    match pc_svc.get_my_pc(&sid_clone).await {
+                        Ok(Some(_pc)) => {
+                            // PC exists, continue to PC View
+                        }
+                        Ok(None) => {
+                            // No PC, redirect to creation
+                            nav_clone.push(Route::PCCreationRoute { world_id: wid });
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to check for PC: {}", e);
+                            // On error, still try to show PC view (might be a transient error)
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     rsx! {
         crate::presentation::views::pc_view::PCView {
             on_back: move |_| {
@@ -255,6 +293,29 @@ pub fn PCViewRoute(world_id: String) -> Element {
                 platform_storage.storage_remove(storage_keys::LAST_WORLD);
                 navigator.push(Route::RoleSelectRoute {});
             }
+        }
+    }
+}
+
+#[component]
+pub fn PCCreationRoute(world_id: String) -> Element {
+    let navigator = use_navigator();
+    let platform = use_context::<Platform>();
+    let session_state = use_context::<SessionState>();
+
+    // Set page title
+    use_effect(move || {
+        platform.set_page_title("Create Character");
+    });
+
+    // Get session_id from session state
+    let session_id = session_state.session_id.read().clone()
+        .unwrap_or_else(|| "".to_string());
+
+    rsx! {
+        crate::presentation::views::pc_creation::PCCreationView {
+            session_id: session_id,
+            world_id: world_id,
         }
     }
 }
@@ -668,7 +729,7 @@ fn DMViewHeader(props: DMViewHeaderProps) -> Element {
 /// will read the server URL from storage (or use the default), persist it, and
 /// initiate a new connection as a Dungeon Master.
 fn ensure_dm_connection(
-    _world_id: &str,
+    world_id: &str,
     session_state: SessionState,
     game_state: GameState,
     dialogue_state: DialogueState,
@@ -699,12 +760,8 @@ fn ensure_dm_connection(
         set_engine_url(&ws_to_http(&server_url));
     }
 
-    // Reuse existing user_id if present, otherwise generate a new one
-    let user_id = session_state
-        .user_id
-        .read()
-        .clone()
-        .unwrap_or_else(|| format!("user-{}", uuid::Uuid::new_v4()));
+    // Use the stable anonymous user ID from storage
+    let user_id = platform.get_user_id();
 
     // For DM routes we always connect as DungeonMaster
     let role = ParticipantRole::DungeonMaster;
@@ -713,6 +770,7 @@ fn ensure_dm_connection(
         server_url,
         user_id,
         role,
+        Some(world_id.to_string()),
         session_state,
         game_state,
         dialogue_state,
@@ -727,6 +785,17 @@ fn ensure_dm_connection(
 fn DMHeaderTabLink(label: &'static str, tab: &'static str, world_id: String, active: bool) -> Element {
     let bg_color = if active { "#3b82f6" } else { "transparent" };
     let text_color = if active { "white" } else { "#9ca3af" };
+
+    // Get generation state for queue badge (only for Creator tab)
+    let generation_state = if tab == "creator" {
+        Some(crate::presentation::state::use_generation_state())
+    } else {
+        None
+    };
+    
+    let queue_badge_count = generation_state.as_ref().map(|gs| {
+        gs.active_count() + gs.active_suggestion_count()
+    }).unwrap_or(0);
 
     // Determine the correct route based on tab - link directly to subtab routes
     // to avoid use_effect redirect race conditions
@@ -757,12 +826,18 @@ fn DMHeaderTabLink(label: &'static str, tab: &'static str, world_id: String, act
         Link {
             to: route,
             style: format!(
-                "padding: 0.4rem 0.75rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; position: relative; z-index: 103; pointer-events: auto; text-decoration: none;",
+                "padding: 0.4rem 0.75rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; position: relative; z-index: 103; pointer-events: auto; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;",
                 bg_color,
                 text_color,
                 if active { "500" } else { "400" }
             ),
             "{label}"
+            if tab == "creator" && queue_badge_count > 0 {
+                span {
+                    style: "background: #f59e0b; color: white; border-radius: 0.75rem; padding: 0.125rem 0.375rem; font-size: 0.625rem; font-weight: bold; min-width: 1.25rem; text-align: center;",
+                    "{queue_badge_count}"
+                }
+            }
         }
     }
 }
@@ -810,6 +885,7 @@ fn initiate_connection(
     server_url: String,
     user_id: String,
     role: ParticipantRole,
+    world_id: Option<String>,
     mut session_state: SessionState,
     mut game_state: GameState,
     mut dialogue_state: DialogueState,
@@ -830,7 +906,7 @@ fn initiate_connection(
         session_state.set_connection_handle(connection.clone());
         let session_service = SessionService::new(connection.clone());
 
-        match session_service.connect(user_id, role).await {
+        match session_service.connect(user_id, role, world_id).await {
             Ok(mut rx) => {
                 // Process events from the stream
                 while let Some(event) = rx.next().await {

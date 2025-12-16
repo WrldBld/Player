@@ -11,6 +11,7 @@ use web_sys::window;
 pub const STORAGE_KEY_SERVER_URL: &str = "wrldbldr_server_url";
 pub const STORAGE_KEY_ROLE: &str = "wrldbldr_role";
 pub const STORAGE_KEY_LAST_WORLD: &str = "wrldbldr_last_world";
+pub const STORAGE_KEY_USER_ID: &str = "wrldbldr_user_id";
 
 /// Save a value to localStorage (WASM only)
 ///
@@ -95,6 +96,7 @@ pub fn clear_all() {
     remove(STORAGE_KEY_SERVER_URL);
     remove(STORAGE_KEY_ROLE);
     remove(STORAGE_KEY_LAST_WORLD);
+    remove(STORAGE_KEY_USER_ID);
 }
 
 // Desktop stubs - no-op implementations for non-WASM targets

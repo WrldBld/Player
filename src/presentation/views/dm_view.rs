@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::{ChallengeData, SkillData};
-use crate::application::ports::outbound::ApprovalDecision;
+use crate::application::ports::outbound::{ApprovalDecision, Platform};
 use crate::application::services::SessionCommandService;
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::services::{use_challenge_service, use_skill_service};
@@ -236,6 +236,9 @@ fn DirectorModeContent() -> Element {
     let mut current_tone = use_signal(|| "Serious".to_string());
     let mut show_challenge_library = use_signal(|| false);
     let mut show_trigger_challenge = use_signal(|| false);
+    let mut show_pc_management = use_signal(|| false);
+    let mut show_location_navigator = use_signal(|| false);
+    let mut show_character_perspective = use_signal(|| false);
     let mut skills: Signal<Vec<SkillData>> = use_signal(Vec::new);
     let mut challenges: Signal<Vec<ChallengeData>> = use_signal(Vec::new);
 
@@ -507,6 +510,118 @@ fn DirectorModeContent() -> Element {
                 }
             }
 
+            // PC Management Modal
+            if *show_pc_management.read() {
+                if let Some(session_id) = session_state.session_id.read().as_ref() {
+                    rsx! {
+                        div {
+                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                            onclick: move |_| show_pc_management.set(false),
+                            div {
+                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                                onclick: move |e| e.stop_propagation(),
+                                div {
+                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                    h2 {
+                                        style: "margin: 0; color: white; font-size: 1.25rem;",
+                                        "Player Character Management"
+                                    }
+                                    button {
+                                        onclick: move |_| show_pc_management.set(false),
+                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                        "×"
+                                    }
+                                }
+                                crate::presentation::components::dm_panel::pc_management::PCManagementPanel {
+                                    session_id: session_id.clone(),
+                                    on_view_as_character: move |character_id| {
+                                        // TODO: Implement view as character
+                                        tracing::info!("View as character: {}", character_id);
+                                        show_pc_management.set(false);
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Location Navigator Modal
+            if *show_location_navigator.read() {
+                if let Some(world_id) = game_state.world.read().as_ref().map(|w| w.world.id.clone()) {
+                    rsx! {
+                        div {
+                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                            onclick: move |_| show_location_navigator.set(false),
+                            div {
+                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                                onclick: move |e| e.stop_propagation(),
+                                div {
+                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                    h2 {
+                                        style: "margin: 0; color: white; font-size: 1.25rem;",
+                                        "Location Navigator"
+                                    }
+                                    button {
+                                        onclick: move |_| show_location_navigator.set(false),
+                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                        "×"
+                                    }
+                                }
+                                crate::presentation::components::dm_panel::location_navigator::LocationNavigator {
+                                    world_id: world_id.clone(),
+                                    on_preview: move |location_id| {
+                                        // TODO: Implement location preview
+                                        tracing::info!("Preview location: {}", location_id);
+                                        show_location_navigator.set(false);
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Character Perspective Viewer Modal
+            if *show_character_perspective.read() {
+                if let (Some(session_id), Some(world_id)) = (
+                    session_state.session_id.read().as_ref().map(|s| s.clone()),
+                    game_state.world.read().as_ref().map(|w| w.world.id.clone())
+                ) {
+                    rsx! {
+                        div {
+                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                            onclick: move |_| show_character_perspective.set(false),
+                            div {
+                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                                onclick: move |e| e.stop_propagation(),
+                                div {
+                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                    h2 {
+                                        style: "margin: 0; color: white; font-size: 1.25rem;",
+                                        "Character Perspective Viewer"
+                                    }
+                                    button {
+                                        onclick: move |_| show_character_perspective.set(false),
+                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                        "×"
+                                    }
+                                }
+                                crate::presentation::components::dm_panel::character_perspective::CharacterPerspectiveViewer {
+                                    session_id: session_id.clone(),
+                                    world_id: world_id.clone(),
+                                    on_view_as: move |character_id| {
+                                        // TODO: Implement view as character
+                                        tracing::info!("View as character: {}", character_id);
+                                        show_character_perspective.set(false);
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Trigger Challenge Modal
             if *show_trigger_challenge.read() {
                 {
@@ -578,6 +693,7 @@ struct ApprovalPopupProps {
 #[component]
 fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
     let session_state = use_session_state();
+    let platform = use_context::<Platform>();
     let mut modified_dialogue = use_signal(|| props.approval.proposed_dialogue.clone());
     let mut show_reasoning = use_signal(|| false);
     let mut rejection_feedback = use_signal(|| String::new());
@@ -590,47 +706,6 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
     let request_id = props.approval.request_id.clone();
     let npc_name = props.approval.npc_name.clone();
-    // Helper function to send approval decision
-    fn send_approval_decision(
-        mut session_state: crate::presentation::state::SessionState,
-        request_id: String,
-        decision: &ApprovalDecision,
-    ) {
-        if let Some(client) = session_state.engine_client.read().as_ref() {
-            let svc = SessionCommandService::new(std::sync::Arc::clone(client));
-            if let Err(e) = svc.send_approval_decision(&request_id, decision.clone()) {
-                tracing::error!("Failed to send approval decision: {}", e);
-            }
-        }
-        // Record decision in local history
-        let outcome_label = match decision {
-            ApprovalDecision::Accept => "accepted",
-            ApprovalDecision::AcceptWithModification { .. } => "modified",
-            ApprovalDecision::Reject { .. } => "rejected",
-            ApprovalDecision::TakeOver { .. } => "takeover",
-        }
-        .to_string();
-
-        // Try to resolve NPC name from current pending approvals
-        let npc_name = session_state
-            .pending_approvals
-            .read()
-            .iter()
-            .find(|a| a.request_id == request_id)
-            .map(|a| a.npc_name.clone())
-            .unwrap_or_else(|| "Unknown".to_string());
-
-        let entry = crate::presentation::state::ApprovalHistoryEntry {
-            request_id: request_id.clone(),
-            npc_name,
-            outcome: outcome_label,
-            timestamp: 0,
-        };
-        session_state.add_approval_history_entry(entry);
-
-        // Remove from pending approvals
-        session_state.remove_pending_approval(&request_id);
-    }
 
     rsx! {
         div {
@@ -761,15 +836,17 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                         {
                             let feedback = rejection_feedback.read().clone();
                             let request_id = request_id.clone();
-                            let session_state = session_state.clone();
-                            let npc_name = npc_name.clone();
+                            let mut session_state = session_state.clone();
+                            let platform_reject = platform.clone();
                             rsx! {
                                 button {
                                     onclick: move |_| {
-                                        send_approval_decision(
-                                            session_state.clone(),
+                                        session_state.record_approval_decision(
                                             request_id.clone(),
-                                            &ApprovalDecision::Reject { feedback: feedback.clone() },
+                                            &ApprovalDecision::Reject {
+                                                feedback: feedback.clone(),
+                                            },
+                                            &platform_reject,
                                         );
                                     },
                                     style: "flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
@@ -790,9 +867,11 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
             if !*show_reject_input.read() {
                 {
                     let request_id_accept = request_id.clone();
-                    let session_state_accept = session_state.clone();
+                    let mut session_state_accept = session_state.clone();
                     let request_id_modify = request_id.clone();
                     let session_state_modify = session_state.clone();
+                    let platform_accept = platform.clone();
+                    let platform_modify = platform.clone();
                     let dialogue = modified_dialogue.read().clone();
                     let original = props.approval.proposed_dialogue.clone();
                     let approved = approved_tools.read().clone();
@@ -802,11 +881,10 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                         div { style: "display: flex; gap: 0.5rem;",
                             button {
                                 onclick: move |_| {
-                                    let npc_name = npc_name.clone();
-                                    send_approval_decision(
-                                        session_state_accept.clone(),
+                                    session_state_accept.record_approval_decision(
                                         request_id_accept.clone(),
                                         &ApprovalDecision::Accept,
+                                        &platform_accept,
                                     );
                                 },
                                 style: "flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;",
@@ -819,7 +897,8 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                                     let approved = approved.clone();
                                     let tools = tools.clone();
                                     let request_id = request_id_modify.clone();
-                                    let session_state = session_state_modify.clone();
+                                    let mut session_state = session_state_modify.clone();
+                                    let platform = platform_modify.clone();
                                     move |_| {
                                         // Only send modification if something changed
                                         if dialogue != original || approved.values().any(|&v| !v) {
@@ -831,20 +910,20 @@ fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                                                 .filter(|t| !*approved.get(&t.id).unwrap_or(&true))
                                                 .map(|t| t.id.clone())
                                                 .collect();
-                                            send_approval_decision(
-                                                session_state.clone(),
+                                            session_state.record_approval_decision(
                                                 request_id.clone(),
                                                 &ApprovalDecision::AcceptWithModification {
                                                     modified_dialogue: dialogue.clone(),
                                                     approved_tools: approved_list,
                                                     rejected_tools: rejected_list,
                                                 },
+                                                &platform,
                                             );
                                         } else {
-                                            send_approval_decision(
-                                                session_state.clone(),
+                                            session_state.record_approval_decision(
                                                 request_id.clone(),
                                                 &ApprovalDecision::Accept,
+                                                &platform,
                                             );
                                         }
                                     }

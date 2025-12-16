@@ -317,6 +317,57 @@ impl SessionState {
     pub fn get_approval_history(&self) -> Vec<ApprovalHistoryEntry> {
         self.decision_history.read().clone()
     }
+
+    /// Record an approval decision: send it to the Engine, log it locally with
+    /// a real timestamp, and remove it from the pending queue.
+    pub fn record_approval_decision(
+        &mut self,
+        request_id: String,
+        decision: &crate::application::ports::outbound::ApprovalDecision,
+        platform: &Platform,
+    ) {
+        // Send to Engine if we have a client
+        if let Some(client) = self.engine_client.read().as_ref() {
+            let svc = crate::application::services::SessionCommandService::new(Arc::clone(client));
+            if let Err(e) = svc.send_approval_decision(&request_id, decision.clone()) {
+                tracing::error!("Failed to send approval decision: {}", e);
+            }
+        }
+
+        // Normalize outcome label
+        let outcome_label = match decision {
+            crate::application::ports::outbound::ApprovalDecision::Accept => "accepted",
+            crate::application::ports::outbound::ApprovalDecision::AcceptWithModification { .. } => {
+                "modified"
+            }
+            crate::application::ports::outbound::ApprovalDecision::Reject { .. } => "rejected",
+            crate::application::ports::outbound::ApprovalDecision::TakeOver { .. } => "takeover",
+        }
+        .to_string();
+
+        // Resolve NPC name from current pending approvals
+        let npc_name = self
+            .pending_approvals
+            .read()
+            .iter()
+            .find(|a| a.request_id == request_id)
+            .map(|a| a.npc_name.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        // Use Platform to get a real timestamp
+        let timestamp = platform.now_unix_secs();
+
+        let entry = ApprovalHistoryEntry {
+            request_id: request_id.clone(),
+            npc_name,
+            outcome: outcome_label,
+            timestamp,
+        };
+        self.add_approval_history_entry(entry);
+
+        // Remove from pending approvals
+        self.remove_pending_approval(&request_id);
+    }
 }
 
 impl Default for SessionState {

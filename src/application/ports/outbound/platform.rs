@@ -6,6 +6,7 @@
 //! 3. Code becomes easily testable with mock implementations
 
 use std::{future::Future, pin::Pin};
+use uuid::Uuid;
 
 /// Time operations abstraction
 pub trait TimeProvider: Clone + 'static {
@@ -230,6 +231,40 @@ impl Platform {
         self.storage.remove(key)
     }
 
+    /// Get or create a stable anonymous user ID.
+    ///
+    /// This ID is persisted in storage and reused across sessions until local
+    /// storage is cleared, effectively acting as an anonymous user identity.
+    pub fn get_user_id(&self) -> String {
+        if let Some(existing) = self.storage_load(storage_keys::USER_ID) {
+            return existing;
+        }
+
+        let new_id = format!("user-{}", Uuid::new_v4());
+        self.storage_save(storage_keys::USER_ID, &new_id);
+        new_id
+    }
+
+    /// Best-effort access to the current anonymous user ID without allocation.
+    ///
+    /// This is primarily used by infrastructure (e.g. HTTP client) to attach
+    /// the `X-User-Id` header. It reads directly from storage and does not
+    /// generate a new ID if missing.
+    pub fn maybe_user_id() -> Option<String> {
+        // On WASM, we can read from the same storage backend used elsewhere.
+        #[cfg(target_arch = "wasm32")]
+        {
+            use crate::infrastructure::storage;
+            storage::load(storage::STORAGE_KEY_USER_ID)
+        }
+
+        // On desktop, we currently don't persist a user ID via this path.
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            None
+        }
+    }
+
     /// Log an info message
     pub fn log_info(&self, msg: &str) {
         self.log.info(msg)
@@ -261,4 +296,5 @@ pub mod storage_keys {
     pub const SERVER_URL: &str = "wrldbldr_server_url";
     pub const ROLE: &str = "wrldbldr_role";
     pub const LAST_WORLD: &str = "wrldbldr_last_world";
+    pub const USER_ID: &str = "wrldbldr_user_id";
 }

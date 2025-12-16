@@ -10,6 +10,7 @@ pub mod challenge_service;
 pub mod character_service;
 pub mod location_service;
 pub mod narrative_event_service;
+pub mod player_character_service;
 pub mod session_service;
 pub mod session_command_service;
 pub mod skill_service;
@@ -34,6 +35,12 @@ pub use world_service::WorldService;
 
 // Re-export character service types
 pub use character_service::{CharacterData, CharacterService, CharacterSheetDataApi};
+
+// Re-export player character service types
+pub use player_character_service::{
+    CreatePlayerCharacterRequest, PlayerCharacterData, PlayerCharacterService,
+    UpdateLocationRequest, UpdateLocationResponse, UpdatePlayerCharacterRequest,
+};
 
 // Re-export location service types
 pub use location_service::{LocationData, LocationService};
