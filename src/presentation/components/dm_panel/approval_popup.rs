@@ -528,12 +528,15 @@ struct OutcomeTabProps {
     on_toggle: EventHandler<()>,
 }
 
-/// Individual outcome tab with expandable details
+/// Individual outcome tab with expandable details and inline editing
 #[component]
 fn OutcomeTab(props: OutcomeTabProps) -> Element {
     let border_color = props.color;
     let label = props.label;
     let is_expanded = props.is_expanded;
+    let mut editing = use_signal(|| false);
+    let mut edited_flavor = use_signal(|| props.outcome.flavor_text.clone());
+    let mut edited_direction = use_signal(|| props.outcome.scene_direction.clone());
 
     rsx! {
         div {
@@ -561,7 +564,7 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                     style: "padding: 0 0.75rem 0.75rem 0.75rem;",
 
                     // Flavor text
-                    if !props.outcome.flavor_text.is_empty() {
+                    if !props.outcome.flavor_text.is_empty() || *editing.read() {
                         div {
                             style: "margin-bottom: 0.5rem;",
 
@@ -569,15 +572,23 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                                 style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
                                 "Flavor"
                             }
-                            p {
-                                style: "color: white; font-size: 0.75rem; font-style: italic; margin: 0; line-height: 1.4;",
-                                "\"{props.outcome.flavor_text}\""
+                            if *editing.read() {
+                                textarea {
+                                    value: "{edited_flavor}",
+                                    oninput: move |e| edited_flavor.set(e.value()),
+                                    style: "width: 100%; padding: 0.5rem; background: #020617; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.75rem; min-height: 60px; resize: vertical;",
+                                }
+                            } else {
+                                p {
+                                    style: "color: white; font-size: 0.75rem; font-style: italic; margin: 0; line-height: 1.4;",
+                                    "\"{props.outcome.flavor_text}\""
+                                }
                             }
                         }
                     }
 
                     // Scene direction
-                    if !props.outcome.scene_direction.is_empty() {
+                    if !props.outcome.scene_direction.is_empty() || *editing.read() {
                         div {
                             style: "margin-bottom: 0.5rem;",
 
@@ -585,9 +596,17 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                                 style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
                                 "Scene Direction"
                             }
-                            p {
-                                style: "color: #d1d5db; font-size: 0.75rem; margin: 0; line-height: 1.4;",
-                                "{props.outcome.scene_direction}"
+                            if *editing.read() {
+                                textarea {
+                                    value: "{edited_direction}",
+                                    oninput: move |e| edited_direction.set(e.value()),
+                                    style: "width: 100%; padding: 0.5rem; background: #020617; border: 1px solid #374151; border-radius: 0.375rem; color: #d1d5db; font-size: 0.75rem; min-height: 60px; resize: vertical;",
+                                }
+                            } else {
+                                p {
+                                    style: "color: #d1d5db; font-size: 0.75rem; margin: 0; line-height: 1.4;",
+                                    "{props.outcome.scene_direction}"
+                                }
                             }
                         }
                     }
@@ -615,25 +634,63 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                         }
                     }
 
-                    // Regenerate button
+                    // Edit / Regenerate controls
                     if props.on_regenerate.is_some() {
-                        {
-                            let request_id = props.request_id.clone();
-                            let outcome_type = props.outcome_type.clone();
-                            let handler = props.on_regenerate.clone();
-                            rsx! {
-                                button {
-                                    onclick: move |_| {
-                                        if let Some(h) = &handler {
-                                            h.call(RegenerateOutcomeData {
-                                                request_id: request_id.clone(),
-                                                outcome_type: Some(outcome_type.clone()),
-                                                guidance: None,
-                                            });
-                                        }
-                                    },
-                                    style: "width: 100%; padding: 0.375rem; background: rgba(59, 130, 246, 0.3); color: #93c5fd; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
-                                    "Regenerate This Outcome"
+                        div {
+                            style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
+
+                            // Toggle edit/save
+                            {
+                                let editing_sig = editing.clone();
+                                rsx! {
+                                    button {
+                                        onclick: move |_| {
+                                            let current = *editing_sig.read();
+                                            editing_sig.set(!current);
+                                        },
+                                        style: "padding: 0.25rem 0.5rem; background: rgba(148, 163, 184, 0.3); color: #e5e7eb; border: 1px solid #64748b; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                        if *editing.read() { "Done Editing" } else { "Edit" }
+                                    }
+                                }
+                            }
+
+                            // Regenerate (optionally incorporating edited text as guidance)
+                            {
+                                let request_id = props.request_id.clone();
+                                let outcome_type = props.outcome_type.clone();
+                                let handler = props.on_regenerate.clone();
+                                let edited_flavor_sig = edited_flavor.clone();
+                                let edited_direction_sig = edited_direction.clone();
+
+                                rsx! {
+                                    button {
+                                        onclick: move |_| {
+                                            if let Some(h) = &handler {
+                                                let mut guidance_parts = Vec::new();
+                                                let flavor = edited_flavor_sig.read().trim().to_string();
+                                                let direction = edited_direction_sig.read().trim().to_string();
+                                                if !flavor.is_empty() {
+                                                    guidance_parts.push(format!("Flavor: {}", flavor));
+                                                }
+                                                if !direction.is_empty() {
+                                                    guidance_parts.push(format!("Scene: {}", direction));
+                                                }
+                                                let guidance = if guidance_parts.is_empty() {
+                                                    None
+                                                } else {
+                                                    Some(guidance_parts.join(" | "))
+                                                };
+
+                                                h.call(RegenerateOutcomeData {
+                                                    request_id: request_id.clone(),
+                                                    outcome_type: Some(outcome_type.clone()),
+                                                    guidance,
+                                                });
+                                            }
+                                        },
+                                        style: "padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.3); color: #93c5fd; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                        "Regenerate"
+                                    }
                                 }
                             }
                         }

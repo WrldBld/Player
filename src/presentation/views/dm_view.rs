@@ -8,6 +8,9 @@ use crate::application::services::SessionCommandService;
 use crate::presentation::components::creator::CreatorMode;
 use crate::presentation::services::{use_challenge_service, use_skill_service};
 use crate::presentation::components::dm_panel::challenge_library::ChallengeLibrary;
+use crate::presentation::components::dm_panel::adhoc_challenge_modal::{
+    AdHocChallengeModal, AdHocChallengeData,
+};
 use crate::presentation::components::dm_panel::decision_queue::DecisionQueuePanel;
 use crate::presentation::components::dm_panel::trigger_challenge_modal::TriggerChallengeModal;
 use crate::presentation::components::settings::SettingsView;
@@ -46,6 +49,9 @@ pub struct DMViewProps {
 
 #[component]
 pub fn DMView(props: DMViewProps) -> Element {
+    // Local UI state for ad-hoc challenge modal visibility
+    let mut show_adhoc_modal = use_signal(|| false);
+
     rsx! {
         div {
             class: "dm-view",
@@ -57,7 +63,13 @@ pub fn DMView(props: DMViewProps) -> Element {
                 style: "flex: 1; overflow: hidden;",
 
                 match props.active_mode {
-                    DMMode::Director => rsx! { DirectorModeContent {} },
+                    DMMode::Director => rsx! {
+                        DirectorModeContent {
+                            on_create_adhoc_challenge: move || {
+                                show_adhoc_modal.set(true);
+                            }
+                        }
+                    },
                     DMMode::Creator => rsx! {
                         CreatorMode {
                             world_id: props.world_id.clone(),
@@ -78,6 +90,64 @@ pub fn DMView(props: DMViewProps) -> Element {
                     },
                 }
             }
+            // Global ad-hoc challenge modal overlay
+            if *show_adhoc_modal.read() {
+                AdHocChallengeEntryPoint {
+                    on_close: move || show_adhoc_modal.set(false),
+                }
+            }
+        }
+    }
+}
+
+/// Thin wrapper that wires the AdHocChallengeModal to the SessionCommandService
+/// and current session state.
+#[component]
+fn AdHocChallengeEntryPoint(on_close: EventHandler<()>) -> Element {
+    let mut session_state = crate::presentation::state::use_session_state();
+    let platform = crate::application::ports::outbound::Platform::default();
+
+    let player_characters: Vec<crate::application::dto::CharacterData> =
+        crate::presentation::services::use_scene_service()
+            .current_characters()
+            .unwrap_or_default();
+
+    // Build a command service if we have a live client
+    let client = session_state.engine_client.read().clone();
+    let command_svc = client.map(|c| SessionCommandService::new(c));
+
+    rsx! {
+        AdHocChallengeModal {
+            player_characters: player_characters,
+            on_create: move |data: AdHocChallengeData| {
+                if let Some(svc) = command_svc.as_ref() {
+                    if let Err(e) = svc.create_adhoc_challenge(
+                        data.challenge_name.clone(),
+                        data.skill_name.clone(),
+                        data.difficulty.clone(),
+                        data.target_pc_id.clone(),
+                        data.outcomes.clone(),
+                    ) {
+                        tracing::error!("Failed to send ad-hoc challenge: {}", e);
+                    }
+                } else {
+                    tracing::warn!("No Engine client available for ad-hoc challenge");
+                }
+
+                // Add a quick log entry for instant feedback
+                session_state.add_log_entry(
+                    "System".to_string(),
+                    format!(
+                        "Ad-hoc challenge '{}' created for PC {}",
+                        data.challenge_name, data.target_pc_id
+                    ),
+                    true,
+                    &platform,
+                );
+
+                on_close.call(());
+            },
+            on_close: move |_| on_close.call(()),
         }
     }
 }

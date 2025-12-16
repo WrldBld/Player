@@ -348,12 +348,52 @@ pub fn handle_server_message(
                 request_id,
                 new_outcome.flavor_text
             );
-            // TODO (Phase 22G): Update approval popup with regenerated outcome
+
+            // Update the matching pending approval's challenge outcomes in-place
+            if let Some(idx) = session_state
+                .pending_approvals
+                .read()
+                .iter()
+                .position(|a| a.request_id == request_id)
+            {
+                let mut approvals = session_state.pending_approvals.read().clone();
+                if let Some(approval) = approvals.get_mut(idx) {
+                    if let Some(challenge) = &mut approval.challenge_suggestion {
+                        if let Some(ref mut outcomes) = challenge.outcomes {
+                            // Map outcome_type string to the appropriate field
+                            match outcome_type.as_str() {
+                                "success" => outcomes.success = Some(new_outcome.clone()),
+                                "failure" => outcomes.failure = Some(new_outcome.clone()),
+                                "critical_success" => outcomes.critical_success = Some(new_outcome.clone()),
+                                "critical_failure" => outcomes.critical_failure = Some(new_outcome.clone()),
+                                // "all" or unknown: update success/failure as a minimal default
+                                _ => {
+                                    outcomes.success = Some(new_outcome.clone());
+                                    outcomes.failure = Some(new_outcome.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+                session_state.pending_approvals.set(approvals);
+            }
         }
 
         ServerMessage::ChallengeDiscarded { request_id } => {
             tracing::info!("Challenge discarded for request {}", request_id);
-            // TODO (Phase 22G): Remove challenge from approval UI
+
+            // Remove the challenge suggestion/outcomes from the approval item
+            let mut approvals = session_state.pending_approvals.read().clone();
+            for approval in approvals.iter_mut() {
+                if approval.request_id == request_id {
+                    approval.challenge_suggestion = None;
+                    if let Some(ref mut nes) = approval.narrative_event_suggestion {
+                        // Leave narrative suggestion intact; only clear challenge-specific state
+                        nes.suggested_outcome = None;
+                    }
+                }
+            }
+            session_state.pending_approvals.set(approvals);
         }
 
         ServerMessage::AdHocChallengeCreated {
@@ -367,7 +407,20 @@ pub fn handle_server_message(
                 challenge_id,
                 target_pc_id
             );
-            // TODO (Phase 22H): Show ad-hoc challenge creation confirmation
+
+            // Log a DM-facing system message so the DM sees confirmation in context
+            let msg = format!(
+                "[AD-HOC CHALLENGE] '{}' created for PC {} (ID: {})",
+                challenge_name, target_pc_id, challenge_id
+            );
+            session_state.conversation_log.write().push(
+                crate::presentation::state::ConversationLogEntry {
+                    speaker: "System".to_string(),
+                    text: msg,
+                    is_system: true,
+                    timestamp: platform.now_unix_secs(),
+                },
+            );
         }
     }
 }
