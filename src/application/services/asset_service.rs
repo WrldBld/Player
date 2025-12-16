@@ -15,6 +15,8 @@ pub struct Asset {
     pub asset_type: String,
     pub label: Option<String>,
     pub is_active: bool,
+    #[serde(default)]
+    pub style_reference_id: Option<String>, // ID of asset used as style reference (if any)
 }
 
 /// Gallery response containing assets
@@ -33,6 +35,8 @@ pub struct GenerateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub negative_prompt: Option<String>,
     pub count: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style_reference_id: Option<String>,
 }
 
 /// Asset service for managing entity assets

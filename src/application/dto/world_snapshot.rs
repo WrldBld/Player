@@ -962,7 +962,7 @@ pub enum DmMarkerType {
 // =============================================================================
 
 /// A narrative event - a DM-designed future event with triggers and outcomes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NarrativeEventData {
     pub id: String,
     pub world_id: String,

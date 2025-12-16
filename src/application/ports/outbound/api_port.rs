@@ -18,6 +18,8 @@ pub enum ApiError {
     ParseError(String),
     /// Failed to serialize request body
     SerializeError(String),
+    /// Resource not found (404)
+    NotFound(String),
 }
 
 impl fmt::Display for ApiError {
@@ -27,6 +29,7 @@ impl fmt::Display for ApiError {
             ApiError::HttpError(status, msg) => write!(f, "HTTP {}: {}", status, msg),
             ApiError::ParseError(msg) => write!(f, "Parse error: {}", msg),
             ApiError::SerializeError(msg) => write!(f, "Serialize error: {}", msg),
+            ApiError::NotFound(msg) => write!(f, "Not found: {}", msg),
         }
     }
 }

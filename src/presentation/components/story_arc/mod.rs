@@ -12,3 +12,6 @@ pub mod add_dm_marker;
 pub mod narrative_event_library;
 pub mod narrative_event_card;
 pub mod pending_events_widget;
+pub mod event_chain_list;
+pub mod event_chain_visualizer;
+pub mod event_chain_editor;

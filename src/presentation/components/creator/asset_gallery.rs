@@ -136,6 +136,7 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                                     id: asset.id.clone(),
                                     label: asset.label.clone(),
                                     is_active: asset.is_active,
+                                    style_reference_id: asset.style_reference_id.clone(),
                                     on_activate: move |id: String| {
                                         let entity_type = entity_type_activate.clone();
                                         let entity_id = entity_id_activate.clone();
@@ -156,6 +157,7 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                                             }
                                         });
                                     },
+                                    on_use_as_reference: None, // TODO: Implement "Use as Reference" action
                                 }
                             }
                         }
@@ -204,8 +206,10 @@ struct AssetThumbnailProps {
     id: String,
     label: Option<String>,
     is_active: bool,
+    style_reference_id: Option<String>,
     on_activate: EventHandler<String>,
     on_delete: EventHandler<String>,
+    on_use_as_reference: Option<EventHandler<String>>,
 }
 
 /// Individual asset thumbnail
@@ -282,6 +286,21 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
                         }
                     }
 
+                    if let Some(on_use_as_ref) = props.on_use_as_reference.as_ref() {
+                        button {
+                            onclick: {
+                                let id = props.id.clone();
+                                let handler = on_use_as_ref.clone();
+                                move |_| {
+                                    handler.call(id.clone());
+                                    show_menu.set(false);
+                                }
+                            },
+                            style: "display: block; width: 100%; padding: 0.5rem; text-align: left; background: transparent; color: #8b5cf6; border: none; cursor: pointer; font-size: 0.75rem; border-bottom: 1px solid #374151;",
+                            "Use as Style Reference"
+                        }
+                    }
+
                     button {
                         onclick: {
                             let id = id_for_delete.clone();
@@ -309,11 +328,30 @@ fn GenerateAssetModal(
     on_close: EventHandler<()>,
     on_generate: EventHandler<GenerateRequest>,
 ) -> Element {
+    let asset_service = use_asset_service();
     let mut prompt = use_signal(|| String::new());
     let mut negative_prompt = use_signal(|| String::new());
     let mut count = use_signal(|| 4u8);
     let mut workflow_slot = use_signal(|| String::new());
     let mut is_generating = use_signal(|| false);
+    let mut style_reference_id: Signal<Option<String>> = use_signal(|| None);
+    let mut style_reference_label: Signal<Option<String>> = use_signal(|| None);
+    let mut show_style_selector = use_signal(|| false);
+    let mut available_assets: Signal<Vec<Asset>> = use_signal(Vec::new);
+
+    // Load available assets for style reference selection
+    let entity_type_for_assets = entity_type.clone();
+    let entity_id_for_assets = entity_id.clone();
+    use_effect(move || {
+        let et = entity_type_for_assets.clone();
+        let ei = entity_id_for_assets.clone();
+        let svc = asset_service.clone();
+        spawn(async move {
+            if let Ok(assets) = svc.get_assets(&et, &ei).await {
+                available_assets.set(assets);
+            }
+        });
+    });
 
     rsx! {
         div {
@@ -337,6 +375,89 @@ fn GenerateAssetModal(
                         oninput: move |e| workflow_slot.set(e.value()),
                         placeholder: "Leave empty for default workflow...",
                         style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    }
+                }
+
+                // Style Reference field
+                div { style: "margin-bottom: 1rem;",
+                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Style Reference (optional)" }
+                    if let Some(ref_id) = style_reference_id.read().as_ref() {
+                        div {
+                            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem;",
+                            span {
+                                style: "flex: 1; color: white; font-size: 0.875rem;",
+                                if let Some(label) = style_reference_label.read().as_ref() {
+                                    "{label}"
+                                } else {
+                                    "Selected asset"
+                                }
+                            }
+                            button {
+                                onclick: move |_| {
+                                    style_reference_id.set(None);
+                                    style_reference_label.set(None);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Clear"
+                            }
+                        }
+                    } else {
+                        div {
+                            style: "display: flex; gap: 0.5rem;",
+                            button {
+                                onclick: move |_| show_style_selector.set(true),
+                                style: "flex: 1; padding: 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                                "Select from Gallery..."
+                            }
+                        }
+                    }
+                }
+
+                // Style reference selector modal
+                if *show_style_selector.read() {
+                    div {
+                        class: "modal-overlay",
+                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1001;",
+                        onclick: move |_| show_style_selector.set(false),
+                        div {
+                            style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;",
+                            onclick: move |e| e.stop_propagation(),
+                            h3 { style: "color: white; margin: 0 0 1rem 0;", "Select Style Reference" }
+                            div {
+                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;",
+                                for asset in available_assets.read().iter() {
+                                    button {
+                                        onclick: {
+                                            let asset_id = asset.id.clone();
+                                            let asset_label = asset.label.clone().or_else(|| Some(asset.id.clone()));
+                                            move |_| {
+                                                style_reference_id.set(Some(asset_id.clone()));
+                                                style_reference_label.set(asset_label.clone());
+                                                show_style_selector.set(false);
+                                            }
+                                        },
+                                        style: "display: flex; flex-direction: column; align-items: center; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer; transition: all 0.2s;",
+                                        onmouseenter: move |_| {
+                                            // Could add hover effect
+                                        },
+                                        div {
+                                            style: "width: 80px; height: 80px; background: #374151; border-radius: 0.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;",
+                                            span { style: "color: #9ca3af; font-size: 0.75rem;", "📷" }
+                                        }
+                                        span {
+                                            style: "color: white; font-size: 0.75rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;",
+                                            "{asset.label.as_ref().unwrap_or(&asset.id)}"
+                                        }
+                                    }
+                                }
+                            }
+                            if available_assets.read().is_empty() {
+                                div {
+                                    style: "color: #6b7280; text-align: center; padding: 2rem;",
+                                    "No assets available for style reference"
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -406,6 +527,7 @@ fn GenerateAssetModal(
                                         Some(negative_prompt.read().clone())
                                     },
                                     count: *count.read(),
+                                    style_reference_id: style_reference_id.read().clone(),
                                 });
                                 is_generating.set(false);
                             }

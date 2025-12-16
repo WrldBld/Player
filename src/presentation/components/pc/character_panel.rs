@@ -85,7 +85,7 @@ pub fn CharacterPanel(props: CharacterPanelProps) -> Element {
             }
 
             // Character Sheet
-            if !loading.read() {
+            if !*loading.read() {
                 if let Some(template) = sheet_template.read().as_ref() {
                     if let Some(sheet_data) = props.pc.sheet_data.as_ref() {
                         div {
@@ -95,8 +95,10 @@ pub fn CharacterPanel(props: CharacterPanelProps) -> Element {
                                 "Character Sheet"
                             }
                             crate::presentation::components::character_sheet_viewer::CharacterSheetViewer {
+                                character_name: props.pc.name.clone(),
                                 template: template.clone(),
                                 values: sheet_data.values.clone(),
+                                on_close: move |_| {},
                             }
                         }
                     }

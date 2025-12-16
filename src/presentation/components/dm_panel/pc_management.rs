@@ -70,12 +70,20 @@ pub fn PCManagementPanel(props: PCManagementPanelProps) -> Element {
                     "No player characters in this session"
                 }
             } else {
-                div {
-                    style: "display: flex; flex-direction: column; gap: 0.75rem;",
-                    for pc in pcs.read().iter() {
-                        PCManagementCard {
-                            pc: pc.clone(),
-                            on_view_as: move |_| props.on_view_as_character.call(pc.id.clone()),
+                {
+                    let pcs_list = pcs.read().clone();
+                    rsx! {
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.75rem;",
+                            {pcs_list.into_iter().map(|pc| {
+                                let pc_id = pc.id.clone();
+                                rsx! {
+                                    PCManagementCard {
+                                        pc,
+                                        on_view_as: move |_| props.on_view_as_character.call(pc_id.clone()),
+                                    }
+                                }
+                            })}
                         }
                     }
                 }
@@ -235,7 +243,11 @@ pub fn PCLocationsWidget(props: PCLocationsWidgetProps) -> Element {
                             }
                             div {
                                 style: "color: #9ca3af; font-size: 0.875rem;",
-                                "{count} PC{if *count > 1 { "s" } else { "" }}"
+                                if *count > 1 {
+                                    "{count} PCs"
+                                } else {
+                                    "{count} PC"
+                                }
                             }
                         }
                     }

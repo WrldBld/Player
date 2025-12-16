@@ -16,7 +16,7 @@ pub struct LocationNavigatorProps {
 #[component]
 pub fn LocationNavigator(props: LocationNavigatorProps) -> Element {
     let location_service = use_location_service();
-    let mut locations: Signal<Vec<crate::application::services::LocationSummary>> = use_signal(Vec::new);
+    let mut locations: Signal<Vec<crate::application::services::location_service::LocationSummary>> = use_signal(Vec::new);
     let mut loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
 
@@ -43,19 +43,22 @@ pub fn LocationNavigator(props: LocationNavigatorProps) -> Element {
         });
     }
 
+    let locs = locations.read().clone();
+    let err = error.read().clone();
+
     rsx! {
         div {
             style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
-            
+
             h3 {
                 style: "margin: 0; color: white; font-size: 1.125rem;",
                 "Location Navigator"
             }
 
-            if let Some(err) = error.read().as_ref() {
+            if let Some(e) = err.as_ref() {
                 div {
                     style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
-                    "{err}"
+                    "{e}"
                 }
             }
 
@@ -64,7 +67,7 @@ pub fn LocationNavigator(props: LocationNavigatorProps) -> Element {
                     style: "padding: 2rem; text-align: center; color: #9ca3af;",
                     "Loading locations..."
                 }
-            } else if locations.read().is_empty() {
+            } else if locs.is_empty() {
                 div {
                     style: "padding: 2rem; text-align: center; color: #9ca3af;",
                     "No locations in this world"
@@ -72,12 +75,15 @@ pub fn LocationNavigator(props: LocationNavigatorProps) -> Element {
             } else {
                 div {
                     style: "display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto;",
-                    for location in locations.read().iter() {
-                        LocationCard {
-                            location: location.clone(),
-                            on_preview: move |_| props.on_preview.call(location.id.clone()),
+                    {locs.into_iter().map(|location| {
+                        let loc_id = location.id.clone();
+                        rsx! {
+                            LocationCard {
+                                location,
+                                on_preview: move |_| props.on_preview.call(loc_id.clone()),
+                            }
                         }
-                    }
+                    })}
                 }
             }
         }

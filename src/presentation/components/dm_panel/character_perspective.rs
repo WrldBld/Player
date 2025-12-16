@@ -57,10 +57,13 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
         });
     }
 
+    let pcs_list = pcs.read().clone();
+    let npcs_list = npcs.read().clone();
+
     rsx! {
         div {
             style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
-            
+
             h3 {
                 style: "margin: 0; color: white; font-size: 1.125rem;",
                 "Character Perspective"
@@ -80,7 +83,7 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
                 }
             } else {
                 // Player Characters section
-                if !pcs.read().is_empty() {
+                if !pcs_list.is_empty() {
                     div {
                         h4 {
                             style: "margin: 0 0 0.75rem 0; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase;",
@@ -88,20 +91,23 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
                         }
                         div {
                             style: "display: flex; flex-direction: column; gap: 0.5rem;",
-                            for pc in pcs.read().iter() {
-                                CharacterCard {
-                                    name: pc.name.clone(),
-                                    id: pc.id.clone(),
-                                    location_id: pc.current_location_id.clone(),
-                                    on_view_as: move |_| props.on_view_as.call(pc.id.clone()),
+                            {pcs_list.iter().map(|pc| {
+                                let pc_id = pc.id.clone();
+                                rsx! {
+                                    CharacterCard {
+                                        name: pc.name.clone(),
+                                        id: pc_id.clone(),
+                                        location_id: pc.current_location_id.clone(),
+                                        on_view_as: move |_| props.on_view_as.call(pc_id.clone()),
+                                    }
                                 }
-                            }
+                            })}
                         }
                     }
                 }
 
                 // NPCs section
-                if !npcs.read().is_empty() {
+                if !npcs_list.is_empty() {
                     div {
                         h4 {
                             style: "margin: 1rem 0 0.75rem 0; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase;",
@@ -109,19 +115,22 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
                         }
                         div {
                             style: "display: flex; flex-direction: column; gap: 0.5rem;",
-                            for npc in npcs.read().iter() {
-                                CharacterCard {
-                                    name: npc.name.clone(),
-                                    id: npc.id.clone(),
-                                    location_id: "unknown".to_string(),
-                                    on_view_as: move |_| props.on_view_as.call(npc.id.clone()),
+                            {npcs_list.iter().map(|npc| {
+                                let npc_id = npc.id.clone();
+                                rsx! {
+                                    CharacterCard {
+                                        name: npc.name.clone(),
+                                        id: npc_id.clone(),
+                                        location_id: "unknown".to_string(),
+                                        on_view_as: move |_| props.on_view_as.call(npc_id.clone()),
+                                    }
                                 }
-                            }
+                            })}
                         }
                     }
                 }
 
-                if pcs.read().is_empty() && npcs.read().is_empty() {
+                if pcs_list.is_empty() && npcs_list.is_empty() {
                     div {
                         style: "padding: 2rem; text-align: center; color: #9ca3af;",
                         "No characters available"

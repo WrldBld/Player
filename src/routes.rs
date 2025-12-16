@@ -266,8 +266,9 @@ pub fn PCViewRoute(world_id: String) -> Element {
                 let sid_clone = sid.clone();
                 let wid = world_id_clone.clone();
                 let nav_clone = nav.clone();
+                let pc_svc_clone = pc_svc.clone();
                 spawn(async move {
-                    match pc_svc.get_my_pc(&sid_clone).await {
+                    match pc_svc_clone.get_my_pc(&sid_clone).await {
                         Ok(Some(_pc)) => {
                             // PC exists, continue to PC View
                         }

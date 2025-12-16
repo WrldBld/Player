@@ -186,6 +186,12 @@ pub enum ServerMessage {
         request_id: String,
         error: String,
     },
+    /// ComfyUI connection state changed
+    ComfyUIStateChanged {
+        state: String, // "connected", "degraded", "disconnected", "circuit_open"
+        message: Option<String>, // Human-readable status
+        retry_in_seconds: Option<u32>, // Countdown for reconnect
+    },
 }
 
 /// Participant role in the session

@@ -7,8 +7,9 @@ use crate::application::dto::{FieldValue, SheetTemplate};
 use crate::application::ports::outbound::Platform;
 use crate::application::services::{
     LocationService, PlayerCharacterService, WorldService,
-    CreatePlayerCharacterRequest, CharacterSheetDataApi,
+    CreatePlayerCharacterRequest,
 };
+use crate::application::services::player_character_service::CharacterSheetDataApi;
 use crate::presentation::services::{
     use_location_service, use_player_character_service, use_world_service,
 };
@@ -66,9 +67,11 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
     {
         let world_id = props.world_id.clone();
         let world_svc = world_service.clone();
+        let platform_clone = platform.clone();
         use_effect(move || {
             let svc = world_svc.clone();
             let world_id_clone = world_id.clone();
+            let plat = platform_clone.clone();
             sheet_loading.set(true);
             spawn(async move {
                 match svc.get_sheet_template(&world_id_clone).await {
@@ -78,12 +81,12 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                                 sheet_template.set(Some(template));
                             }
                             Err(e) => {
-                                platform.log_warn(&format!("Failed to parse sheet template: {}", e));
+                                plat.log_warn(&format!("Failed to parse sheet template: {}", e));
                             }
                         }
                     }
                     Err(e) => {
-                        platform.log_warn(&format!("Failed to load sheet template: {}", e));
+                        plat.log_warn(&format!("Failed to load sheet template: {}", e));
                     }
                 }
                 sheet_loading.set(false);
@@ -95,9 +98,11 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
     {
         let world_id = props.world_id.clone();
         let loc_svc = location_service.clone();
+        let platform_clone = platform.clone();
         use_effect(move || {
             let svc = loc_svc.clone();
             let world_id_clone = world_id.clone();
+            let plat = platform_clone.clone();
             locations_loading.set(true);
             spawn(async move {
                 match svc.list_locations(&world_id_clone).await {
@@ -105,7 +110,7 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                         available_locations.set(locations);
                     }
                     Err(e) => {
-                        platform.log_error(&format!("Failed to load locations: {}", e));
+                        plat.log_error(&format!("Failed to load locations: {}", e));
                     }
                 }
                 locations_loading.set(false);
@@ -115,7 +120,8 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
 
     // Navigation handlers
     let go_next = move |_| {
-        match *current_step.read() {
+        let step = *current_step.read();
+        match step {
             CreationStep::Basics => {
                 if name.read().trim().is_empty() {
                     error_message.set(Some("Character name is required".to_string()));
@@ -141,7 +147,8 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
     };
 
     let go_back = move |_| {
-        match *current_step.read() {
+        let step = *current_step.read();
+        match step {
             CreationStep::Basics => {
                 navigator.go_back();
             }
@@ -491,6 +498,9 @@ struct StartingLocationStepProps {
 
 #[component]
 fn StartingLocationStep(props: StartingLocationStepProps) -> Element {
+    let locations = props.locations.clone();
+    let selected = props.selected.clone();
+
     rsx! {
         div {
             style: "max-width: 800px; margin: 0 auto;",
@@ -503,7 +513,7 @@ fn StartingLocationStep(props: StartingLocationStepProps) -> Element {
                     style: "text-align: center; padding: 2rem; color: #9ca3af;",
                     "Loading locations..."
                 }
-            } else if props.locations.is_empty() {
+            } else if locations.is_empty() {
                 div {
                     style: "padding: 1.5rem; background: #1a1a2e; border-radius: 0.5rem; border: 1px solid #374151; text-align: center; color: #9ca3af;",
                     "No locations available. Please contact your DM."
@@ -511,13 +521,17 @@ fn StartingLocationStep(props: StartingLocationStepProps) -> Element {
             } else {
                 div {
                     style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;",
-                    for location in props.locations.iter() {
-                        LocationCard {
-                            location: location.clone(),
-                            is_selected: props.selected.as_ref().map(|s| s == &location.id).unwrap_or(false),
-                            on_select: move |_| props.on_select.call(location.id.clone()),
+                    {locations.into_iter().map(|location| {
+                        let loc_id = location.id.clone();
+                        let sel = selected.as_ref().map(|s| s == &loc_id).unwrap_or(false);
+                        rsx! {
+                            LocationCard {
+                                location,
+                                is_selected: sel,
+                                on_select: move |_| props.on_select.call(loc_id.clone()),
+                            }
                         }
-                    }
+                    })}
                 }
             }
         }

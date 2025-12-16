@@ -414,7 +414,10 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
 pub struct CharacterSheetFormProps {
     pub template: SheetTemplate,
     pub values: HashMap<String, FieldValue>,
+    #[props(default)]
     pub on_change: EventHandler<(String, FieldValue)>,
+    #[props(default)]
+    pub on_values_change: EventHandler<HashMap<String, FieldValue>>,
     #[props(default = false)]
     pub read_only: bool,
 }

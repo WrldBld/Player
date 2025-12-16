@@ -10,6 +10,7 @@ pub mod asset_gallery;
 pub mod generation_queue;
 pub mod suggestion_button;
 pub mod sheet_field_input;
+pub mod comfyui_banner;
 
 use dioxus::prelude::*;
 use crate::application::ports::outbound::Platform;
@@ -116,12 +117,25 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
         });
     });
 
+    let session_state = use_session_state();
+    
     rsx! {
         div {
             class: "creator-mode",
-            style: "height: 100%; display: grid; grid-template-columns: 280px 1fr; gap: 1rem; padding: 1rem;",
+            style: "height: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 1rem;",
 
-            // Left panel - Entity browser and generation queue
+            // ComfyUI status banner
+            if *session_state.comfyui_state.read() != "connected" {
+                comfyui_banner::ComfyUIBanner {
+                    state: session_state.comfyui_state.read().clone(),
+                    message: session_state.comfyui_message.read().clone(),
+                    retry_in_seconds: *session_state.comfyui_retry_in_seconds.read(),
+                }
+            }
+
+            div {
+                style: "display: grid; grid-template-columns: 280px 1fr; gap: 1rem; flex: 1; overflow: hidden;",
+                // Left panel - Entity browser and generation queue
             div {
                 class: "left-panel",
                 style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
@@ -145,7 +159,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                     on_navigate_to_entity: {
                         let mut selected_id = selected_entity_id;
                         let world_id = props.world_id.clone();
-                        move |(entity_type, entity_id)| {
+                        move |(entity_type, entity_id): (String, String)| {
                             // Set the selected entity ID so the form opens
                             selected_id.set(Some(entity_id.clone()));
                             // Note: Navigation to the correct tab is handled by the route
@@ -200,6 +214,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
                         PlaceholderPanel { title: "Map Editor", message: "Map editing coming soon" }
                     },
                 }
+            }
             }
         }
     }

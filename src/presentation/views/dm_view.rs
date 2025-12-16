@@ -13,7 +13,7 @@ use crate::presentation::components::dm_panel::trigger_challenge_modal::TriggerC
 use crate::presentation::components::settings::SettingsView;
 use crate::presentation::components::story_arc::timeline_view::TimelineView;
 use crate::presentation::components::story_arc::narrative_event_library::NarrativeEventLibrary;
-use crate::presentation::state::{use_game_state, use_session_state, PendingApproval};
+use crate::presentation::state::{use_game_state, use_session_state, use_generation_state, PendingApproval};
 use crate::routes::Route;
 
 /// The active tab/mode in the DM View
@@ -169,7 +169,9 @@ fn StoryArcContent(props: StoryArcContentProps) -> Element {
                         NarrativeEventLibrary { world_id: props.world_id.clone() }
                     },
                     StoryArcSubTab::EventChains => rsx! {
-                        EventChainsPlaceholder {}
+                        EventChainsView {
+                            world_id: props.world_id.clone(),
+                        }
                     },
                 }
             }
@@ -208,17 +210,110 @@ fn StoryArcTabLink(props: StoryArcTabLinkProps) -> Element {
     }
 }
 
-/// Placeholder for Event Chains (to be implemented in Phase 17G)
+/// Event Chains view - main component for managing event chains
 #[component]
-fn EventChainsPlaceholder() -> Element {
+fn EventChainsView(world_id: String) -> Element {
+    use crate::presentation::components::story_arc::event_chain_list::{EventChainList, ChainFilter};
+    use crate::presentation::components::story_arc::event_chain_visualizer::EventChainVisualizer;
+    use crate::presentation::components::story_arc::event_chain_editor::EventChainEditor;
+    use crate::application::services::EventChainData;
+    use crate::presentation::services::use_event_chain_service;
+
+    let event_chain_service = use_event_chain_service();
+    let mut selected_chain: Signal<Option<String>> = use_signal(|| None);
+    let mut selected_chain_data: Signal<Option<EventChainData>> = use_signal(|| None);
+    let mut show_editor: Signal<bool> = use_signal(|| false);
+    let mut editing_chain: Signal<Option<EventChainData>> = use_signal(|| None);
+    let mut filter: Signal<ChainFilter> = use_signal(|| ChainFilter::All);
+
+    // Load chain data when selected
+    let chain_id = selected_chain.read().clone();
+    let service = event_chain_service.clone();
+    use_effect(move || {
+        if let Some(id) = chain_id.as_ref() {
+            let svc = service.clone();
+            let id_clone = id.clone();
+            spawn(async move {
+                if let Ok(chain) = svc.get_chain(&id_clone).await {
+                    selected_chain_data.set(Some(chain));
+                }
+            });
+        } else {
+            selected_chain_data.set(None);
+        }
+    });
+
+    let chain_data = selected_chain_data.read().clone();
+
     rsx! {
         div {
-            style: "height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6b7280; padding: 2rem;",
+            style: "height: 100%; display: flex; flex-direction: column; gap: 1rem;",
 
-            div { style: "font-size: 4rem; margin-bottom: 1rem;", "🔗" }
-            h3 { style: "color: white; margin: 0 0 0.5rem 0;", "Event Chains" }
-            p { style: "text-align: center; max-width: 400px;", "Chain narrative events together to create branching storylines. Connect events with conditions and outcomes." }
-            p { style: "font-size: 0.875rem; margin-top: 1rem; color: #9ca3af;", "Coming soon..." }
+            // Header with create button
+            div {
+                style: "display: flex; justify-content: space-between; align-items: center;",
+                h2 {
+                    style: "color: white; margin: 0; font-size: 1.5rem;",
+                    "Event Chains"
+                }
+                button {
+                    onclick: move |_| {
+                        editing_chain.set(None);
+                        show_editor.set(true);
+                    },
+                    style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                    "+ Create Chain"
+                }
+            }
+
+            // Main content area
+            if *show_editor.read() {
+                EventChainEditor {
+                    chain: editing_chain.read().clone(),
+                    world_id: world_id.clone(),
+                    on_save: move |chain: EventChainData| {
+                        selected_chain.set(Some(chain.id.clone()));
+                        selected_chain_data.set(Some(chain.clone()));
+                        show_editor.set(false);
+                        editing_chain.set(None);
+                    },
+                    on_cancel: move |_| {
+                        show_editor.set(false);
+                        editing_chain.set(None);
+                    },
+                }
+            } else if let Some(chain) = chain_data.as_ref() {
+                // Show visualizer for selected chain
+                div {
+                    style: "display: flex; gap: 1rem; height: 100%;",
+                    // Sidebar with chain list
+                    div {
+                        style: "width: 300px; flex-shrink: 0; overflow-y: auto;",
+                        EventChainList {
+                            world_id: world_id.clone(),
+                            filter: *filter.read(),
+                            on_select_chain: move |id| selected_chain.set(Some(id)),
+                        }
+                    }
+                    // Visualizer
+                    div {
+                        style: "flex: 1; min-height: 0;",
+                        EventChainVisualizer {
+                            chain: chain.clone(),
+                            world_id: world_id.clone(),
+                            on_select_event: move |event_id| {
+                                // TODO: Navigate to event details
+                            },
+                        }
+                    }
+                }
+            } else {
+                EventChainList {
+                    world_id: world_id.clone(),
+                    filter: *filter.read(),
+                    on_select_chain: move |id| selected_chain.set(Some(id)),
+                }
+            }
         }
     }
 }
@@ -230,6 +325,8 @@ fn DirectorModeContent() -> Element {
     let game_state = use_game_state();
     let skill_service = use_skill_service();
     let challenge_service = use_challenge_service();
+    let generation_state = use_generation_state();
+    let mut show_queue_panel = use_signal(|| false);
 
     // Local state for directorial inputs
     let mut scene_notes = use_signal(|| String::new());
@@ -513,69 +610,72 @@ fn DirectorModeContent() -> Element {
             // PC Management Modal
             if *show_pc_management.read() {
                 if let Some(session_id) = session_state.session_id.read().as_ref() {
-                    rsx! {
+                    div {
+                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                        onclick: move |_| show_pc_management.set(false),
                         div {
-                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                            onclick: move |_| show_pc_management.set(false),
+                            style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                            onclick: move |e| e.stop_propagation(),
                             div {
-                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
-                                onclick: move |e| e.stop_propagation(),
-                                div {
-                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                                    h2 {
-                                        style: "margin: 0; color: white; font-size: 1.25rem;",
-                                        "Player Character Management"
-                                    }
-                                    button {
-                                        onclick: move |_| show_pc_management.set(false),
-                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
-                                        "×"
-                                    }
+                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                h2 {
+                                    style: "margin: 0; color: white; font-size: 1.25rem;",
+                                    "Player Character Management"
                                 }
-                                crate::presentation::components::dm_panel::pc_management::PCManagementPanel {
-                                    session_id: session_id.clone(),
-                                    on_view_as_character: move |character_id| {
-                                        // TODO: Implement view as character
-                                        tracing::info!("View as character: {}", character_id);
-                                        show_pc_management.set(false);
-                                    },
+                                button {
+                                    onclick: move |_| show_pc_management.set(false),
+                                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                    "×"
                                 }
+                            }
+                            crate::presentation::components::dm_panel::pc_management::PCManagementPanel {
+                                session_id: session_id.clone(),
+                                on_view_as_character: move |character_id| {
+                                    // TODO: Implement view as character
+                                    tracing::info!("View as character: {}", character_id);
+                                    show_pc_management.set(false);
+                                },
                             }
                         }
                     }
                 }
             }
 
+            // Director Queue Panel
+            if *show_queue_panel.read() {
+                crate::presentation::components::dm_panel::director_queue_panel::DirectorQueuePanel {
+                    on_close: move |_| show_queue_panel.set(false),
+                }
+            }
+
             // Location Navigator Modal
             if *show_location_navigator.read() {
                 if let Some(world_id) = game_state.world.read().as_ref().map(|w| w.world.id.clone()) {
-                    rsx! {
+                    div {
+                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                        onclick: move |_| show_location_navigator.set(false),
                         div {
-                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                            onclick: move |_| show_location_navigator.set(false),
+                            style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                            onclick: move |e| e.stop_propagation(),
                             div {
-                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
-                                onclick: move |e| e.stop_propagation(),
-                                div {
-                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                                    h2 {
-                                        style: "margin: 0; color: white; font-size: 1.25rem;",
-                                        "Location Navigator"
-                                    }
-                                    button {
-                                        onclick: move |_| show_location_navigator.set(false),
-                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
-                                        "×"
-                                    }
+                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                h2 {
+                                    style: "margin: 0; color: white; font-size: 1.25rem;",
+                                    "Location Navigator"
                                 }
-                                crate::presentation::components::dm_panel::location_navigator::LocationNavigator {
-                                    world_id: world_id.clone(),
-                                    on_preview: move |location_id| {
-                                        // TODO: Implement location preview
-                                        tracing::info!("Preview location: {}", location_id);
-                                        show_location_navigator.set(false);
-                                    },
+                                button {
+                                    onclick: move |_| show_location_navigator.set(false),
+                                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                    "×"
                                 }
+                            }
+                            crate::presentation::components::dm_panel::location_navigator::LocationNavigator {
+                                world_id: world_id.clone(),
+                                on_preview: move |location_id| {
+                                    // TODO: Implement location preview
+                                    tracing::info!("Preview location: {}", location_id);
+                                    show_location_navigator.set(false);
+                                },
                             }
                         }
                     }
@@ -588,34 +688,32 @@ fn DirectorModeContent() -> Element {
                     session_state.session_id.read().as_ref().map(|s| s.clone()),
                     game_state.world.read().as_ref().map(|w| w.world.id.clone())
                 ) {
-                    rsx! {
+                    div {
+                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                        onclick: move |_| show_character_perspective.set(false),
                         div {
-                            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-                            onclick: move |_| show_character_perspective.set(false),
+                            style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
+                            onclick: move |e| e.stop_propagation(),
                             div {
-                                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;",
-                                onclick: move |e| e.stop_propagation(),
-                                div {
-                                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                                    h2 {
-                                        style: "margin: 0; color: white; font-size: 1.25rem;",
-                                        "Character Perspective Viewer"
-                                    }
-                                    button {
-                                        onclick: move |_| show_character_perspective.set(false),
-                                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
-                                        "×"
-                                    }
+                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                                h2 {
+                                    style: "margin: 0; color: white; font-size: 1.25rem;",
+                                    "Character Perspective Viewer"
                                 }
-                                crate::presentation::components::dm_panel::character_perspective::CharacterPerspectiveViewer {
-                                    session_id: session_id.clone(),
-                                    world_id: world_id.clone(),
-                                    on_view_as: move |character_id| {
-                                        // TODO: Implement view as character
-                                        tracing::info!("View as character: {}", character_id);
-                                        show_character_perspective.set(false);
-                                    },
+                                button {
+                                    onclick: move |_| show_character_perspective.set(false),
+                                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                                    "×"
                                 }
+                            }
+                            crate::presentation::components::dm_panel::character_perspective::CharacterPerspectiveViewer {
+                                session_id: session_id.clone(),
+                                world_id: world_id.clone(),
+                                on_view_as: move |character_id| {
+                                    // TODO: Implement view as character
+                                    tracing::info!("View as character: {}", character_id);
+                                    show_character_perspective.set(false);
+                                },
                             }
                         }
                     }

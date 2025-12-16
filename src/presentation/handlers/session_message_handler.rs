@@ -231,6 +231,17 @@ pub fn handle_server_message(
             generation_state.suggestion_failed(&request_id, error);
         }
 
+        ServerMessage::ComfyUIStateChanged {
+            state,
+            message,
+            retry_in_seconds,
+        } => {
+            tracing::info!("ComfyUI state changed: {} - {:?}", state, message);
+            session_state.comfyui_state.set(state);
+            session_state.comfyui_message.set(message);
+            session_state.comfyui_retry_in_seconds.set(retry_in_seconds);
+        }
+
         ServerMessage::ChallengePrompt {
             challenge_id,
             challenge_name,
@@ -297,6 +308,25 @@ pub fn handle_server_message(
             );
             // TODO (Phase 17 Story Arc UI): Update Story Arc timeline when the tab is implemented
             // For now, this is logged to console for DM awareness
+        }
+
+        ServerMessage::SplitPartyNotification {
+            location_count,
+            locations,
+        } => {
+            tracing::info!(
+                "Party is split across {} locations",
+                location_count
+            );
+            // TODO: Update UI to show split party warning with location information
+            // For now, this is logged to console for DM awareness
+            for loc in locations {
+                tracing::debug!(
+                    "Location: {} - {} PC(s)",
+                    loc.location_name,
+                    loc.pc_count
+                );
+            }
         }
     }
 }

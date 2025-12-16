@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use std::sync::Arc;
 
 use crate::application::services::{
-    AssetService, CharacterService, ChallengeService, LocationService, NarrativeEventService,
+    AssetService, CharacterService, ChallengeService, EventChainService, LocationService, NarrativeEventService,
     PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
 use crate::infrastructure::http_client::ApiAdapter;
@@ -25,6 +25,7 @@ pub type NarrativeEventSvc = NarrativeEventService<ApiAdapter>;
 pub type WorkflowSvc = WorkflowService<ApiAdapter>;
 pub type AssetSvc = AssetService<ApiAdapter>;
 pub type SuggestionSvc = SuggestionService<ApiAdapter>;
+pub type EventChainSvc = EventChainService<ApiAdapter>;
 
 /// All services wrapped for context provision
 #[derive(Clone)]
@@ -40,6 +41,7 @@ pub struct Services {
     pub workflow: Arc<WorkflowSvc>,
     pub asset: Arc<AssetSvc>,
     pub suggestion: Arc<SuggestionSvc>,
+    pub event_chain: Arc<EventChainSvc>,
 }
 
 impl Default for Services {
@@ -63,7 +65,8 @@ impl Services {
             narrative_event: Arc::new(NarrativeEventService::new(api.clone())),
             workflow: Arc::new(WorkflowService::new(api.clone())),
             asset: Arc::new(AssetService::new(api.clone())),
-            suggestion: Arc::new(SuggestionService::new(api)),
+            suggestion: Arc::new(SuggestionService::new(api.clone())),
+            event_chain: Arc::new(EventChainService::new(api)),
         }
     }
 }
@@ -132,6 +135,12 @@ pub fn use_asset_service() -> Arc<AssetSvc> {
 pub fn use_suggestion_service() -> Arc<SuggestionSvc> {
     let services = use_context::<Services>();
     services.suggestion.clone()
+}
+
+/// Hook to access the EventChainService from context
+pub fn use_event_chain_service() -> Arc<EventChainSvc> {
+    let services = use_context::<Services>();
+    services.event_chain.clone()
 }
 
 use crate::presentation::state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};

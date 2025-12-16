@@ -2,8 +2,6 @@
 
 use dioxus::prelude::*;
 
-use dioxus::prelude::*;
-
 use crate::presentation::state::{use_generation_state, use_game_state, BatchStatus, GenerationBatch, SuggestionStatus, SuggestionTask};
 use crate::presentation::services::{
     visible_batches,
@@ -44,10 +42,7 @@ pub struct GenerationQueuePanelProps {
 
 /// Panel showing generation queue status (images and suggestions)
 #[component]
-pub fn GenerationQueuePanel(
-    #[props(default)]
-    props: GenerationQueuePanelProps,
-) -> Element {
+pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
     let generation_state = use_generation_state();
     let game_state = use_game_state();
     let mut selected_suggestion: Signal<Option<SuggestionTask>> = use_signal(|| None);
@@ -146,6 +141,35 @@ pub fn GenerationQueuePanel(
                                 style: "background: #f59e0b; color: white; border-radius: 0.75rem; padding: 0.125rem 0.375rem; font-size: 0.625rem; font-weight: bold;",
                                 "{total_active}"
                             }
+                        }
+                    }
+                    // Clear All Completed button
+                    {
+                        let completed_count = all_batches.iter()
+                            .filter(|b| matches!(b.status, BatchStatus::Ready { .. }))
+                            .count();
+                        if completed_count > 0 {
+                            rsx! {
+                                button {
+                                    onclick: {
+                                        let mut state = use_generation_state();
+                                        move |_| {
+                                            let batches = state.get_batches();
+                                            let to_remove: Vec<_> = batches.iter()
+                                                .filter(|b| matches!(b.status, BatchStatus::Ready { .. }))
+                                                .map(|b| b.batch_id.clone())
+                                                .collect();
+                                            for batch_id in to_remove {
+                                                state.remove_batch(&batch_id);
+                                            }
+                                        }
+                                    },
+                                    style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                    "Clear All Completed"
+                                }
+                            }
+                        } else {
+                            rsx! { }
                         }
                     }
                     label {
@@ -315,13 +339,14 @@ fn QueueItemRow(
     on_navigate_to_entity: Option<EventHandler<(String, String)>>,
 ) -> Element {
     let mut expanded_error: Signal<bool> = use_signal(|| false);
+    let mut expanded_details: Signal<bool> = use_signal(|| false);
     let batch_id = batch.batch_id.clone();
     let (status_icon, status_color, status_text) = match &batch.status {
-        BatchStatus::Queued { position } => ("🖼️", "#9ca3af", format!("#{} in queue", position)),
-        BatchStatus::Generating { progress } => ("⚙️", "#f59e0b", format!("{}%", progress)),
-        BatchStatus::Ready { asset_count } => ("✅", "#22c55e", format!("{} ready", asset_count)),
-        BatchStatus::Failed { error: _ } => ("❌", "#ef4444", "Failed".into()),
-    };
+                    BatchStatus::Queued { position } => ("🖼️", "#9ca3af", format!("#{} in queue", position)),
+                    BatchStatus::Generating { progress } => ("⚙️", "#f59e0b", format!("{}%", progress)),
+                    BatchStatus::Ready { asset_count } => ("✅", "#22c55e", format!("{} ready", asset_count)),
+                    BatchStatus::Failed { error: _ } => ("❌", "#ef4444", "Failed".into()),
+                };
 
     let display_name = format!("{} ({})", batch.entity_id, batch.entity_type);
 
@@ -334,149 +359,213 @@ fn QueueItemRow(
 
     rsx! {
         div {
-            class: "queue-item",
-            style: format!(
-                "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border-radius: 0.25rem; {}",
-                opacity_style
-            ),
-
-            span { style: format!("color: {};", status_color), "{status_icon}" }
-
-            div { style: "flex: 1; min-width: 0;",
-                div { style: "color: white; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
-                    "{display_name}"
-                }
-                div { style: "color: #6b7280; font-size: 0.75rem;",
-                    "{batch.asset_type}"
-                }
-            }
-
+            style: "display: flex; flex-direction: column;",
+            
             div {
-                style: "display: flex; align-items: center; gap: 0.25rem;",
-                match &batch.status {
-                    BatchStatus::Generating { progress } => rsx! {
-                        div {
-                            style: "width: 50px; height: 4px; background: #374151; border-radius: 2px; overflow: hidden;",
-                            div {
-                                style: format!("width: {}%; height: 100%; background: #f59e0b;", progress),
-                            }
-                        }
-                        button {
-                            onclick: {
-                                let batch_id = batch.batch_id.clone();
-                                let asset_service = use_asset_service();
-                                let mut state = use_generation_state();
-                                move |_| {
-                                    let bid = batch_id.clone();
-                                    let svc = asset_service.clone();
-                                    let mut gen_state = state;
-                                    spawn(async move {
-                                        match svc.cancel_batch(&bid).await {
-                                            Ok(_) => {
-                                                tracing::info!("Cancelled batch: {}", bid);
-                                                gen_state.remove_batch(&bid);
-                                            }
-                                            Err(e) => {
-                                                tracing::error!("Failed to cancel batch {}: {}", bid, e);
-                                            }
-                                        }
-                                    });
-                                }
-                            },
-                            style: "padding: 0.125rem 0.375rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem;",
-                            "Cancel"
-                        }
-                    },
-                    BatchStatus::Ready { .. } => rsx! {
-                        button {
-                            onclick: {
-                                let batch_id = batch.batch_id.clone();
-                                let entity_type = batch.entity_type.clone();
-                                let entity_id = batch.entity_id.clone();
-                                let mut state = use_generation_state();
-                                let world_id_clone = world_id.clone();
-                                let nav_handler = on_navigate_to_entity.clone();
-                                move |_| {
-                                    let bid = batch_id.clone();
-                                    let wid = world_id_clone.clone();
-                                    let mut gen_state = state;
-                                    let nav = nav_handler.clone();
-                                spawn(async move {
-                                        if let Err(e) = mark_batch_read_and_sync(&mut gen_state, &bid, wid.as_deref()).await {
-                                        tracing::error!("Failed to mark batch read and sync: {}", e);
-                                    }
-                                });
-                                    // Navigate to entity if handler provided
-                                    if let Some(handler) = nav {
-                                        handler.call((entity_type.clone(), entity_id.clone()));
-                                    }
-                                }
-                            },
-                            style: "padding: 0.25rem 0.5rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
-                            "Select"
-                        }
-                        button {
-                            onclick: {
-                                let batch_id = batch_id.clone();
-                                move |_| {
+                class: "queue-item",
+                style: format!(
+                    "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border-radius: 0.25rem; {}",
+                    opacity_style
+                ),
+
+                span { style: format!("color: {};", status_color), "{status_icon}" }
+
+                div { style: "flex: 1; min-width: 0;",
+                    div { style: "color: white; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                        "{display_name}"
+                    }
+                    div { style: "color: #6b7280; font-size: 0.75rem;",
+                        "{batch.asset_type}"
+                    }
+                }
+
+                div {
+                    style: "display: flex; align-items: center; gap: 0.25rem;",
+                    match &batch.status {
+                        BatchStatus::Queued { .. } => rsx! {
+                            button {
+                                onclick: {
+                                    let batch_id = batch.batch_id.clone();
+                                    let asset_service = use_asset_service();
                                     let mut state = use_generation_state();
-                                    state.remove_batch(&batch_id);
+                                    move |_| {
+                                        let bid = batch_id.clone();
+                                        let svc = asset_service.clone();
+                                        let mut gen_state = state;
+                                        spawn(async move {
+                                            match svc.cancel_batch(&bid).await {
+                                                Ok(_) => {
+                                                    tracing::info!("Cancelled batch: {}", bid);
+                                                    gen_state.remove_batch(&bid);
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!("Failed to cancel batch {}: {}", bid, e);
+                                                }
+                                            }
+                                        });
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Cancel"
+                            }
+                            button {
+                                onclick: move |_| {
+                                    let current = *expanded_details.read();
+                                    expanded_details.set(!current);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                if *expanded_details.read() { "Hide Details" } else { "Details" }
+                            }
+                        },
+                        BatchStatus::Generating { progress } => rsx! {
+                            div {
+                                style: "width: 50px; height: 4px; background: #374151; border-radius: 2px; overflow: hidden;",
+                                div {
+                                    style: format!("width: {}%; height: 100%; background: #f59e0b;", progress),
                                 }
-                            },
-                            style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
-                            "Clear"
-                        }
-                    },
-                    BatchStatus::Failed { error: _ } => rsx! {
-                        button {
-                            onclick: move |_| {
-                                let current = *expanded_error.read();
-                                expanded_error.set(!current);
-                            },
-                            style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
-                            if *expanded_error.read() { "Hide Error" } else { "Show Error" }
-                        }
-                        button {
-                            onclick: {
-                                let batch_id = batch.batch_id.clone();
-                                let asset_service = use_asset_service();
-                                let mut state = use_generation_state();
-                                move |_| {
-                                    let bid = batch_id.clone();
-                                    let svc = asset_service.clone();
-                                    let mut gen_state = state;
+                            }
+                            button {
+                                onclick: {
+                                    let batch_id = batch.batch_id.clone();
+                                    let asset_service = use_asset_service();
+                                    let mut state = use_generation_state();
+                                    move |_| {
+                                        let bid = batch_id.clone();
+                                        let svc = asset_service.clone();
+                                        let mut gen_state = state;
+                                        spawn(async move {
+                                            match svc.cancel_batch(&bid).await {
+                                                Ok(_) => {
+                                                    tracing::info!("Cancelled batch: {}", bid);
+                                                    gen_state.remove_batch(&bid);
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!("Failed to cancel batch {}: {}", bid, e);
+                                                }
+                                            }
+                                        });
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Cancel"
+                            }
+                            button {
+                                onclick: move |_| {
+                                    let current = *expanded_details.read();
+                                    expanded_details.set(!current);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                if *expanded_details.read() { "Hide Details" } else { "Details" }
+                            }
+                        },
+                        BatchStatus::Ready { .. } => rsx! {
+                            button {
+                                onclick: {
+                                    let batch_id = batch.batch_id.clone();
+                                    let entity_type = batch.entity_type.clone();
+                                    let entity_id = batch.entity_id.clone();
+                                    let mut state = use_generation_state();
+                                    let world_id_clone = world_id.clone();
+                                    let nav_handler = on_navigate_to_entity.clone();
+                                    move |_| {
+                                        let bid = batch_id.clone();
+                                        let wid = world_id_clone.clone();
+                                        let mut gen_state = state;
+                                        let nav = nav_handler.clone();
                                     spawn(async move {
-                                        match svc.retry_batch(&bid).await {
-                                            Ok(new_batch_id) => {
-                                                tracing::info!("Retried batch {} -> {}", bid, new_batch_id);
-                                                // Remove old failed batch
-                                                gen_state.remove_batch(&bid);
-                                                // New batch will be added via WebSocket event
-                                            }
-                                            Err(e) => {
-                                                tracing::error!("Failed to retry batch {}: {}", bid, e);
-                                            }
+                                            if let Err(e) = mark_batch_read_and_sync(&mut gen_state, &bid, wid.as_deref()).await {
+                                            tracing::error!("Failed to mark batch read and sync: {}", e);
                                         }
                                     });
-                                }
-                            },
-                            style: "padding: 0.25rem 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
-                            "Retry"
-                        }
-                        button {
-                            onclick: move |_| {
-                                let mut state = use_generation_state();
-                                state.remove_batch(&batch.batch_id);
-                            },
-                            style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
-                            "Clear"
-                        }
-                    },
-                    _ => rsx! {
-                        span { style: format!("color: {}; font-size: 0.75rem;", status_color), "{status_text}" }
-                    },
+                                        // Navigate to entity if handler provided
+                                        if let Some(handler) = nav {
+                                            handler.call((entity_type.clone(), entity_id.clone()));
+                                        }
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Select"
+                            }
+                            button {
+                                onclick: {
+                                    let batch_id = batch_id.clone();
+                                    move |_| {
+                                        let mut state = use_generation_state();
+                                        state.remove_batch(&batch_id);
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Clear"
+                            }
+                            button {
+                                onclick: move |_| {
+                                    let current = *expanded_details.read();
+                                    expanded_details.set(!current);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                if *expanded_details.read() { "Hide Details" } else { "Details" }
+                            }
+                        },
+                        BatchStatus::Failed { error: _ } => rsx! {
+                            button {
+                                onclick: move |_| {
+                                    let current = *expanded_error.read();
+                                    expanded_error.set(!current);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                if *expanded_error.read() { "Hide Error" } else { "Show Error" }
+                            }
+                            button {
+                                onclick: {
+                                    let batch_id = batch.batch_id.clone();
+                                    let asset_service = use_asset_service();
+                                    let mut state = use_generation_state();
+                                    move |_| {
+                                        let bid = batch_id.clone();
+                                        let svc = asset_service.clone();
+                                        let mut gen_state = state;
+                                        spawn(async move {
+                                            match svc.retry_batch(&bid).await {
+                                                Ok(new_batch_id) => {
+                                                    tracing::info!("Retried batch {} -> {}", bid, new_batch_id);
+                                                    // Remove old failed batch
+                                                    gen_state.remove_batch(&bid);
+                                                    // New batch will be added via WebSocket event
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!("Failed to retry batch {}: {}", bid, e);
+                                                }
+                                            }
+                                        });
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Retry"
+                            }
+                            button {
+                                onclick: {
+                                    let batch_id_copy = batch_id.clone();
+                                    move |_| {
+                                        let mut state = use_generation_state();
+                                        state.remove_batch(&batch_id_copy);
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                "Clear"
+                            }
+                            button {
+                                onclick: move |_| {
+                                    let current = *expanded_details.read();
+                                    expanded_details.set(!current);
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                if *expanded_details.read() { "Hide Details" } else { "Details" }
+                            }
+                        },
+                    }
                 }
             }
+            
             
             // Expanded error details for failed batches
             if let BatchStatus::Failed { error } = &batch.status {
@@ -495,6 +584,25 @@ fn QueueItemRow(
                             style: "color: #e5e7eb; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-family: 'Courier New', monospace;",
                             "{error}"
                         }
+                    }
+                }
+            }
+
+            // Expanded batch details
+            if *expanded_details.read() {
+                div {
+                    style: "margin-top: 0.5rem; padding: 0.75rem; background: #1f2937; border-radius: 0.375rem; border-left: 3px solid #8b5cf6;",
+                    div {
+                        style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                        "Entity: {batch.entity_type} - {batch.entity_id}"
+                    }
+                    div {
+                        style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                        "Asset Type: {batch.asset_type}"
+                    }
+                    div {
+                        style: "color: #9ca3af; font-size: 0.75rem;",
+                        "Batch ID: {batch.batch_id}"
                     }
                 }
             }

@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 
 use crate::application::dto::{FieldValue, SheetTemplate};
-use crate::application::services::{PlayerCharacterData, UpdatePlayerCharacterRequest, CharacterSheetDataApi};
+use crate::application::services::{PlayerCharacterData, UpdatePlayerCharacterRequest};
+use crate::application::services::player_character_service::CharacterSheetDataApi;
 use crate::presentation::services::{use_player_character_service, use_world_service};
 
 /// Props for EditCharacterModal
@@ -110,10 +111,8 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
     rsx! {
         div {
             style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000;",
-            onclick: move |e| {
-                if e.target() == e.current_target() {
-                    props.on_close.call(());
-                }
+            onclick: move |_| {
+                props.on_close.call(());
             },
             div {
                 style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;",
@@ -176,7 +175,7 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
                     }
 
                     // Character Sheet
-                    if !loading.read() {
+                    if !*loading.read() {
                         if let Some(template) = sheet_template.read().as_ref() {
                             div {
                                 h3 {

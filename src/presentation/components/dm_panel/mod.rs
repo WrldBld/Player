@@ -10,6 +10,8 @@ pub mod conversation_log;
 pub mod directorial_notes;
 pub mod location_navigator;
 pub mod npc_motivation;
+pub mod director_generate_modal;
+pub mod director_queue_panel;
 pub mod pc_management;
 pub mod scene_preview;
 pub mod tone_selector;

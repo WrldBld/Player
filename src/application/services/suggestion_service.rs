@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::application::ports::outbound::{ApiError, ApiPort};
 
 /// Context for generating suggestions
-#[derive(Clone, Default, PartialEq, Serialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize)]
 pub struct SuggestionContext {
     /// Type of entity (e.g., "character", "location", "tavern", "forest")
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -166,6 +166,10 @@ pub struct SessionState {
     pub player_skills: Signal<Vec<PlayerSkillData>>,
     /// Recent approval decisions for DM decision history
     pub decision_history: Signal<Vec<ApprovalHistoryEntry>>,
+    /// ComfyUI connection state
+    pub comfyui_state: Signal<String>, // "connected", "degraded", "disconnected", "circuit_open"
+    pub comfyui_message: Signal<Option<String>>,
+    pub comfyui_retry_in_seconds: Signal<Option<u32>>,
 }
 
 impl SessionState {
@@ -185,6 +189,9 @@ impl SessionState {
             challenge_results: Signal::new(Vec::new()),
             player_skills: Signal::new(Vec::new()),
             decision_history: Signal::new(Vec::new()),
+            comfyui_state: Signal::new("connected".to_string()),
+            comfyui_message: Signal::new(None),
+            comfyui_retry_in_seconds: Signal::new(None),
         }
     }
 
