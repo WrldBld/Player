@@ -92,6 +92,26 @@ impl<A: ApiPort> AssetService<A> {
             .post_no_response("/api/assets/generate", request)
             .await
     }
+
+    /// Cancel a generation batch
+    pub async fn cancel_batch(&self, batch_id: &str) -> Result<(), ApiError> {
+        self.api.delete(&format!("/api/assets/batch/{}", batch_id)).await
+    }
+
+    /// Retry a failed generation batch
+    pub async fn retry_batch(&self, batch_id: &str) -> Result<String, ApiError> {
+        #[derive(Serialize)]
+        struct EmptyBody {}
+        #[derive(Deserialize)]
+        struct RetryResponse {
+            id: String,
+        }
+        let response: RetryResponse = self
+            .api
+            .post(&format!("/api/assets/batch/{}/retry", batch_id), &EmptyBody {})
+            .await?;
+        Ok(response.id)
+    }
 }
 
 impl<A: ApiPort + Clone> Clone for AssetService<A> {

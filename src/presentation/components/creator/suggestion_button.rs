@@ -117,11 +117,12 @@ pub fn SuggestionButton(
                         platform.log_info(&format!("Suggestion request queued: {}", req_id));
                         request_id.set(Some(req_id.clone()));
                         
-                        // Add to generation state
+                        // Add to generation state with context for retry
                         generation_state.add_suggestion_task(
                             req_id,
                             field_type,
                             None, // entity_id not available here
+                            Some(context.clone()), // Store context for retry
                         );
                     }
                     Err(e) => {

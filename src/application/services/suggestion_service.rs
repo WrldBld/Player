@@ -204,6 +204,11 @@ impl<A: ApiPort> SuggestionService<A> {
             .await?;
         Ok(response.request_id)
     }
+
+    /// Cancel a pending suggestion request
+    pub async fn cancel_suggestion(&self, request_id: &str) -> Result<(), ApiError> {
+        self.api.delete(&format!("/api/suggest/{}/cancel", request_id)).await
+    }
 }
 
 impl<A: ApiPort + Clone> Clone for SuggestionService<A> {

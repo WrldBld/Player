@@ -237,6 +237,7 @@ pub async fn hydrate_generation_queue(
             s.request_id.clone(),
             s.field_type,
             s.entity_id,
+            None, // Context not available from snapshot
         );
         // Override status if needed using the same request_id
         let req_id = s.request_id;
