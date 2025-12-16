@@ -168,23 +168,23 @@ pub fn GenerationQueuePanel(
                     // Filter tabs
                     div {
                         style: "display: flex; gap: 0.25rem; border-bottom: 1px solid #374151; flex: 1;",
-                        FilterTab {
-                            label: "All",
-                            count: total_count,
-                            is_active: filter_val == QueueFilter::All,
-                            onclick: move |_| active_filter.set(QueueFilter::All),
-                        }
-                        FilterTab {
-                            label: "Images",
-                            count: batch_count,
-                            is_active: filter_val == QueueFilter::Images,
-                            onclick: move |_| active_filter.set(QueueFilter::Images),
-                        }
-                        FilterTab {
-                            label: "Suggestions",
-                            count: suggestion_count,
-                            is_active: filter_val == QueueFilter::Suggestions,
-                            onclick: move |_| active_filter.set(QueueFilter::Suggestions),
+                    FilterTab {
+                        label: "All",
+                        count: total_count,
+                        is_active: filter_val == QueueFilter::All,
+                        onclick: move |_| active_filter.set(QueueFilter::All),
+                    }
+                    FilterTab {
+                        label: "Images",
+                        count: batch_count,
+                        is_active: filter_val == QueueFilter::Images,
+                        onclick: move |_| active_filter.set(QueueFilter::Images),
+                    }
+                    FilterTab {
+                        label: "Suggestions",
+                        count: suggestion_count,
+                        is_active: filter_val == QueueFilter::Suggestions,
+                        onclick: move |_| active_filter.set(QueueFilter::Suggestions),
                         }
                     }
                     // Sort dropdown
@@ -401,11 +401,11 @@ fn QueueItemRow(
                                     let wid = world_id_clone.clone();
                                     let mut gen_state = state;
                                     let nav = nav_handler.clone();
-                                    spawn(async move {
+                                spawn(async move {
                                         if let Err(e) = mark_batch_read_and_sync(&mut gen_state, &bid, wid.as_deref()).await {
-                                            tracing::error!("Failed to mark batch read and sync: {}", e);
-                                        }
-                                    });
+                                        tracing::error!("Failed to mark batch read and sync: {}", e);
+                                    }
+                                });
                                     // Navigate to entity if handler provided
                                     if let Some(handler) = nav {
                                         handler.call((entity_type.clone(), entity_id.clone()));
@@ -574,11 +574,11 @@ fn SuggestionQueueRow(
                                     let wid = world_id_clone.clone();
                                     let mut gen_state = state;
                                     let nav = nav_handler.clone();
-                                    spawn(async move {
+                                spawn(async move {
                                         if let Err(e) = mark_suggestion_read_and_sync(&mut gen_state, &req_id_clone, wid.as_deref()).await {
-                                            tracing::error!("Failed to mark suggestion read and sync: {}", e);
-                                        }
-                                    });
+                                        tracing::error!("Failed to mark suggestion read and sync: {}", e);
+                                    }
+                                });
                                     // Navigate to entity if available and handler provided
                                     if let (Some(entity_id), Some(handler)) = (entity_id.clone(), nav) {
                                         // Determine entity type from field type

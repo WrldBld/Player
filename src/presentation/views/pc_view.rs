@@ -90,10 +90,10 @@ pub fn PCView(props: PCViewProps) -> Element {
                 }
                 
                 // Connection status
-                if !is_connected {
-                    div {
+            if !is_connected {
+                div {
                         style: "padding: 0.5rem 1rem; background: rgba(239,68,68,0.8); color: white; border-radius: 0.5rem; font-size: 0.75rem;",
-                        "Disconnected"
+                    "Disconnected"
                     }
                 }
             }
