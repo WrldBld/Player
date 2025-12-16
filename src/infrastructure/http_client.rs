@@ -24,7 +24,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
 
-use crate::application::ports::outbound::Platform;
 use super::api::get_engine_url;
 
 /// API error type for all HTTP operations
@@ -85,9 +84,11 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            // Attach anonymous user header if available
             let mut request = Request::get(&url);
-            if let Some(user_id) = Platform::maybe_user_id() {
+            // Attach anonymous user header if available (WASM only)
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
                 request = request.header("X-User-Id", &user_id);
             }
 
@@ -112,11 +113,8 @@ impl HttpClient {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = reqwest::Client::new();
-            let mut builder = client.get(&url);
-            if let Some(user_id) = Platform::maybe_user_id() {
-                builder = builder.header("X-User-Id", user_id);
-            }
-            let response = builder
+            let response = client
+                .get(&url)
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -144,7 +142,9 @@ impl HttpClient {
             let body_str = serde_json::to_string(body)
                 .map_err(|e| ApiError::SerializeError(e.to_string()))?;
             let mut request = Request::post(&url).header("Content-Type", "application/json");
-            if let Some(user_id) = Platform::maybe_user_id() {
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
                 request = request.header("X-User-Id", &user_id);
             }
 
@@ -171,11 +171,9 @@ impl HttpClient {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = reqwest::Client::new();
-            let mut builder = client.post(&url).json(body);
-            if let Some(user_id) = Platform::maybe_user_id() {
-                builder = builder.header("X-User-Id", user_id);
-            }
-            let response = builder
+            let response = client
+                .post(&url)
+                .json(body)
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -203,7 +201,9 @@ impl HttpClient {
             let body_str = serde_json::to_string(body)
                 .map_err(|e| ApiError::SerializeError(e.to_string()))?;
             let mut request = Request::post(&url).header("Content-Type", "application/json");
-            if let Some(user_id) = Platform::maybe_user_id() {
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
                 request = request.header("X-User-Id", &user_id);
             }
 
@@ -227,11 +227,9 @@ impl HttpClient {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = reqwest::Client::new();
-            let mut builder = client.post(&url).json(body);
-            if let Some(user_id) = Platform::maybe_user_id() {
-                builder = builder.header("X-User-Id", user_id);
-            }
-            let response = builder
+            let response = client
+                .post(&url)
+                .json(body)
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -254,7 +252,9 @@ impl HttpClient {
             use gloo_net::http::Request;
 
             let mut request = Request::post(&url);
-            if let Some(user_id) = Platform::maybe_user_id() {
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
                 request = request.header("X-User-Id", &user_id);
             }
 
@@ -275,11 +275,7 @@ impl HttpClient {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let client = reqwest::Client::new();
-            let mut builder = client.post(&url);
-            if let Some(user_id) = Platform::maybe_user_id() {
-                builder = builder.header("X-User-Id", user_id);
-            }
-            let response = builder.send()
+            let response = client.post(&url).send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
 

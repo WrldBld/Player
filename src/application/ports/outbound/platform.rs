@@ -245,26 +245,6 @@ impl Platform {
         new_id
     }
 
-    /// Best-effort access to the current anonymous user ID without allocation.
-    ///
-    /// This is primarily used by infrastructure (e.g. HTTP client) to attach
-    /// the `X-User-Id` header. It reads directly from storage and does not
-    /// generate a new ID if missing.
-    pub fn maybe_user_id() -> Option<String> {
-        // On WASM, we can read from the same storage backend used elsewhere.
-        #[cfg(target_arch = "wasm32")]
-        {
-            use crate::infrastructure::storage;
-            storage::load(storage::STORAGE_KEY_USER_ID)
-        }
-
-        // On desktop, we currently don't persist a user ID via this path.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            None
-        }
-    }
-
     /// Log an info message
     pub fn log_info(&self, msg: &str) {
         self.log.info(msg)
