@@ -6,15 +6,13 @@
 //! - Spectator: Can watch existing worlds
 
 use dioxus::prelude::*;
-use serde::Deserialize;
 
 use crate::application::dto::{
     DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
     SuccessComparison, SessionWorldSnapshot,
 };
-use crate::application::services::world_service::WorldSummary;
+use crate::application::services::world_service::{WorldSummary, SessionInfo};
 use crate::application::ports::outbound::Platform;
-use crate::infrastructure::http_client::HttpClient;
 use crate::presentation::services::use_world_service;
 use crate::presentation::state::GameState;
 use crate::UserRole;
@@ -37,7 +35,7 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
     let platform = use_context::<Platform>();
     let world_service = use_world_service();
     let mut worlds: Signal<Vec<WorldSummary>> = use_signal(Vec::new);
-    let mut sessions: Signal<Vec<SessionInfoDto>> = use_signal(Vec::new);
+    let mut sessions: Signal<Vec<SessionInfo>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| true);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut show_create_form = use_signal(|| false);
@@ -68,9 +66,11 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
 
     // Fetch active sessions for all worlds (for DM "Continue" and Player/Spectator views)
     let user_id = platform.get_user_id();
+    let world_service_for_sessions = world_service.clone();
     use_effect(move || {
+        let svc = world_service_for_sessions.clone();
         spawn(async move {
-            match HttpClient::get::<Vec<SessionInfoDto>>("/api/sessions").await {
+            match svc.list_sessions().await {
                 Ok(list) => {
                     sessions.set(list);
                 }
@@ -251,17 +251,19 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                                     on_select: {
                                         let mut world_to_load = world_to_load.clone();
                                         let user_id = user_id.clone();
+                                        let svc = world_service.clone();
                                         move |id: String| {
                                             if is_dm {
                                                 // For DMs, ensure there is an active deterministic session
                                                 // for this world. We optimistically start loading the world,
-                                                // and fire-and-forget the session POST.
+                                                // and fire-and-forget the session creation.
                                                 world_to_load.set(Some(id.clone()));
-                                                let body = serde_json::json!({ "dm_user_id": user_id.clone() });
-                                                let path = format!("/api/worlds/{}/sessions", id);
+                                                let world_id = id.clone();
+                                                let dm_id = user_id.clone();
+                                                let svc_for_async = svc.clone();
                                                 spawn(async move {
                                                     if let Err(e) =
-                                                        HttpClient::post_no_response(&path, &body).await
+                                                        svc_for_async.create_session(&world_id, &dm_id).await
                                                     {
                                                         tracing::error!(
                                                             "Failed to create/resume DM session: {}",
@@ -324,16 +326,6 @@ fn WorldCard(
             }
         }
     }
-}
-
-/// Lightweight SessionInfo DTO matching the Engine API for /api/sessions.
-#[derive(Debug, Clone, Deserialize)]
-struct SessionInfoDto {
-    pub session_id: String,
-    pub world_id: String,
-    pub dm_user_id: String,
-    pub active_player_count: usize,
-    pub created_at: i64,
 }
 
 /// Form for creating a new world (DM only)

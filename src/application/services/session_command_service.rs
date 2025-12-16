@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use crate::application::ports::outbound::{ApprovalDecision, DirectorialContext, GameConnectionPort};
+use crate::application::ports::outbound::{ApprovalDecision, DiceInputType, DirectorialContext, GameConnectionPort};
 
 /// Application service for sending session commands via the game connection.
 #[derive(Clone)]
@@ -34,6 +34,10 @@ impl SessionCommandService {
 
     pub fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> Result<()> {
         self.connection.submit_challenge_roll(challenge_id, roll)
+    }
+
+    pub fn submit_challenge_roll_input(&self, challenge_id: &str, input: DiceInputType) -> Result<()> {
+        self.connection.submit_challenge_roll_input(challenge_id, input)
     }
 }
 

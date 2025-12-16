@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 
 use crate::domain::entities::PlayerAction;
-use crate::application::dto::{FieldValue, SheetTemplate, InteractionData};
+use crate::application::dto::{FieldValue, SheetTemplate, InteractionData, DiceInputType};
 use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
 use crate::presentation::components::tactical::ChallengeRollModal;
@@ -310,11 +310,13 @@ pub fn PCView(props: PCViewProps) -> Element {
                     difficulty_display: challenge.difficulty_display.clone(),
                     description: challenge.description.clone(),
                     character_modifier: challenge.character_modifier,
+                    suggested_dice: challenge.suggested_dice.clone(),
+                    rule_system_hint: challenge.rule_system_hint.clone(),
                     on_roll: {
                         let session_state = session_state.clone();
                         let challenge_id = challenge.challenge_id.clone();
-                        move |roll: i32| {
-                            send_challenge_roll(&session_state, &challenge_id, roll);
+                        move |input: DiceInputType| {
+                            send_challenge_roll_input(&session_state, &challenge_id, input);
                         }
                     },
                     on_close: {
@@ -419,17 +421,17 @@ fn handle_interaction(
     send_player_action(session_state, action);
 }
 
-/// Send a challenge roll via WebSocket
-fn send_challenge_roll(
+/// Send a challenge roll with dice input via WebSocket
+fn send_challenge_roll_input(
     session_state: &crate::presentation::state::SessionState,
     challenge_id: &str,
-    roll: i32,
+    input: DiceInputType,
 ) {
     let client_binding = session_state.engine_client.read();
     if let Some(ref client) = *client_binding {
         let svc = crate::application::services::SessionCommandService::new(std::sync::Arc::clone(client));
-        if let Err(e) = svc.submit_challenge_roll(challenge_id, roll) {
-            tracing::error!("Failed to send challenge roll: {}", e);
+        if let Err(e) = svc.submit_challenge_roll_input(challenge_id, input) {
+            tracing::error!("Failed to send challenge roll input: {}", e);
         }
     } else {
         tracing::warn!("Cannot send challenge roll: not connected to server");

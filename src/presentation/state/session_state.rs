@@ -101,6 +101,10 @@ pub struct ChallengePromptData {
     pub description: String,
     /// Character's skill modifier for this challenge
     pub character_modifier: i32,
+    /// Suggested dice formula based on rule system (e.g., "1d20", "1d100", "2d6")
+    pub suggested_dice: Option<String>,
+    /// Human-readable hint about the rule system
+    pub rule_system_hint: Option<String>,
 }
 
 /// Challenge result data for display
@@ -122,6 +126,10 @@ pub struct ChallengeResultData {
     pub outcome_description: String,
     /// Timestamp for ordering
     pub timestamp: u64,
+    /// Roll breakdown string (e.g., "1d20(14) + 3 = 17" or "Manual: 18")
+    pub roll_breakdown: Option<String>,
+    /// Individual dice results if rolled with formula
+    pub individual_rolls: Option<Vec<i32>>,
 }
 
 /// A log entry for the conversation

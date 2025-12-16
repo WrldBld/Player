@@ -10,8 +10,8 @@ pub mod platform;
 
 pub use api_port::{ApiError, ApiPort};
 pub use game_connection_port::{
-    ApprovalDecision, ConnectionState, DirectorialContext, GameConnectionPort, NpcMotivation,
-    ParticipantRole,
+    ApprovalDecision, ConnectionState, DiceInputType, DirectorialContext, GameConnectionPort,
+    NpcMotivation, ParticipantRole,
 };
 pub use platform::{
     Platform, storage_keys,

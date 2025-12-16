@@ -249,6 +249,8 @@ pub fn handle_server_message(
             difficulty_display,
             description,
             character_modifier,
+            suggested_dice,
+            rule_system_hint,
         } => {
             let challenge = ChallengePromptData {
                 challenge_id,
@@ -257,6 +259,8 @@ pub fn handle_server_message(
                 difficulty_display,
                 description,
                 character_modifier,
+                suggested_dice,
+                rule_system_hint,
             };
             session_state.set_active_challenge(challenge);
         }
@@ -270,6 +274,8 @@ pub fn handle_server_message(
             total,
             outcome,
             outcome_description,
+            roll_breakdown,
+            individual_rolls,
         } => {
             // Clear active challenge if it matches
             let active = { session_state.active_challenge.read().clone() };
@@ -289,6 +295,8 @@ pub fn handle_server_message(
                 outcome,
                 outcome_description,
                 timestamp,
+                roll_breakdown,
+                individual_rolls,
             };
             session_state.add_challenge_result(result);
         }
@@ -327,6 +335,39 @@ pub fn handle_server_message(
                     loc.pc_count
                 );
             }
+        }
+
+        ServerMessage::OutcomeRegenerated {
+            request_id,
+            outcome_type,
+            new_outcome,
+        } => {
+            tracing::info!(
+                "Outcome '{}' regenerated for request {}: {}",
+                outcome_type,
+                request_id,
+                new_outcome.flavor_text
+            );
+            // TODO (Phase 22G): Update approval popup with regenerated outcome
+        }
+
+        ServerMessage::ChallengeDiscarded { request_id } => {
+            tracing::info!("Challenge discarded for request {}", request_id);
+            // TODO (Phase 22G): Remove challenge from approval UI
+        }
+
+        ServerMessage::AdHocChallengeCreated {
+            challenge_id,
+            challenge_name,
+            target_pc_id,
+        } => {
+            tracing::info!(
+                "Ad-hoc challenge '{}' (ID: {}) created for PC {}",
+                challenge_name,
+                challenge_id,
+                target_pc_id
+            );
+            // TODO (Phase 22H): Show ad-hoc challenge creation confirmation
         }
     }
 }

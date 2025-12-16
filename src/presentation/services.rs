@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use std::sync::Arc;
 
 use crate::application::services::{
-    AssetService, CharacterService, ChallengeService, EventChainService, LocationService, NarrativeEventService,
+    AssetService, CharacterService, ChallengeService, EventChainService, GenerationService, LocationService, NarrativeEventService,
     PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
 use crate::infrastructure::http_client::ApiAdapter;
@@ -26,6 +26,7 @@ pub type WorkflowSvc = WorkflowService<ApiAdapter>;
 pub type AssetSvc = AssetService<ApiAdapter>;
 pub type SuggestionSvc = SuggestionService<ApiAdapter>;
 pub type EventChainSvc = EventChainService<ApiAdapter>;
+pub type GenerationSvc = GenerationService<ApiAdapter>;
 
 /// All services wrapped for context provision
 #[derive(Clone)]
@@ -42,6 +43,7 @@ pub struct Services {
     pub asset: Arc<AssetSvc>,
     pub suggestion: Arc<SuggestionSvc>,
     pub event_chain: Arc<EventChainSvc>,
+    pub generation: Arc<GenerationSvc>,
 }
 
 impl Default for Services {
@@ -66,7 +68,8 @@ impl Services {
             workflow: Arc::new(WorkflowService::new(api.clone())),
             asset: Arc::new(AssetService::new(api.clone())),
             suggestion: Arc::new(SuggestionService::new(api.clone())),
-            event_chain: Arc::new(EventChainService::new(api)),
+            event_chain: Arc::new(EventChainService::new(api.clone())),
+            generation: Arc::new(GenerationService::new(api)),
         }
     }
 }
@@ -143,61 +146,29 @@ pub fn use_event_chain_service() -> Arc<EventChainSvc> {
     services.event_chain.clone()
 }
 
+/// Hook to access the GenerationService from context
+pub fn use_generation_service() -> Arc<GenerationSvc> {
+    let services = use_context::<Services>();
+    services.generation.clone()
+}
+
 use crate::presentation::state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};
 use crate::infrastructure::storage;
-use crate::infrastructure::http_client::HttpClient;
-use crate::application::ports::outbound::Platform;
+use crate::application::ports::outbound::ApiPort;
 use anyhow::Result;
 
 /// Hydrate GenerationState from the Engine's unified generation queue endpoint.
-pub async fn hydrate_generation_queue(
-    _platform: &Platform,
+///
+/// # Arguments
+/// * `generation_service` - The GenerationService to fetch queue state from
+/// * `generation_state` - The mutable state to populate
+/// * `user_id` - Optional user ID to filter queue items
+pub async fn hydrate_generation_queue<A: ApiPort>(
+    generation_service: &GenerationService<A>,
     generation_state: &mut GenerationState,
-    user_id: Option<String>,
+    user_id: Option<&str>,
 ) -> Result<()> {
-    let snapshot: GenerationQueueSnapshotDto =
-        if let Some(uid) = user_id {
-            crate::infrastructure::http_client::HttpClient::get(&format!(
-                "/api/generation/queue?user_id={}",
-                uid
-            ))
-            .await?
-        } else {
-            crate::infrastructure::http_client::HttpClient::get("/api/generation/queue").await?
-        };
-
-    #[derive(serde::Deserialize)]
-    struct GenerationQueueSnapshotDto {
-        batches: Vec<BatchDto>,
-        suggestions: Vec<SuggestionDto>,
-    }
-
-    #[derive(serde::Deserialize)]
-    struct BatchDto {
-        batch_id: String,
-        entity_type: String,
-        entity_id: String,
-        asset_type: String,
-        status: String,
-        position: Option<u32>,
-        progress: Option<u8>,
-        asset_count: Option<u32>,
-        error: Option<String>,
-        #[serde(default)]
-        is_read: bool,
-    }
-
-    #[derive(serde::Deserialize)]
-    struct SuggestionDto {
-        request_id: String,
-        field_type: String,
-        entity_id: Option<String>,
-        status: String,
-        suggestions: Option<Vec<String>>,
-        error: Option<String>,
-        #[serde(default)]
-        is_read: bool,
-    }
+    let snapshot = generation_service.fetch_queue(user_id).await?;
 
     // Clear existing state and repopulate from snapshot
     generation_state.clear();
@@ -314,13 +285,14 @@ fn apply_generation_read_state(state: &mut GenerationState) {
 /// Sync generation read state to the backend.
 ///
 /// This helper collects all read batches and suggestions from the given state
-/// and sends them to the Engine's `/api/generation/read-state` endpoint.
-/// The `X-User-Id` header is automatically attached by HttpClient.
+/// and sends them to the Engine via the GenerationService.
 ///
 /// # Arguments
+/// * `generation_service` - The GenerationService to sync with
 /// * `state` - The GenerationState to sync read markers from
-/// * `world_id` - Optional world ID to scope read markers (if None, uses "GLOBAL")
-pub async fn sync_generation_read_state(
+/// * `world_id` - Optional world ID to scope read markers
+pub async fn sync_generation_read_state<A: ApiPort>(
+    generation_service: &GenerationService<A>,
     state: &GenerationState,
     world_id: Option<&str>,
 ) -> Result<()> {
@@ -343,17 +315,8 @@ pub async fn sync_generation_read_state(
         return Ok(());
     }
 
-    let mut body = serde_json::json!({
-        "read_batches": read_batches,
-        "read_suggestions": read_suggestions,
-    });
-
-    // Add world_id if provided
-    if let Some(wid) = world_id {
-        body["world_id"] = serde_json::Value::String(wid.to_string());
-    }
-
-    HttpClient::post_no_response("/api/generation/read-state", &body)
+    generation_service
+        .sync_read_state(read_batches, read_suggestions, world_id)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to sync generation read state: {}", e))?;
 
@@ -387,23 +350,37 @@ pub fn visible_suggestions(
 }
 
 /// Mark a batch as read and sync to backend
-pub async fn mark_batch_read_and_sync(
+///
+/// # Arguments
+/// * `generation_service` - The GenerationService to sync with
+/// * `state` - The mutable GenerationState
+/// * `batch_id` - The batch ID to mark as read
+/// * `world_id` - Optional world ID scope
+pub async fn mark_batch_read_and_sync<A: ApiPort>(
+    generation_service: &GenerationService<A>,
     state: &mut GenerationState,
     batch_id: &str,
     world_id: Option<&str>,
 ) -> Result<()> {
     state.mark_batch_read(batch_id);
     persist_generation_read_state(state);
-    sync_generation_read_state(state, world_id).await
+    sync_generation_read_state(generation_service, state, world_id).await
 }
 
 /// Mark a suggestion as read and sync to backend
-pub async fn mark_suggestion_read_and_sync(
+///
+/// # Arguments
+/// * `generation_service` - The GenerationService to sync with
+/// * `state` - The mutable GenerationState
+/// * `request_id` - The request ID to mark as read
+/// * `world_id` - Optional world ID scope
+pub async fn mark_suggestion_read_and_sync<A: ApiPort>(
+    generation_service: &GenerationService<A>,
     state: &mut GenerationState,
     request_id: &str,
     world_id: Option<&str>,
 ) -> Result<()> {
     state.mark_suggestion_read(request_id);
     persist_generation_read_state(state);
-    sync_generation_read_state(state, world_id).await
+    sync_generation_read_state(generation_service, state, world_id).await
 }

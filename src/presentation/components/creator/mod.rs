@@ -16,6 +16,7 @@ use dioxus::prelude::*;
 use crate::application::ports::outbound::Platform;
 use crate::presentation::state::use_session_state;
 use crate::presentation::state::use_generation_state;
+use crate::presentation::services::use_generation_service;
 
 /// Props for CreatorMode
 #[derive(Props, Clone, PartialEq)]
@@ -96,16 +97,18 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
 
     // Hydrate generation queue from Engine on mount
     let platform = use_context::<Platform>();
+    let generation_service = use_generation_service();
     let mut generation_state = use_generation_state();
     let session_state = use_session_state();
     use_effect(move || {
         let platform = platform.clone();
+        let gen_svc = generation_service.clone();
         let user_id = session_state.user_id.read().clone();
         spawn(async move {
             if let Err(e) = crate::presentation::services::hydrate_generation_queue(
-                &platform,
+                &gen_svc,
                 &mut generation_state,
-                user_id,
+                user_id.as_deref(),
             )
             .await
             {

@@ -4,6 +4,8 @@
 //! allowing application services to manage real-time game sessions without
 //! depending on concrete WebSocket client implementations.
 
+pub use crate::application::dto::websocket_messages::DiceInputType;
+
 /// Connection state for the game session
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
@@ -124,8 +126,11 @@ pub trait GameConnectionPort: Send + Sync {
     /// Trigger a challenge (DM only)
     fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;
 
-    /// Submit a challenge roll (Player only)
+    /// Submit a challenge roll (Player only) - legacy method using raw i32
     fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> anyhow::Result<()>;
+
+    /// Submit a challenge roll with dice input (Player only) - supports formulas and manual input
+    fn submit_challenge_roll_input(&self, challenge_id: &str, input: DiceInputType) -> anyhow::Result<()>;
 
     /// Send a heartbeat ping
     fn heartbeat(&self) -> anyhow::Result<()>;
@@ -192,8 +197,11 @@ pub trait GameConnectionPort {
     /// Trigger a challenge for a character (DM only)
     fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;
 
-    /// Submit a challenge roll (Player only)
+    /// Submit a challenge roll (Player only) - legacy method using raw i32
     fn submit_challenge_roll(&self, challenge_id: &str, roll: i32) -> anyhow::Result<()>;
+
+    /// Submit a challenge roll with dice input (Player only) - supports formulas and manual input
+    fn submit_challenge_roll_input(&self, challenge_id: &str, input: DiceInputType) -> anyhow::Result<()>;
 
     /// Send a heartbeat ping
     fn heartbeat(&self) -> anyhow::Result<()>;

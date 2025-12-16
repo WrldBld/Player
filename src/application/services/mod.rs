@@ -8,6 +8,7 @@ pub mod action_service;
 pub mod asset_service;
 pub mod challenge_service;
 pub mod character_service;
+pub mod generation_service;
 pub mod location_service;
 pub mod narrative_event_service;
 pub mod player_character_service;
@@ -81,3 +82,6 @@ pub use event_chain_service::{
     AddEventRequest, ChainStatusData, CreateEventChainRequest, EventChainData,
     EventChainService, UpdateEventChainRequest,
 };
+
+// Re-export generation service types
+pub use generation_service::GenerationService;

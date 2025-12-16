@@ -4,6 +4,7 @@
 //! directorial notes, NPC motivation tracking, LLM response approval,
 //! and challenge management.
 
+pub mod adhoc_challenge_modal;
 pub mod approval_popup;
 pub mod challenge_library;
 pub mod conversation_log;

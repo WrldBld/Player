@@ -33,6 +33,29 @@ pub struct CreateWorldResponse {
     pub name: String,
 }
 
+/// Summary of an active session
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct SessionInfo {
+    pub session_id: String,
+    pub world_id: String,
+    pub dm_user_id: String,
+    pub active_player_count: usize,
+    pub created_at: i64,
+}
+
+/// Request to create or resume a session
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateSessionRequest {
+    pub dm_user_id: String,
+}
+
+/// Response from session creation/resumption
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreateSessionResponse {
+    pub session_id: String,
+    pub world_id: String,
+}
+
 /// World service for managing worlds
 ///
 /// This service provides methods for world-related operations
@@ -117,6 +140,28 @@ impl<A: ApiPort> WorldService<A> {
     pub async fn get_sheet_template(&self, world_id: &str) -> Result<serde_json::Value, ApiError> {
         let path = format!("/api/worlds/{}/sheet-template", world_id);
         self.api.get(&path).await
+    }
+
+    /// List all active sessions across all worlds
+    pub async fn list_sessions(&self) -> Result<Vec<SessionInfo>, ApiError> {
+        self.api.get("/api/sessions").await
+    }
+
+    /// Create or resume a session for a world
+    ///
+    /// # Arguments
+    /// * `world_id` - The world ID
+    /// * `dm_user_id` - The user ID of the dungeon master
+    pub async fn create_session(
+        &self,
+        world_id: &str,
+        dm_user_id: &str,
+    ) -> Result<CreateSessionResponse, ApiError> {
+        let path = format!("/api/worlds/{}/sessions", world_id);
+        let request = CreateSessionRequest {
+            dm_user_id: dm_user_id.to_string(),
+        };
+        self.api.post(&path, &request).await
     }
 }
 

@@ -10,6 +10,7 @@ use crate::presentation::services::{
     mark_suggestion_read_and_sync,
     use_suggestion_service,
     use_asset_service,
+    use_generation_service,
 };
 
 /// Filter type for the generation queue
@@ -45,6 +46,7 @@ pub struct GenerationQueuePanelProps {
 pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
     let generation_state = use_generation_state();
     let game_state = use_game_state();
+    let generation_service = use_generation_service();
     let mut selected_suggestion: Signal<Option<SuggestionTask>> = use_signal(|| None);
     let mut show_read: Signal<bool> = use_signal(|| false);
     let mut active_filter: Signal<QueueFilter> = use_signal(|| QueueFilter::All);
@@ -338,6 +340,7 @@ fn QueueItemRow(
     #[props(default)]
     on_navigate_to_entity: Option<EventHandler<(String, String)>>,
 ) -> Element {
+    let generation_service = use_generation_service();
     let mut expanded_error: Signal<bool> = use_signal(|| false);
     let mut expanded_details: Signal<bool> = use_signal(|| false);
     let batch_id = batch.batch_id.clone();
@@ -467,13 +470,15 @@ fn QueueItemRow(
                                     let mut state = use_generation_state();
                                     let world_id_clone = world_id.clone();
                                     let nav_handler = on_navigate_to_entity.clone();
+                                    let gen_svc = generation_service.clone();
                                     move |_| {
                                         let bid = batch_id.clone();
                                         let wid = world_id_clone.clone();
                                         let mut gen_state = state;
                                         let nav = nav_handler.clone();
+                                        let svc = gen_svc.clone();
                                     spawn(async move {
-                                            if let Err(e) = mark_batch_read_and_sync(&mut gen_state, &bid, wid.as_deref()).await {
+                                            if let Err(e) = mark_batch_read_and_sync(&svc, &mut gen_state, &bid, wid.as_deref()).await {
                                             tracing::error!("Failed to mark batch read and sync: {}", e);
                                         }
                                     });
@@ -621,6 +626,7 @@ fn SuggestionQueueRow(
     #[props(default)]
     on_navigate_to_entity: Option<EventHandler<(String, String)>>,
 ) -> Element {
+    let generation_service = use_generation_service();
     let mut expanded_error: Signal<bool> = use_signal(|| false);
     let (status_icon, status_color, status_text) = match &suggestion.status {
         SuggestionStatus::Queued => ("💭", "#9ca3af", "Queued".to_string()),
@@ -676,14 +682,16 @@ fn SuggestionQueueRow(
                                 let mut state = use_generation_state();
                                 let world_id_clone = world_id.clone();
                                 let nav_handler = on_navigate_to_entity.clone();
+                                let gen_svc = generation_service.clone();
                                 move |_| {
                                     selected_suggestion.set(Some(suggestion_clone.clone()));
                                     let req_id_clone = req_id.clone();
                                     let wid = world_id_clone.clone();
                                     let mut gen_state = state;
                                     let nav = nav_handler.clone();
+                                    let svc = gen_svc.clone();
                                 spawn(async move {
-                                        if let Err(e) = mark_suggestion_read_and_sync(&mut gen_state, &req_id_clone, wid.as_deref()).await {
+                                        if let Err(e) = mark_suggestion_read_and_sync(&svc, &mut gen_state, &req_id_clone, wid.as_deref()).await {
                                         tracing::error!("Failed to mark suggestion read and sync: {}", e);
                                     }
                                 });

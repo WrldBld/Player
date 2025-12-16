@@ -311,6 +311,27 @@ impl GameConnectionPort for EngineGameConnection {
         }
     }
 
+    fn submit_challenge_roll_input(&self, challenge_id: &str, input: crate::application::dto::websocket_messages::DiceInputType) -> Result<()> {
+        let msg = ClientMessage::ChallengeRollInput {
+            challenge_id: challenge_id.to_string(),
+            input_type: input,
+        };
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.client.send(msg)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.send(msg).await {
+                    tracing::error!("Failed to submit challenge roll input: {}", e);
+                }
+            });
+            Ok(())
+        }
+    }
+
     fn heartbeat(&self) -> Result<()> {
         let msg = ClientMessage::Heartbeat;
         #[cfg(target_arch = "wasm32")]

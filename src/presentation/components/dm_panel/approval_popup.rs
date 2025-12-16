@@ -1,9 +1,10 @@
 //! Approval popup component
 //!
 //! Shows proposed NPC dialogue and actions for DM approval before execution.
+//! Supports challenge outcome regeneration and discard functionality.
 
 use dioxus::prelude::*;
-use crate::application::dto::{ChallengeSuggestionInfo, NarrativeEventSuggestionInfo};
+use crate::application::dto::{ChallengeSuggestionInfo, NarrativeEventSuggestionInfo, OutcomeDetailData};
 
 /// A proposed action/tool call from the LLM
 #[derive(Clone, PartialEq)]
@@ -16,9 +17,37 @@ pub struct ProposedAction {
     pub checked: bool,
 }
 
+/// Outcome details for display in the approval popup
+#[derive(Clone, PartialEq, Default)]
+pub struct ChallengeOutcomes {
+    pub success: Option<OutcomeDetailData>,
+    pub failure: Option<OutcomeDetailData>,
+    pub critical_success: Option<OutcomeDetailData>,
+    pub critical_failure: Option<OutcomeDetailData>,
+}
+
+/// Data for outcome regeneration request
+#[derive(Clone, PartialEq)]
+pub struct RegenerateOutcomeData {
+    pub request_id: String,
+    /// Which outcome to regenerate (None = all)
+    pub outcome_type: Option<String>,
+    pub guidance: Option<String>,
+}
+
+/// Data for discard challenge request
+#[derive(Clone, PartialEq)]
+pub struct DiscardChallengeData {
+    pub request_id: String,
+    pub feedback: Option<String>,
+}
+
 /// Props for the ApprovalPopup component
 #[derive(Props, Clone, PartialEq)]
 pub struct ApprovalPopupProps {
+    /// Unique request ID for this approval item
+    #[props(default)]
+    pub request_id: String,
     /// The NPC that will perform the action
     pub npc_name: String,
     /// Proposed dialogue text from LLM
@@ -27,6 +56,9 @@ pub struct ApprovalPopupProps {
     pub proposed_actions: Vec<ProposedAction>,
     /// Optional challenge suggestion from Engine
     pub challenge_suggestion: Option<ChallengeSuggestionInfo>,
+    /// Optional challenge outcomes for detailed display
+    #[props(default)]
+    pub challenge_outcomes: Option<ChallengeOutcomes>,
     /// Optional narrative event suggestion from Engine
     pub narrative_event_suggestion: Option<NarrativeEventSuggestionInfo>,
     /// Handler when Accept is clicked
@@ -35,6 +67,12 @@ pub struct ApprovalPopupProps {
     pub on_modify: EventHandler<()>,
     /// Handler when Reject is clicked
     pub on_reject: EventHandler<()>,
+    /// Handler when regenerate outcome is requested (optional)
+    #[props(default)]
+    pub on_regenerate_outcome: Option<EventHandler<RegenerateOutcomeData>>,
+    /// Handler when discard challenge is requested (optional)
+    #[props(default)]
+    pub on_discard_challenge: Option<EventHandler<DiscardChallengeData>>,
 }
 
 /// ApprovalPopup component - Shows LLM response for approval
@@ -83,57 +121,104 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
             // Challenge suggestion section
             if let Some(suggestion) = &props.challenge_suggestion {
-                div {
-                    style: "margin-bottom: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 0.5rem;",
+                {
+                    let request_id = props.request_id.clone();
+                    let on_regenerate = props.on_regenerate_outcome.clone();
+                    let on_discard = props.on_discard_challenge.clone();
+                    let outcomes = props.challenge_outcomes.clone();
 
-                    h4 {
-                        style: "color: #f59e0b; margin: 0 0 0.75rem 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
-                        "Challenge Suggested"
-                    }
-
-                    div {
-                        style: "margin-bottom: 0.75rem;",
-
+                    rsx! {
                         div {
-                            style: "display: flex; justify-content: space-between; align-items: baseline;",
+                            style: "margin-bottom: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 0.5rem;",
 
-                            span {
-                                style: "color: white; font-weight: bold; font-size: 0.875rem;",
-                                "{suggestion.challenge_name}"
+                            // Header with title and discard button
+                            div {
+                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;",
+
+                                h4 {
+                                    style: "color: #f59e0b; margin: 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
+                                    "Challenge Suggested"
+                                }
+
+                                // Discard button
+                                if on_discard.is_some() {
+                                    {
+                                        let request_id_discard = request_id.clone();
+                                        let handler = on_discard.clone();
+                                        rsx! {
+                                            button {
+                                                onclick: move |_| {
+                                                    if let Some(h) = &handler {
+                                                        h.call(DiscardChallengeData {
+                                                            request_id: request_id_discard.clone(),
+                                                            feedback: None,
+                                                        });
+                                                    }
+                                                },
+                                                style: "padding: 0.25rem 0.5rem; background: rgba(107, 114, 128, 0.5); color: #9ca3af; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                                "Discard"
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
-                            span {
-                                style: "color: #9ca3af; margin-left: 0.5rem; font-size: 0.75rem;",
-                                "({suggestion.skill_name} - {suggestion.difficulty_display})"
+                            // Challenge info
+                            div {
+                                style: "margin-bottom: 0.75rem;",
+
+                                div {
+                                    style: "display: flex; justify-content: space-between; align-items: baseline;",
+
+                                    span {
+                                        style: "color: white; font-weight: bold; font-size: 0.875rem;",
+                                        "{suggestion.challenge_name}"
+                                    }
+
+                                    span {
+                                        style: "color: #9ca3af; margin-left: 0.5rem; font-size: 0.75rem;",
+                                        "({suggestion.skill_name} - {suggestion.difficulty_display})"
+                                    }
+                                }
                             }
-                        }
-                    }
 
-                    div {
-                        style: "margin-bottom: 0.5rem;",
+                            div {
+                                style: "margin-bottom: 0.5rem;",
 
-                        p {
-                            style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.25rem 0;",
-                            "Confidence: {suggestion.confidence}"
-                        }
-                    }
+                                p {
+                                    style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.25rem 0;",
+                                    "Confidence: {suggestion.confidence}"
+                                }
+                            }
 
-                    p {
-                        style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
-                        "\"{suggestion.reasoning}\""
-                    }
+                            p {
+                                style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                                "\"{suggestion.reasoning}\""
+                            }
 
-                    div {
-                        style: "display: flex; gap: 0.5rem;",
+                            // Outcome details (if available)
+                            if let Some(ref outcomes) = outcomes {
+                                OutcomeDetailsSection {
+                                    outcomes: outcomes.clone(),
+                                    request_id: request_id.clone(),
+                                    on_regenerate: on_regenerate.clone(),
+                                }
+                            }
 
-                        button {
-                            style: "flex: 1; padding: 0.5rem; background: rgba(34, 197, 94, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
-                            "Approve Challenge"
-                        }
+                            // Action buttons
+                            div {
+                                style: "display: flex; gap: 0.5rem;",
 
-                        button {
-                            style: "flex: 1; padding: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
-                            "Skip Challenge"
+                                button {
+                                    style: "flex: 1; padding: 0.5rem; background: rgba(34, 197, 94, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                                    "Approve Challenge"
+                                }
+
+                                button {
+                                    style: "flex: 1; padding: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                                    "Skip Challenge"
+                                }
+                            }
                         }
                     }
                 }
@@ -283,6 +368,276 @@ fn ProposedActionCheckbox(
                 div {
                     style: "color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;",
                     "{action.description}"
+                }
+            }
+        }
+    }
+}
+
+/// Props for OutcomeDetailsSection
+#[derive(Props, Clone, PartialEq)]
+struct OutcomeDetailsSectionProps {
+    outcomes: ChallengeOutcomes,
+    request_id: String,
+    on_regenerate: Option<EventHandler<RegenerateOutcomeData>>,
+}
+
+/// Section displaying challenge outcomes with regeneration buttons
+#[component]
+fn OutcomeDetailsSection(props: OutcomeDetailsSectionProps) -> Element {
+    let mut expanded_outcome = use_signal(|| Option::<String>::None);
+
+    rsx! {
+        div {
+            style: "margin-bottom: 0.75rem; border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 0.75rem;",
+
+            // Header with "Regenerate All" button
+            div {
+                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;",
+
+                p {
+                    style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0;",
+                    "Outcomes"
+                }
+
+                if props.on_regenerate.is_some() {
+                    {
+                        let request_id = props.request_id.clone();
+                        let handler = props.on_regenerate.clone();
+                        rsx! {
+                            button {
+                                onclick: move |_| {
+                                    if let Some(h) = &handler {
+                                        h.call(RegenerateOutcomeData {
+                                            request_id: request_id.clone(),
+                                            outcome_type: None, // None = regenerate all
+                                            guidance: None,
+                                        });
+                                    }
+                                },
+                                style: "padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.5); color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                "Regenerate All"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Outcome tabs
+            div {
+                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+
+                // Success outcome
+                if let Some(ref outcome) = props.outcomes.success {
+                    OutcomeTab {
+                        label: "Success",
+                        color: "#22c55e",
+                        outcome: outcome.clone(),
+                        outcome_type: "success".to_string(),
+                        request_id: props.request_id.clone(),
+                        on_regenerate: props.on_regenerate.clone(),
+                        is_expanded: *expanded_outcome.read() == Some("success".to_string()),
+                        on_toggle: move |_| {
+                            let current = expanded_outcome.read().clone();
+                            if current == Some("success".to_string()) {
+                                expanded_outcome.set(None);
+                            } else {
+                                expanded_outcome.set(Some("success".to_string()));
+                            }
+                        },
+                    }
+                }
+
+                // Failure outcome
+                if let Some(ref outcome) = props.outcomes.failure {
+                    OutcomeTab {
+                        label: "Failure",
+                        color: "#ef4444",
+                        outcome: outcome.clone(),
+                        outcome_type: "failure".to_string(),
+                        request_id: props.request_id.clone(),
+                        on_regenerate: props.on_regenerate.clone(),
+                        is_expanded: *expanded_outcome.read() == Some("failure".to_string()),
+                        on_toggle: move |_| {
+                            let current = expanded_outcome.read().clone();
+                            if current == Some("failure".to_string()) {
+                                expanded_outcome.set(None);
+                            } else {
+                                expanded_outcome.set(Some("failure".to_string()));
+                            }
+                        },
+                    }
+                }
+
+                // Critical success outcome
+                if let Some(ref outcome) = props.outcomes.critical_success {
+                    OutcomeTab {
+                        label: "Critical Success",
+                        color: "#fbbf24",
+                        outcome: outcome.clone(),
+                        outcome_type: "critical_success".to_string(),
+                        request_id: props.request_id.clone(),
+                        on_regenerate: props.on_regenerate.clone(),
+                        is_expanded: *expanded_outcome.read() == Some("critical_success".to_string()),
+                        on_toggle: move |_| {
+                            let current = expanded_outcome.read().clone();
+                            if current == Some("critical_success".to_string()) {
+                                expanded_outcome.set(None);
+                            } else {
+                                expanded_outcome.set(Some("critical_success".to_string()));
+                            }
+                        },
+                    }
+                }
+
+                // Critical failure outcome
+                if let Some(ref outcome) = props.outcomes.critical_failure {
+                    OutcomeTab {
+                        label: "Critical Failure",
+                        color: "#dc2626",
+                        outcome: outcome.clone(),
+                        outcome_type: "critical_failure".to_string(),
+                        request_id: props.request_id.clone(),
+                        on_regenerate: props.on_regenerate.clone(),
+                        is_expanded: *expanded_outcome.read() == Some("critical_failure".to_string()),
+                        on_toggle: move |_| {
+                            let current = expanded_outcome.read().clone();
+                            if current == Some("critical_failure".to_string()) {
+                                expanded_outcome.set(None);
+                            } else {
+                                expanded_outcome.set(Some("critical_failure".to_string()));
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Props for OutcomeTab
+#[derive(Props, Clone, PartialEq)]
+struct OutcomeTabProps {
+    label: &'static str,
+    color: &'static str,
+    outcome: OutcomeDetailData,
+    outcome_type: String,
+    request_id: String,
+    on_regenerate: Option<EventHandler<RegenerateOutcomeData>>,
+    is_expanded: bool,
+    on_toggle: EventHandler<()>,
+}
+
+/// Individual outcome tab with expandable details
+#[component]
+fn OutcomeTab(props: OutcomeTabProps) -> Element {
+    let border_color = props.color;
+    let label = props.label;
+    let is_expanded = props.is_expanded;
+
+    rsx! {
+        div {
+            style: "background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem; border-left: 3px solid {border_color};",
+
+            // Header (clickable to expand)
+            button {
+                onclick: move |_| props.on_toggle.call(()),
+                style: "width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: none; border: none; cursor: pointer; text-align: left;",
+
+                span {
+                    style: "color: {border_color}; font-size: 0.75rem; font-weight: 600;",
+                    "{label}"
+                }
+
+                span {
+                    style: "color: #6b7280; font-size: 0.75rem;",
+                    if is_expanded { "v" } else { ">" }
+                }
+            }
+
+            // Expanded content
+            if is_expanded {
+                div {
+                    style: "padding: 0 0.75rem 0.75rem 0.75rem;",
+
+                    // Flavor text
+                    if !props.outcome.flavor_text.is_empty() {
+                        div {
+                            style: "margin-bottom: 0.5rem;",
+
+                            p {
+                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                "Flavor"
+                            }
+                            p {
+                                style: "color: white; font-size: 0.75rem; font-style: italic; margin: 0; line-height: 1.4;",
+                                "\"{props.outcome.flavor_text}\""
+                            }
+                        }
+                    }
+
+                    // Scene direction
+                    if !props.outcome.scene_direction.is_empty() {
+                        div {
+                            style: "margin-bottom: 0.5rem;",
+
+                            p {
+                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                "Scene Direction"
+                            }
+                            p {
+                                style: "color: #d1d5db; font-size: 0.75rem; margin: 0; line-height: 1.4;",
+                                "{props.outcome.scene_direction}"
+                            }
+                        }
+                    }
+
+                    // Tool calls (if any)
+                    if !props.outcome.proposed_tools.is_empty() {
+                        div {
+                            style: "margin-bottom: 0.5rem;",
+
+                            p {
+                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                "Tool Calls ({props.outcome.proposed_tools.len()})"
+                            }
+                            div {
+                                style: "display: flex; flex-wrap: wrap; gap: 0.25rem;",
+
+                                for tool in props.outcome.proposed_tools.iter() {
+                                    span {
+                                        key: "{tool.id}",
+                                        style: "padding: 0.125rem 0.375rem; background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-radius: 0.25rem; font-size: 0.625rem;",
+                                        "{tool.name}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Regenerate button
+                    if props.on_regenerate.is_some() {
+                        {
+                            let request_id = props.request_id.clone();
+                            let outcome_type = props.outcome_type.clone();
+                            let handler = props.on_regenerate.clone();
+                            rsx! {
+                                button {
+                                    onclick: move |_| {
+                                        if let Some(h) = &handler {
+                                            h.call(RegenerateOutcomeData {
+                                                request_id: request_id.clone(),
+                                                outcome_type: Some(outcome_type.clone()),
+                                                guidance: None,
+                                            });
+                                        }
+                                    },
+                                    style: "width: 100%; padding: 0.375rem; background: rgba(59, 130, 246, 0.3); color: #93c5fd; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                    "Regenerate This Outcome"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

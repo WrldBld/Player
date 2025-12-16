@@ -27,6 +27,9 @@ anyhow = "1.0"
 # Async traits
 async-trait = "0.1"
 
+# Regex for dice parsing (lightweight, no_std compatible)
+regex-lite = "0.1"
+
 # WebSocket client
 futures-util = "0.3"
 futures-channel = "0.3"
