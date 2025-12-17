@@ -1,6 +1,7 @@
 //! Infrastructure layer - External adapters
 
 pub mod api;
+pub mod connection_factory;
 pub mod http_client;
 pub mod platform;
 pub mod storage;

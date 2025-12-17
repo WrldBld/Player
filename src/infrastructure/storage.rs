@@ -82,23 +82,6 @@ pub fn remove(key: &str) {
     }
 }
 
-/// Clear all WrldBldr localStorage entries (WASM only)
-///
-/// Removes all application-specific storage keys on WASM targets.
-/// On desktop targets, this is a no-op.
-///
-/// # Example
-/// ```ignore
-/// storage::clear_all();
-/// ```
-#[cfg(target_arch = "wasm32")]
-pub fn clear_all() {
-    remove(STORAGE_KEY_SERVER_URL);
-    remove(STORAGE_KEY_ROLE);
-    remove(STORAGE_KEY_LAST_WORLD);
-    remove(STORAGE_KEY_USER_ID);
-}
-
 // Desktop stubs - no-op implementations for non-WASM targets
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save(_key: &str, _value: &str) {}
@@ -110,9 +93,6 @@ pub fn load(_key: &str) -> Option<String> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn remove(_key: &str) {}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn clear_all() {}
 
 #[cfg(test)]
 mod tests {
@@ -132,6 +112,5 @@ mod tests {
         save("key", "value");
         assert_eq!(load("key"), None);
         remove("key");
-        clear_all();
     }
 }

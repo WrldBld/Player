@@ -296,6 +296,8 @@ pub struct CharacterData {
     pub portrait_asset: Option<String>,
     pub position: CharacterPosition,
     pub is_speaking: bool,
+    #[serde(default)]
+    pub emotion: String,
 }
 
 /// Character position on screen
@@ -375,6 +377,26 @@ pub struct ChallengeSuggestionInfo {
     pub difficulty_display: String,
     pub confidence: String,
     pub reasoning: String,
+    /// Enhanced outcomes for the challenge (Phase 22C)
+    #[serde(default)]
+    pub outcomes: Option<ChallengeSuggestionOutcomes>,
+}
+
+/// Enhanced outcomes structure for challenge suggestions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChallengeSuggestionOutcomes {
+    /// What happens on success
+    #[serde(default)]
+    pub success: Option<OutcomeDetailData>,
+    /// What happens on failure
+    #[serde(default)]
+    pub failure: Option<OutcomeDetailData>,
+    /// What happens on critical success
+    #[serde(default)]
+    pub critical_success: Option<OutcomeDetailData>,
+    /// What happens on critical failure
+    #[serde(default)]
+    pub critical_failure: Option<OutcomeDetailData>,
 }
 
 /// Information about a session participant

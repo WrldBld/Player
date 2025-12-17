@@ -2,15 +2,24 @@
 //!
 //! Central state management using Dioxus signals and context.
 
+pub mod approval_state;
+pub mod challenge_state;
+pub mod connection_state;
 pub mod dialogue_state;
 pub mod game_state;
 pub mod generation_state;
 pub mod session_state;
 
+// Export individual substates
+pub use approval_state::{ApprovalState, ApprovalHistoryEntry, ConversationLogEntry, PendingApproval};
+pub use challenge_state::{ChallengeState, ChallengePromptData, ChallengeResultData};
+pub use connection_state::{ConnectionState, ConnectionStatus};
 pub use dialogue_state::{use_typewriter_effect, DialogueState};
 pub use game_state::GameState;
 pub use generation_state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};
-pub use session_state::{ApprovalHistoryEntry, ConnectionStatus, PendingApproval, SessionState};
+
+// SessionState is the facade that composes the substates (backward-compatible)
+pub use session_state::SessionState;
 
 use dioxus::prelude::*;
 

@@ -101,18 +101,19 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
     let mut generation_state = use_generation_state();
     let session_state = use_session_state();
     use_effect(move || {
-        let platform = platform.clone();
+        let platform_clone = platform.clone();
         let gen_svc = generation_service.clone();
-        let user_id = session_state.user_id.read().clone();
+        let user_id = session_state.user_id().read().clone();
         spawn(async move {
             if let Err(e) = crate::presentation::services::hydrate_generation_queue(
                 &gen_svc,
                 &mut generation_state,
                 user_id.as_deref(),
+                &platform_clone,
             )
             .await
             {
-                platform.log_error(&format!(
+                platform_clone.log_error(&format!(
                     "Failed to hydrate generation queue from Engine: {}",
                     e
                 ));
@@ -128,11 +129,11 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
             style: "height: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 1rem;",
 
             // ComfyUI status banner
-            if *session_state.comfyui_state.read() != "connected" {
+            if *session_state.comfyui_state().read() != "connected" {
                 comfyui_banner::ComfyUIBanner {
-                    state: session_state.comfyui_state.read().clone(),
-                    message: session_state.comfyui_message.read().clone(),
-                    retry_in_seconds: *session_state.comfyui_retry_in_seconds.read(),
+                    state: session_state.comfyui_state().read().clone(),
+                    message: session_state.comfyui_message().read().clone(),
+                    retry_in_seconds: *session_state.comfyui_retry_in_seconds().read(),
                 }
             }
 

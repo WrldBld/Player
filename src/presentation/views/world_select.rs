@@ -588,7 +588,9 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
                     if *show_advanced.read() {
                         {
-                            let config = rule_config.read().clone().unwrap();
+                            let Some(config) = rule_config.read().clone() else {
+                                return rsx! {};
+                            };
                             rsx! {
                                 RuleSystemConfigEditor {
                                     config: config,

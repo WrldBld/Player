@@ -60,10 +60,10 @@ pub fn PCView(props: PCViewProps) -> Element {
     let interactions = game_state.interactions.read().clone();
 
     // Get active challenge if any
-    let active_challenge = session_state.active_challenge.read().clone();
+    let active_challenge = session_state.active_challenge().read().clone();
 
     // Check if connected
-    let is_connected = session_state.connection_status.read().is_connected();
+    let is_connected = session_state.connection_status().read().is_connected();
 
     rsx! {
         div {
@@ -336,7 +336,8 @@ fn send_player_action(
     session_state: &crate::presentation::state::SessionState,
     action: PlayerAction,
 ) {
-    let client_binding = session_state.engine_client.read();
+    let engine_client_signal = session_state.engine_client();
+    let client_binding = engine_client_signal.read();
     if let Some(ref client) = *client_binding {
         let svc = crate::application::services::ActionService::new(std::sync::Arc::clone(client));
         if let Err(e) = svc.send_action(action) {
@@ -427,7 +428,8 @@ fn send_challenge_roll_input(
     challenge_id: &str,
     input: DiceInputType,
 ) {
-    let client_binding = session_state.engine_client.read();
+    let engine_client_signal = session_state.engine_client();
+    let client_binding = engine_client_signal.read();
     if let Some(ref client) = *client_binding {
         let svc = crate::application::services::SessionCommandService::new(std::sync::Arc::clone(client));
         if let Err(e) = svc.submit_challenge_roll_input(challenge_id, input) {

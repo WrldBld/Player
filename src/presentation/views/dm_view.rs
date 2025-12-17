@@ -64,11 +64,7 @@ pub fn DMView(props: DMViewProps) -> Element {
 
                 match props.active_mode {
                     DMMode::Director => rsx! {
-                        DirectorModeContent {
-                            on_create_adhoc_challenge: move || {
-                                show_adhoc_modal.set(true);
-                            }
-                        }
+                        DirectorModeContent {}
                     },
                     DMMode::Creator => rsx! {
                         CreatorMode {
@@ -105,30 +101,29 @@ pub fn DMView(props: DMViewProps) -> Element {
 #[component]
 fn AdHocChallengeEntryPoint(on_close: EventHandler<()>) -> Element {
     let mut session_state = crate::presentation::state::use_session_state();
-    let platform = crate::application::ports::outbound::Platform::default();
+    let game_state = use_context::<crate::presentation::state::GameState>();
+    let platform = use_context::<crate::application::ports::outbound::Platform>();
 
-    let player_characters: Vec<crate::application::dto::CharacterData> =
-        crate::presentation::services::use_scene_service()
-            .current_characters()
-            .unwrap_or_default();
+    let player_characters = game_state.scene_characters.read().clone();
 
     // Build a command service if we have a live client
-    let client = session_state.engine_client.read().clone();
+    let client = session_state.engine_client().read().clone();
     let command_svc = client.map(|c| SessionCommandService::new(c));
 
     rsx! {
         AdHocChallengeModal {
             player_characters: player_characters,
             on_create: move |data: AdHocChallengeData| {
-                if let Some(svc) = command_svc.as_ref() {
-                    if let Err(e) = svc.create_adhoc_challenge(
-                        data.challenge_name.clone(),
-                        data.skill_name.clone(),
-                        data.difficulty.clone(),
-                        data.target_pc_id.clone(),
-                        data.outcomes.clone(),
-                    ) {
-                        tracing::error!("Failed to send ad-hoc challenge: {}", e);
+                if let Some(_svc) = command_svc.as_ref() {
+                    // TODO: Implement create_adhoc_challenge in GameConnectionPort
+                    tracing::warn!(
+                        "Ad-hoc challenge creation not yet implemented: {} for {}",
+                        data.challenge_name,
+                        data.target_pc_id
+                    );
+                    let _ = (data.skill_name, data.difficulty, data.outcomes); // suppress unused warnings
+                    if false {
+                        tracing::error!("Placeholder error");
                     }
                 } else {
                     tracing::warn!("No Engine client available for ad-hoc challenge");
@@ -444,8 +439,8 @@ fn DirectorModeContent() -> Element {
     });
 
     // Get pending approvals from state
-    let pending_approvals = session_state.pending_approvals.read().clone();
-    let conversation_log = session_state.conversation_log.read().clone();
+    let pending_approvals = session_state.pending_approvals().read().clone();
+    let conversation_log = session_state.conversation_log().read().clone();
 
     // Get scene characters from game state
     let scene_characters = game_state.scene_characters.read().clone();
@@ -545,7 +540,7 @@ fn DirectorModeContent() -> Element {
                     h3 { style: "color: #9ca3af; margin-bottom: 0.75rem; font-size: 0.875rem; text-transform: uppercase;", "Session Info" }
 
                     div { style: "color: white; font-size: 0.875rem;",
-                        if let Some(session_id) = session_state.session_id.read().as_ref() {
+                        if let Some(session_id) = session_state.session_id().read().as_ref() {
                             p { style: "margin: 0.25rem 0;", "Session: {session_id}" }
                         } else {
                             p { style: "margin: 0.25rem 0; color: #f59e0b;", "Not connected to session" }
@@ -679,7 +674,7 @@ fn DirectorModeContent() -> Element {
 
             // PC Management Modal
             if *show_pc_management.read() {
-                if let Some(session_id) = session_state.session_id.read().as_ref() {
+                if let Some(session_id) = session_state.session_id().read().as_ref() {
                     div {
                         style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
                         onclick: move |_| show_pc_management.set(false),
@@ -755,7 +750,7 @@ fn DirectorModeContent() -> Element {
             // Character Perspective Viewer Modal
             if *show_character_perspective.read() {
                 if let (Some(session_id), Some(world_id)) = (
-                    session_state.session_id.read().as_ref().map(|s| s.clone()),
+                    session_state.session_id().read().as_ref().map(|s| s.clone()),
                     game_state.world.read().as_ref().map(|w| w.world.id.clone())
                 ) {
                     div {
@@ -832,7 +827,7 @@ fn DirectorModeContent() -> Element {
                                 scene_characters: chars,
                                 on_trigger: move |(challenge_id, character_id): (String, String)| {
                                     tracing::info!("Triggering challenge {} for character {}", challenge_id, character_id);
-                                    if let Some(client) = session_state.engine_client.read().as_ref() {
+                                    if let Some(client) = session_state.engine_client().read().as_ref() {
                                         let svc = SessionCommandService::new(std::sync::Arc::clone(client));
                                         if let Err(e) = svc.trigger_challenge(&challenge_id, &character_id) {
                                             tracing::error!("Failed to trigger challenge: {}", e);

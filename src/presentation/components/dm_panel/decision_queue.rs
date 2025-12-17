@@ -9,7 +9,7 @@ use crate::presentation::state::use_session_state;
 pub fn DecisionQueuePanel() -> Element {
     let session_state = use_session_state();
 
-    let pending = session_state.pending_approvals.read().clone();
+    let pending = session_state.pending_approvals().read().clone();
     let history = session_state.get_approval_history();
 
     let mut show_history_only: Signal<bool> = use_signal(|| false);

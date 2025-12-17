@@ -4,16 +4,8 @@
 
 use dioxus::prelude::*;
 
+use crate::application::dto::websocket_messages::CharacterData;
 use crate::presentation::components::dm_panel::director_generate_modal::DirectorGenerateModal;
-
-/// Character data for NPC motivation tracking
-#[derive(Clone, PartialEq)]
-pub struct CharacterData {
-    /// Character ID
-    pub id: String,
-    /// Character name
-    pub name: String,
-}
 
 /// NPC motivation state
 #[derive(Clone, PartialEq)]

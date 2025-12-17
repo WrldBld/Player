@@ -4,11 +4,6 @@
 //! - PC View: Visual novel gameplay experience for players
 //! - DM View: Directorial control panel for running the game
 
-// NOTE: The Player crate includes a lot of WIP modules/components/services that
-// are compiled but not yet wired into the runtime UI. Until those are exercised
-// (and tested), `dead_code` warnings are mostly noise.
-#![allow(dead_code)]
-
 mod application;
 mod domain;
 mod infrastructure;
@@ -60,8 +55,11 @@ fn App() -> Element {
     use_context_provider(DialogueState::new);
     use_context_provider(GenerationState::new);
 
-    // Provide application services via context
-    use_context_provider(Services::new);
+    // Infrastructure instantiation happens HERE only (composition root)
+    let api = infrastructure::http_client::ApiAdapter::new();
+
+    // Provide application services via context with the API adapter
+    use_context_provider(|| presentation::Services::new(api));
 
     // Non-DM routes show a simple header, DM routes use their own layout
     // Router handles all view switching

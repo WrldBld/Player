@@ -614,8 +614,9 @@ fn parse_input_value(value: &str, input_type: &str) -> serde_json::Value {
             .unwrap_or(serde_json::Value::String(value.to_string())),
         "float" => value
             .parse::<f64>()
-            .map(|n| serde_json::Value::Number(serde_json::Number::from_f64(n).unwrap()))
-            .unwrap_or(serde_json::Value::String(value.to_string())),
+            .ok()
+            .and_then(|n| serde_json::Number::from_f64(n).map(serde_json::Value::Number))
+            .unwrap_or_else(|| serde_json::Value::String(value.to_string())),
         "boolean" => serde_json::Value::Bool(value == "true" || value == "1"),
         _ => serde_json::Value::String(value.to_string()),
     }

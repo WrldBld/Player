@@ -160,7 +160,7 @@ pub fn handle_server_message(
         ServerMessage::Error { code, message } => {
             let error_msg = format!("Server error [{}]: {}", code, message);
             tracing::error!("{}", error_msg);
-            session_state.error_message.set(Some(error_msg));
+            session_state.error_message().set(Some(error_msg));
         }
 
         ServerMessage::Pong => {}
@@ -237,9 +237,9 @@ pub fn handle_server_message(
             retry_in_seconds,
         } => {
             tracing::info!("ComfyUI state changed: {} - {:?}", state, message);
-            session_state.comfyui_state.set(state);
-            session_state.comfyui_message.set(message);
-            session_state.comfyui_retry_in_seconds.set(retry_in_seconds);
+            session_state.comfyui_state().set(state);
+            session_state.comfyui_message().set(message);
+            session_state.comfyui_retry_in_seconds().set(retry_in_seconds);
         }
 
         ServerMessage::ChallengePrompt {
@@ -278,7 +278,7 @@ pub fn handle_server_message(
             individual_rolls,
         } => {
             // Clear active challenge if it matches
-            let active = { session_state.active_challenge.read().clone() };
+            let active = { session_state.active_challenge().read().clone() };
             if let Some(active_challenge) = active {
                 if active_challenge.challenge_id == challenge_id {
                     session_state.clear_active_challenge();
@@ -350,13 +350,16 @@ pub fn handle_server_message(
             );
 
             // Update the matching pending approval's challenge outcomes in-place
-            if let Some(idx) = session_state
-                .pending_approvals
-                .read()
-                .iter()
-                .position(|a| a.request_id == request_id)
-            {
-                let mut approvals = session_state.pending_approvals.read().clone();
+            // Find the index first and drop the read borrow
+            let idx = {
+                session_state
+                    .pending_approvals()
+                    .read()
+                    .iter()
+                    .position(|a| a.request_id == request_id)
+            };
+            if let Some(idx) = idx {
+                let mut approvals = session_state.pending_approvals().read().clone();
                 if let Some(approval) = approvals.get_mut(idx) {
                     if let Some(challenge) = &mut approval.challenge_suggestion {
                         if let Some(ref mut outcomes) = challenge.outcomes {
@@ -375,7 +378,7 @@ pub fn handle_server_message(
                         }
                     }
                 }
-                session_state.pending_approvals.set(approvals);
+                session_state.pending_approvals().set(approvals);
             }
         }
 
@@ -383,7 +386,7 @@ pub fn handle_server_message(
             tracing::info!("Challenge discarded for request {}", request_id);
 
             // Remove the challenge suggestion/outcomes from the approval item
-            let mut approvals = session_state.pending_approvals.read().clone();
+            let mut approvals = session_state.pending_approvals().read().clone();
             for approval in approvals.iter_mut() {
                 if approval.request_id == request_id {
                     approval.challenge_suggestion = None;
@@ -393,7 +396,7 @@ pub fn handle_server_message(
                     }
                 }
             }
-            session_state.pending_approvals.set(approvals);
+            session_state.pending_approvals().set(approvals);
         }
 
         ServerMessage::AdHocChallengeCreated {
@@ -413,7 +416,7 @@ pub fn handle_server_message(
                 "[AD-HOC CHALLENGE] '{}' created for PC {} (ID: {})",
                 challenge_name, target_pc_id, challenge_id
             );
-            session_state.conversation_log.write().push(
+            session_state.conversation_log().write().push(
                 crate::presentation::state::ConversationLogEntry {
                     speaker: "System".to_string(),
                     text: msg,

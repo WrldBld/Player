@@ -195,6 +195,15 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                 Some(CharacterSheetDataApi { values: sheet_vals })
             };
 
+            let starting_location_id = match location_id {
+                Some(id) => id,
+                None => {
+                    error_message.set(Some("Please select a starting location".to_string()));
+                    is_creating.set(false);
+                    return;
+                }
+            };
+
             let request = CreatePlayerCharacterRequest {
                 name: name_val,
                 description: if desc_val.trim().is_empty() {
@@ -202,7 +211,7 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                 } else {
                     Some(desc_val)
                 },
-                starting_location_id: location_id.unwrap(),
+                starting_location_id,
                 sheet_data,
                 sprite_asset: None,
                 portrait_asset: None,

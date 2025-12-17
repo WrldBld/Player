@@ -257,7 +257,7 @@ pub fn PCViewRoute(world_id: String) -> Element {
 
     // Check for existing PC on mount
     {
-        let session_id = session_state.session_id.read().clone();
+        let session_id = session_state.session_id().read().clone();
         let world_id_clone = world_id.clone();
         let nav = navigator.clone();
         let pc_svc = pc_service.clone();
@@ -310,7 +310,7 @@ pub fn PCCreationRoute(world_id: String) -> Element {
     });
 
     // Get session_id from session state
-    let session_id = session_state.session_id.read().clone()
+    let session_id = session_state.session_id().read().clone()
         .unwrap_or_else(|| "".to_string());
 
     rsx! {
@@ -506,7 +506,7 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
             // Header with DM tabs
             DMViewHeader {
                 world_id: props.world_id.clone(),
-                connection_status: *session_state.connection_status.read(),
+                connection_status: *session_state.connection_status().read(),
                 dm_mode: props.dm_mode,
                 on_connection_click: {
                     let platform = platform.clone();
@@ -553,11 +553,11 @@ fn DMViewLayout(props: DMViewLayoutProps) -> Element {
             }
 
             // Error overlay
-            if let Some(error) = session_state.error_message.read().as_ref() {
+            if let Some(error) = session_state.error_message().read().as_ref() {
                 ErrorOverlay {
                     message: error.clone(),
                     on_dismiss: move |_| {
-                        session_state.error_message.clone().set(None);
+                        session_state.error_message().clone().set(None);
                     }
                 }
             }
@@ -737,7 +737,7 @@ fn ensure_dm_connection(
     generation_state: GenerationState,
     platform: Platform,
 ) {
-    let status = *session_state.connection_status.read();
+    let status = *session_state.connection_status().read();
     // Only attempt a new connection if we're not already in the process / connected.
     if matches!(
         status,
@@ -901,9 +901,8 @@ fn initiate_connection(
     spawn(async move {
         use futures_util::StreamExt;
 
-        // Build a concrete connection (infrastructure) and pass it to the application service.
-        let client = crate::infrastructure::websocket::EngineClient::new(&server_url);
-        let connection = std::sync::Arc::new(crate::infrastructure::websocket::EngineGameConnection::new(client));
+        // Use the connection factory to create a game connection
+        let connection = crate::infrastructure::connection_factory::ConnectionFactory::create_game_connection(&server_url);
         session_state.set_connection_handle(connection.clone());
         let session_service = SessionService::new(connection.clone());
 
@@ -938,7 +937,7 @@ fn handle_disconnect(
     mut dialogue_state: DialogueState,
 ) {
     // Disconnect client if present
-    if let Some(client) = session_state.engine_client.read().as_ref() {
+    if let Some(client) = session_state.engine_client().read().as_ref() {
         client.disconnect();
     }
 

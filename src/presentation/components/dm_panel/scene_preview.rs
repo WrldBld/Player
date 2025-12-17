@@ -3,36 +3,15 @@
 //! Shows a smaller version of what players see including backdrop and character sprites.
 
 use dioxus::prelude::*;
+use crate::application::dto::websocket_messages::{CharacterData, CharacterPosition};
 
-/// Character data for scene preview
-#[derive(Clone, PartialEq)]
-pub struct CharacterData {
-    /// Character ID
-    pub id: String,
-    /// Character name
-    pub name: String,
-    /// Character sprite image URL
-    pub sprite_url: Option<String>,
-    /// Position on stage (left, center, right)
-    pub position: SpritePosition,
-    /// Current emotion/expression
-    pub emotion: String,
-}
-
-/// Position of a character sprite on stage
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum SpritePosition {
-    Left,
-    Center,
-    Right,
-}
-
-impl SpritePosition {
+impl CharacterPosition {
     fn as_style(&self) -> &'static str {
         match self {
-            SpritePosition::Left => "left: 10%; transform: translateX(0);",
-            SpritePosition::Center => "left: 50%; transform: translateX(-50%);",
-            SpritePosition::Right => "right: 10%; transform: translateX(0);",
+            CharacterPosition::Left => "left: 10%; transform: translateX(0);",
+            CharacterPosition::Center => "left: 50%; transform: translateX(-50%);",
+            CharacterPosition::Right => "right: 10%; transform: translateX(0);",
+            CharacterPosition::OffScreen => "display: none;",
         }
     }
 }
@@ -150,7 +129,7 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
 /// Character sprite preview component
 #[component]
 fn CharacterSpritePreview(character: CharacterData) -> Element {
-    let sprite_content = match &character.sprite_url {
+    let sprite_content = match &character.sprite_asset {
         Some(url) => rsx! {
             img {
                 src: "{url}",

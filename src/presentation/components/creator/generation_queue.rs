@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 
+use crate::application::ports::outbound::Platform;
 use crate::presentation::state::{use_generation_state, use_game_state, BatchStatus, GenerationBatch, SuggestionStatus, SuggestionTask};
 use crate::presentation::services::{
     visible_batches,
@@ -47,6 +48,7 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
     let generation_state = use_generation_state();
     let game_state = use_game_state();
     let generation_service = use_generation_service();
+    let platform = use_context::<Platform>();
     let mut selected_suggestion: Signal<Option<SuggestionTask>> = use_signal(|| None);
     let mut show_read: Signal<bool> = use_signal(|| false);
     let mut active_filter: Signal<QueueFilter> = use_signal(|| QueueFilter::All);
@@ -341,6 +343,7 @@ fn QueueItemRow(
     on_navigate_to_entity: Option<EventHandler<(String, String)>>,
 ) -> Element {
     let generation_service = use_generation_service();
+    let platform = use_context::<Platform>();
     let mut expanded_error: Signal<bool> = use_signal(|| false);
     let mut expanded_details: Signal<bool> = use_signal(|| false);
     let batch_id = batch.batch_id.clone();
@@ -471,14 +474,16 @@ fn QueueItemRow(
                                     let world_id_clone = world_id.clone();
                                     let nav_handler = on_navigate_to_entity.clone();
                                     let gen_svc = generation_service.clone();
+                                    let plat_clone = platform.clone();
                                     move |_| {
                                         let bid = batch_id.clone();
                                         let wid = world_id_clone.clone();
                                         let mut gen_state = state;
                                         let nav = nav_handler.clone();
                                         let svc = gen_svc.clone();
+                                        let plat = plat_clone.clone();
                                     spawn(async move {
-                                            if let Err(e) = mark_batch_read_and_sync(&svc, &mut gen_state, &bid, wid.as_deref()).await {
+                                            if let Err(e) = mark_batch_read_and_sync(&svc, &mut gen_state, &bid, wid.as_deref(), &plat).await {
                                             tracing::error!("Failed to mark batch read and sync: {}", e);
                                         }
                                     });
@@ -627,6 +632,7 @@ fn SuggestionQueueRow(
     on_navigate_to_entity: Option<EventHandler<(String, String)>>,
 ) -> Element {
     let generation_service = use_generation_service();
+    let platform = use_context::<Platform>();
     let mut expanded_error: Signal<bool> = use_signal(|| false);
     let (status_icon, status_color, status_text) = match &suggestion.status {
         SuggestionStatus::Queued => ("💭", "#9ca3af", "Queued".to_string()),
@@ -683,6 +689,7 @@ fn SuggestionQueueRow(
                                 let world_id_clone = world_id.clone();
                                 let nav_handler = on_navigate_to_entity.clone();
                                 let gen_svc = generation_service.clone();
+                                let plat_clone = platform.clone();
                                 move |_| {
                                     selected_suggestion.set(Some(suggestion_clone.clone()));
                                     let req_id_clone = req_id.clone();
@@ -690,8 +697,9 @@ fn SuggestionQueueRow(
                                     let mut gen_state = state;
                                     let nav = nav_handler.clone();
                                     let svc = gen_svc.clone();
+                                    let plat = plat_clone.clone();
                                 spawn(async move {
-                                        if let Err(e) = mark_suggestion_read_and_sync(&svc, &mut gen_state, &req_id_clone, wid.as_deref()).await {
+                                        if let Err(e) = mark_suggestion_read_and_sync(&svc, &mut gen_state, &req_id_clone, wid.as_deref(), &plat).await {
                                         tracing::error!("Failed to mark suggestion read and sync: {}", e);
                                     }
                                 });

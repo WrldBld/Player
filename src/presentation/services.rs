@@ -11,51 +11,33 @@ use crate::application::services::{
     AssetService, CharacterService, ChallengeService, EventChainService, GenerationService, LocationService, NarrativeEventService,
     PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
+use crate::application::ports::outbound::ApiPort;
 use crate::infrastructure::http_client::ApiAdapter;
-
-/// Type aliases for concrete service types
-pub type WorldSvc = WorldService<ApiAdapter>;
-pub type CharacterSvc = CharacterService<ApiAdapter>;
-pub type LocationSvc = LocationService<ApiAdapter>;
-pub type PlayerCharacterSvc = PlayerCharacterService<ApiAdapter>;
-pub type SkillSvc = SkillService<ApiAdapter>;
-pub type ChallengeSvc = ChallengeService<ApiAdapter>;
-pub type StoryEventSvc = StoryEventService<ApiAdapter>;
-pub type NarrativeEventSvc = NarrativeEventService<ApiAdapter>;
-pub type WorkflowSvc = WorkflowService<ApiAdapter>;
-pub type AssetSvc = AssetService<ApiAdapter>;
-pub type SuggestionSvc = SuggestionService<ApiAdapter>;
-pub type EventChainSvc = EventChainService<ApiAdapter>;
-pub type GenerationSvc = GenerationService<ApiAdapter>;
 
 /// All services wrapped for context provision
 #[derive(Clone)]
-pub struct Services {
-    pub world: Arc<WorldSvc>,
-    pub character: Arc<CharacterSvc>,
-    pub location: Arc<LocationSvc>,
-    pub player_character: Arc<PlayerCharacterSvc>,
-    pub skill: Arc<SkillSvc>,
-    pub challenge: Arc<ChallengeSvc>,
-    pub story_event: Arc<StoryEventSvc>,
-    pub narrative_event: Arc<NarrativeEventSvc>,
-    pub workflow: Arc<WorkflowSvc>,
-    pub asset: Arc<AssetSvc>,
-    pub suggestion: Arc<SuggestionSvc>,
-    pub event_chain: Arc<EventChainSvc>,
-    pub generation: Arc<GenerationSvc>,
+pub struct Services<A: ApiPort> {
+    pub world: Arc<WorldService<A>>,
+    pub character: Arc<CharacterService<A>>,
+    pub location: Arc<LocationService<A>>,
+    pub player_character: Arc<PlayerCharacterService<A>>,
+    pub skill: Arc<SkillService<A>>,
+    pub challenge: Arc<ChallengeService<A>>,
+    pub story_event: Arc<StoryEventService<A>>,
+    pub narrative_event: Arc<NarrativeEventService<A>>,
+    pub workflow: Arc<WorkflowService<A>>,
+    pub asset: Arc<AssetService<A>>,
+    pub suggestion: Arc<SuggestionService<A>>,
+    pub event_chain: Arc<EventChainService<A>>,
+    pub generation: Arc<GenerationService<A>>,
 }
 
-impl Default for Services {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// Concrete Services type using the ApiAdapter
+pub type ConcreteServices = Services<ApiAdapter>;
 
-impl Services {
-    /// Create all services with the default API adapter
-    pub fn new() -> Self {
-        let api = ApiAdapter::new();
+impl<A: ApiPort + Clone> Services<A> {
+    /// Create all services with the given API port implementation
+    pub fn new(api: A) -> Self {
         Self {
             world: Arc::new(WorldService::new(api.clone())),
             character: Arc::new(CharacterService::new(api.clone())),
@@ -75,86 +57,85 @@ impl Services {
 }
 
 /// Hook to access the WorldService from context
-pub fn use_world_service() -> Arc<WorldSvc> {
-    let services = use_context::<Services>();
+pub fn use_world_service() -> Arc<WorldService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.world.clone()
 }
 
 /// Hook to access the CharacterService from context
-pub fn use_character_service() -> Arc<CharacterSvc> {
-    let services = use_context::<Services>();
+pub fn use_character_service() -> Arc<CharacterService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.character.clone()
 }
 
 /// Hook to access the LocationService from context
-pub fn use_location_service() -> Arc<LocationSvc> {
-    let services = use_context::<Services>();
+pub fn use_location_service() -> Arc<LocationService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.location.clone()
 }
 
 /// Hook to access the PlayerCharacterService from context
-pub fn use_player_character_service() -> Arc<PlayerCharacterSvc> {
-    let services = use_context::<Services>();
+pub fn use_player_character_service() -> Arc<PlayerCharacterService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.player_character.clone()
 }
 
 /// Hook to access the SkillService from context
-pub fn use_skill_service() -> Arc<SkillSvc> {
-    let services = use_context::<Services>();
+pub fn use_skill_service() -> Arc<SkillService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.skill.clone()
 }
 
 /// Hook to access the ChallengeService from context
-pub fn use_challenge_service() -> Arc<ChallengeSvc> {
-    let services = use_context::<Services>();
+pub fn use_challenge_service() -> Arc<ChallengeService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.challenge.clone()
 }
 
 /// Hook to access the StoryEventService from context
-pub fn use_story_event_service() -> Arc<StoryEventSvc> {
-    let services = use_context::<Services>();
+pub fn use_story_event_service() -> Arc<StoryEventService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.story_event.clone()
 }
 
 /// Hook to access the NarrativeEventService from context
-pub fn use_narrative_event_service() -> Arc<NarrativeEventSvc> {
-    let services = use_context::<Services>();
+pub fn use_narrative_event_service() -> Arc<NarrativeEventService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.narrative_event.clone()
 }
 
 /// Hook to access the WorkflowService from context
-pub fn use_workflow_service() -> Arc<WorkflowSvc> {
-    let services = use_context::<Services>();
+pub fn use_workflow_service() -> Arc<WorkflowService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.workflow.clone()
 }
 
 /// Hook to access the AssetService from context
-pub fn use_asset_service() -> Arc<AssetSvc> {
-    let services = use_context::<Services>();
+pub fn use_asset_service() -> Arc<AssetService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.asset.clone()
 }
 
 /// Hook to access the SuggestionService from context
-pub fn use_suggestion_service() -> Arc<SuggestionSvc> {
-    let services = use_context::<Services>();
+pub fn use_suggestion_service() -> Arc<SuggestionService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.suggestion.clone()
 }
 
 /// Hook to access the EventChainService from context
-pub fn use_event_chain_service() -> Arc<EventChainSvc> {
-    let services = use_context::<Services>();
+pub fn use_event_chain_service() -> Arc<EventChainService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.event_chain.clone()
 }
 
 /// Hook to access the GenerationService from context
-pub fn use_generation_service() -> Arc<GenerationSvc> {
-    let services = use_context::<Services>();
+pub fn use_generation_service() -> Arc<GenerationService<ApiAdapter>> {
+    let services = use_context::<ConcreteServices>();
     services.generation.clone()
 }
 
 use crate::presentation::state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};
-use crate::infrastructure::storage;
-use crate::application::ports::outbound::ApiPort;
+use crate::application::ports::outbound::Platform;
 use anyhow::Result;
 
 /// Hydrate GenerationState from the Engine's unified generation queue endpoint.
@@ -163,10 +144,12 @@ use anyhow::Result;
 /// * `generation_service` - The GenerationService to fetch queue state from
 /// * `generation_state` - The mutable state to populate
 /// * `user_id` - Optional user ID to filter queue items
+/// * `platform` - The platform adapter for storage access
 pub async fn hydrate_generation_queue<A: ApiPort>(
     generation_service: &GenerationService<A>,
     generation_state: &mut GenerationState,
     user_id: Option<&str>,
+    platform: &Platform,
 ) -> Result<()> {
     let snapshot = generation_service.fetch_queue(user_id).await?;
 
@@ -236,7 +219,7 @@ pub async fn hydrate_generation_queue<A: ApiPort>(
     }
 
     // Re-apply persisted read/unread state based on local storage (secondary layer)
-    apply_generation_read_state(generation_state);
+    apply_generation_read_state(platform, generation_state);
 
     Ok(())
 }
@@ -245,7 +228,7 @@ const STORAGE_KEY_GEN_READ_BATCHES: &str = "wrldbldr_gen_read_batches";
 const STORAGE_KEY_GEN_READ_SUGGESTIONS: &str = "wrldbldr_gen_read_suggestions";
 
 /// Persist the read/unread state of generation queue items to local storage
-pub fn persist_generation_read_state(state: &GenerationState) {
+pub fn persist_generation_read_state(platform: &Platform, state: &GenerationState) {
     // Persist read batch IDs
     let read_batch_ids: Vec<String> = state
         .get_batches()
@@ -254,7 +237,7 @@ pub fn persist_generation_read_state(state: &GenerationState) {
         .map(|b| b.batch_id)
         .collect();
     let batch_value = read_batch_ids.join(",");
-    storage::save(STORAGE_KEY_GEN_READ_BATCHES, &batch_value);
+    platform.storage_save(STORAGE_KEY_GEN_READ_BATCHES, &batch_value);
 
     // Persist read suggestion IDs
     let read_suggestion_ids: Vec<String> = state
@@ -264,18 +247,18 @@ pub fn persist_generation_read_state(state: &GenerationState) {
         .map(|s| s.request_id)
         .collect();
     let suggestion_value = read_suggestion_ids.join(",");
-    storage::save(STORAGE_KEY_GEN_READ_SUGGESTIONS, &suggestion_value);
+    platform.storage_save(STORAGE_KEY_GEN_READ_SUGGESTIONS, &suggestion_value);
 }
 
 /// Apply persisted read/unread state from local storage to the current GenerationState
-fn apply_generation_read_state(state: &mut GenerationState) {
-    if let Some(batch_str) = storage::load(STORAGE_KEY_GEN_READ_BATCHES) {
+fn apply_generation_read_state(platform: &Platform, state: &mut GenerationState) {
+    if let Some(batch_str) = platform.storage_load(STORAGE_KEY_GEN_READ_BATCHES) {
         for id in batch_str.split(',').map(str::trim).filter(|s| !s.is_empty()) {
             state.mark_batch_read(id);
         }
     }
 
-    if let Some(sugg_str) = storage::load(STORAGE_KEY_GEN_READ_SUGGESTIONS) {
+    if let Some(sugg_str) = platform.storage_load(STORAGE_KEY_GEN_READ_SUGGESTIONS) {
         for id in sugg_str.split(',').map(str::trim).filter(|s| !s.is_empty()) {
             state.mark_suggestion_read(id);
         }
@@ -356,14 +339,16 @@ pub fn visible_suggestions(
 /// * `state` - The mutable GenerationState
 /// * `batch_id` - The batch ID to mark as read
 /// * `world_id` - Optional world ID scope
+/// * `platform` - The platform adapter for storage access
 pub async fn mark_batch_read_and_sync<A: ApiPort>(
     generation_service: &GenerationService<A>,
     state: &mut GenerationState,
     batch_id: &str,
     world_id: Option<&str>,
+    platform: &Platform,
 ) -> Result<()> {
     state.mark_batch_read(batch_id);
-    persist_generation_read_state(state);
+    persist_generation_read_state(platform, state);
     sync_generation_read_state(generation_service, state, world_id).await
 }
 
@@ -374,13 +359,15 @@ pub async fn mark_batch_read_and_sync<A: ApiPort>(
 /// * `state` - The mutable GenerationState
 /// * `request_id` - The request ID to mark as read
 /// * `world_id` - Optional world ID scope
+/// * `platform` - The platform adapter for storage access
 pub async fn mark_suggestion_read_and_sync<A: ApiPort>(
     generation_service: &GenerationService<A>,
     state: &mut GenerationState,
     request_id: &str,
     world_id: Option<&str>,
+    platform: &Platform,
 ) -> Result<()> {
     state.mark_suggestion_read(request_id);
-    persist_generation_read_state(state);
+    persist_generation_read_state(platform, state);
     sync_generation_read_state(generation_service, state, world_id).await
 }

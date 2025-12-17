@@ -641,7 +641,7 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
 
                             // Toggle edit/save
                             {
-                                let editing_sig = editing.clone();
+                                let mut editing_sig = editing.clone();
                                 rsx! {
                                     button {
                                         onclick: move |_| {

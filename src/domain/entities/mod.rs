@@ -1,9 +1,6 @@
 //! Domain entities
 
-pub mod approval;
 pub mod character;
-pub mod dialogue;
-pub mod interaction;
 pub mod location;
 pub mod player_action;
 pub mod scene;

@@ -37,10 +37,10 @@ pub fn handle_session_event(
                 crate::application::dto::AppConnectionStatus::Failed => ConnectionStatus::Failed,
             };
 
-            session_state.connection_status.set(presentation_status);
+            session_state.connection_status().set(presentation_status);
 
             if matches!(state, PortConnectionState::Disconnected | PortConnectionState::Failed) {
-                session_state.engine_client.set(None);
+                session_state.engine_client().set(None);
             }
         }
         SessionEvent::MessageReceived(message) => {
