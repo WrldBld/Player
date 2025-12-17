@@ -4,8 +4,8 @@
 //! for deterministic testing.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
-    TimeProvider,
+    DocumentProvider, EngineConfigProvider, ConnectionFactoryProvider, LogProvider,
+    Platform, RandomProvider, SleepProvider, StorageProvider, TimeProvider,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -248,6 +248,55 @@ impl SleepProvider for MockSleepProvider {
     }
 }
 
+/// Mock engine configuration provider
+#[derive(Clone, Default)]
+pub struct MockEngineConfigProvider {
+    configured_url: Arc<RwLock<Option<String>>>,
+}
+
+impl MockEngineConfigProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Get the configured engine URL
+    pub fn get_configured_url(&self) -> Option<String> {
+        self.configured_url.read().unwrap().clone()
+    }
+}
+
+impl EngineConfigProvider for MockEngineConfigProvider {
+    fn configure_engine_url(&self, ws_url: &str) {
+        *self.configured_url.write().unwrap() = Some(self.ws_to_http(ws_url));
+    }
+
+    fn ws_to_http(&self, ws_url: &str) -> String {
+        ws_url
+            .replace("wss://", "https://")
+            .replace("ws://", "http://")
+            .trim_end_matches("/ws")
+            .to_string()
+    }
+}
+
+/// Mock connection factory provider
+#[derive(Clone, Default)]
+pub struct MockConnectionFactoryProvider;
+
+impl MockConnectionFactoryProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl ConnectionFactoryProvider for MockConnectionFactoryProvider {
+    fn create_game_connection(&self, _server_url: &str) -> Arc<dyn crate::application::ports::outbound::GameConnectionPort> {
+        // For testing, we would need a mock GameConnectionPort implementation
+        // For now, this will panic if called - tests that need connection should mock it separately
+        panic!("MockConnectionFactoryProvider::create_game_connection called - this should be mocked in tests that need it")
+    }
+}
+
 /// Create a mock platform with default settings for testing
 pub fn create_mock_platform() -> Platform {
     Platform::new(
@@ -257,6 +306,8 @@ pub fn create_mock_platform() -> Platform {
         MockStorageProvider::default(),
         MockLogProvider::default(),
         MockDocumentProvider::default(),
+        MockEngineConfigProvider::default(),
+        MockConnectionFactoryProvider::default(),
     )
 }
 
@@ -268,6 +319,8 @@ pub struct MockPlatformBuilder {
     storage: MockStorageProvider,
     log: MockLogProvider,
     document: MockDocumentProvider,
+    engine_config: MockEngineConfigProvider,
+    connection_factory: MockConnectionFactoryProvider,
 }
 
 impl Default for MockPlatformBuilder {
@@ -285,6 +338,8 @@ impl MockPlatformBuilder {
             storage: MockStorageProvider::default(),
             log: MockLogProvider::default(),
             document: MockDocumentProvider::default(),
+            engine_config: MockEngineConfigProvider::default(),
+            connection_factory: MockConnectionFactoryProvider::default(),
         }
     }
 
@@ -304,6 +359,15 @@ impl MockPlatformBuilder {
     }
 
     pub fn build(self) -> Platform {
-        Platform::new(self.time, self.sleep, self.random, self.storage, self.log, self.document)
+        Platform::new(
+            self.time,
+            self.sleep,
+            self.random,
+            self.storage,
+            self.log,
+            self.document,
+            self.engine_config,
+            self.connection_factory,
+        )
     }
 }

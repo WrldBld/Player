@@ -59,6 +59,24 @@ pub trait DocumentProvider: Clone + 'static {
     fn set_page_title(&self, title: &str);
 }
 
+/// Engine configuration provider for API URL management
+pub trait EngineConfigProvider: Clone + 'static {
+    /// Configure the base Engine URL for API calls (from WebSocket URL)
+    fn configure_engine_url(&self, ws_url: &str);
+
+    /// Convert WebSocket URL to HTTP URL
+    fn ws_to_http(&self, ws_url: &str) -> String;
+}
+
+/// Connection factory provider for creating game connections
+pub trait ConnectionFactoryProvider: Clone + 'static {
+    /// Create a game connection to the engine
+    ///
+    /// Returns an Arc-wrapped connection that implements GameConnectionPort.
+    /// This abstracts the WebSocket connection creation from the presentation layer.
+    fn create_game_connection(&self, server_url: &str) -> std::sync::Arc<dyn super::GameConnectionPort>;
+}
+
 /// Unified platform services container
 ///
 /// Provides all platform abstractions through a single injectable type.
@@ -71,6 +89,8 @@ pub struct Platform {
     storage: std::sync::Arc<dyn StorageProviderDyn>,
     log: std::sync::Arc<dyn LogProviderDyn>,
     document: std::sync::Arc<dyn DocumentProviderDyn>,
+    engine_config: std::sync::Arc<dyn EngineConfigProviderDyn>,
+    connection_factory: std::sync::Arc<dyn ConnectionFactoryProviderDyn>,
 }
 
 // Dynamic trait versions for Arc storage (need Send + Sync for Dioxus context)
@@ -103,6 +123,15 @@ trait LogProviderDyn: Send + Sync {
 
 trait DocumentProviderDyn: Send + Sync {
     fn set_page_title(&self, title: &str);
+}
+
+trait EngineConfigProviderDyn: Send + Sync {
+    fn configure_engine_url(&self, ws_url: &str);
+    fn ws_to_http(&self, ws_url: &str) -> String;
+}
+
+trait ConnectionFactoryProviderDyn: Send + Sync {
+    fn create_game_connection(&self, server_url: &str) -> std::sync::Arc<dyn super::GameConnectionPort>;
 }
 
 // Blanket implementations
@@ -163,15 +192,33 @@ impl<T: DocumentProvider + Send + Sync> DocumentProviderDyn for T {
     }
 }
 
+impl<T: EngineConfigProvider + Send + Sync> EngineConfigProviderDyn for T {
+    fn configure_engine_url(&self, ws_url: &str) {
+        EngineConfigProvider::configure_engine_url(self, ws_url)
+    }
+
+    fn ws_to_http(&self, ws_url: &str) -> String {
+        EngineConfigProvider::ws_to_http(self, ws_url)
+    }
+}
+
+impl<T: ConnectionFactoryProvider + Send + Sync> ConnectionFactoryProviderDyn for T {
+    fn create_game_connection(&self, server_url: &str) -> std::sync::Arc<dyn super::GameConnectionPort> {
+        ConnectionFactoryProvider::create_game_connection(self, server_url)
+    }
+}
+
 impl Platform {
     /// Create a new Platform with the given providers
-    pub fn new<Tm, Sl, R, S, L, D>(
+    pub fn new<Tm, Sl, R, S, L, D, E, C>(
         time: Tm,
         sleep: Sl,
         random: R,
         storage: S,
         log: L,
         document: D,
+        engine_config: E,
+        connection_factory: C,
     ) -> Self
     where
         Tm: TimeProvider + Send + Sync,
@@ -180,6 +227,8 @@ impl Platform {
         S: StorageProvider + Send + Sync,
         L: LogProvider + Send + Sync,
         D: DocumentProvider + Send + Sync,
+        E: EngineConfigProvider + Send + Sync,
+        C: ConnectionFactoryProvider + Send + Sync,
     {
         Self {
             time: std::sync::Arc::new(time),
@@ -188,6 +237,8 @@ impl Platform {
             storage: std::sync::Arc::new(storage),
             log: std::sync::Arc::new(log),
             document: std::sync::Arc::new(document),
+            engine_config: std::sync::Arc::new(engine_config),
+            connection_factory: std::sync::Arc::new(connection_factory),
         }
     }
 
@@ -268,6 +319,21 @@ impl Platform {
     /// Set the browser page title (no-op on desktop)
     pub fn set_page_title(&self, title: &str) {
         self.document.set_page_title(title)
+    }
+
+    /// Configure the base Engine URL for API calls (from WebSocket URL)
+    pub fn configure_engine_url(&self, ws_url: &str) {
+        self.engine_config.configure_engine_url(ws_url)
+    }
+
+    /// Convert WebSocket URL to HTTP URL
+    pub fn ws_to_http(&self, ws_url: &str) -> String {
+        self.engine_config.ws_to_http(ws_url)
+    }
+
+    /// Create a game connection to the engine
+    pub fn create_game_connection(&self, server_url: &str) -> std::sync::Arc<dyn super::GameConnectionPort> {
+        self.connection_factory.create_game_connection(server_url)
     }
 }
 

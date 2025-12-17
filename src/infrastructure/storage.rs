@@ -10,7 +10,6 @@ use web_sys::window;
 /// Keys for localStorage entries
 pub const STORAGE_KEY_SERVER_URL: &str = "wrldbldr_server_url";
 pub const STORAGE_KEY_ROLE: &str = "wrldbldr_role";
-pub const STORAGE_KEY_LAST_WORLD: &str = "wrldbldr_last_world";
 pub const STORAGE_KEY_USER_ID: &str = "wrldbldr_user_id";
 
 /// Save a value to localStorage (WASM only)
@@ -102,7 +101,6 @@ mod tests {
     fn test_storage_constants() {
         assert_eq!(STORAGE_KEY_SERVER_URL, "wrldbldr_server_url");
         assert_eq!(STORAGE_KEY_ROLE, "wrldbldr_role");
-        assert_eq!(STORAGE_KEY_LAST_WORLD, "wrldbldr_last_world");
     }
 
     #[test]

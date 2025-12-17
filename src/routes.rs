@@ -98,12 +98,8 @@ pub fn MainMenuRoute() -> Element {
         // Persist it so subsequent screens can read it
         platform_for_effect.storage_save(storage_keys::SERVER_URL, &server_url);
 
-        // Configure Engine HTTP base URL from the WebSocket URL (WASM only)
-        #[cfg(target_arch = "wasm32")]
-        {
-            use crate::infrastructure::api::{set_engine_url, ws_to_http};
-            set_engine_url(&ws_to_http(&server_url));
-        }
+        // Configure Engine HTTP base URL from the WebSocket URL
+        platform_for_effect.configure_engine_url(&server_url);
 
         // Go straight to role selection
         navigator_for_effect.push(Route::RoleSelectRoute {});
@@ -754,12 +750,8 @@ fn ensure_dm_connection(
         .unwrap_or_else(|| DEFAULT_ENGINE_URL.to_string());
     platform.storage_save(storage_keys::SERVER_URL, &server_url);
 
-    // Configure Engine HTTP base URL from the WebSocket URL (WASM only)
-    #[cfg(target_arch = "wasm32")]
-    {
-        use crate::infrastructure::api::{set_engine_url, ws_to_http};
-        set_engine_url(&ws_to_http(&server_url));
-    }
+    // Configure Engine HTTP base URL from the WebSocket URL
+    platform.configure_engine_url(&server_url);
 
     // Use the stable anonymous user ID from storage
     let user_id = platform.get_user_id();
@@ -901,8 +893,8 @@ fn initiate_connection(
     spawn(async move {
         use futures_util::StreamExt;
 
-        // Use the connection factory to create a game connection
-        let connection = crate::infrastructure::connection_factory::ConnectionFactory::create_game_connection(&server_url);
+        // Use the platform's connection factory to create a game connection
+        let connection = platform.create_game_connection(&server_url);
         session_state.set_connection_handle(connection.clone());
         let session_service = SessionService::new(connection.clone());
 

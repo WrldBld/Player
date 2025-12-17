@@ -4,11 +4,11 @@
 //! standard library and native crates.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
-    TimeProvider,
+    DocumentProvider, EngineConfigProvider, ConnectionFactoryProvider, LogProvider,
+    Platform, RandomProvider, SleepProvider, StorageProvider, TimeProvider,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::{future::Future, pin::Pin};
+use std::{future::Future, pin::Pin, sync::Arc};
 
 /// Desktop time provider using std::time
 #[derive(Clone, Default)]
@@ -114,6 +114,41 @@ impl SleepProvider for DesktopSleepProvider {
     }
 }
 
+/// Desktop engine configuration provider
+#[derive(Clone, Default)]
+pub struct DesktopEngineConfigProvider;
+
+impl EngineConfigProvider for DesktopEngineConfigProvider {
+    fn configure_engine_url(&self, _ws_url: &str) {
+        // Desktop doesn't use the same API configuration as WASM
+        // This is a no-op for desktop builds
+    }
+
+    fn ws_to_http(&self, ws_url: &str) -> String {
+        // Reuse the same conversion logic as infrastructure/api.rs
+        let url = ws_url
+            .replace("wss://", "https://")
+            .replace("ws://", "http://");
+
+        // Remove /ws path suffix if present
+        if url.ends_with("/ws") {
+            url[..url.len() - 3].to_string()
+        } else {
+            url
+        }
+    }
+}
+
+/// Desktop connection factory provider
+#[derive(Clone, Default)]
+pub struct DesktopConnectionFactoryProvider;
+
+impl ConnectionFactoryProvider for DesktopConnectionFactoryProvider {
+    fn create_game_connection(&self, server_url: &str) -> Arc<dyn crate::application::ports::outbound::GameConnectionPort> {
+        crate::infrastructure::connection_factory::ConnectionFactory::create_game_connection(server_url)
+    }
+}
+
 /// Create platform services for desktop
 pub fn create_platform() -> Platform {
     Platform::new(
@@ -123,5 +158,7 @@ pub fn create_platform() -> Platform {
         DesktopStorageProvider,
         DesktopLogProvider,
         DesktopDocumentProvider,
+        DesktopEngineConfigProvider,
+        DesktopConnectionFactoryProvider,
     )
 }

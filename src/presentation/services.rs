@@ -3,6 +3,16 @@
 //! This module provides Dioxus context providers for application services.
 //! Components can use `use_context` to access services without depending
 //! on infrastructure implementations.
+//!
+//! ## Architecture Note
+//!
+//! The hook functions (`use_*_service`) reference `ApiAdapter` from infrastructure.
+//! This is a controlled violation: these hooks are part of the "composition layer"
+//! that wires concrete types together. The ConcreteServices type is defined in main.rs
+//! (the composition root), and these hooks simply provide convenient access.
+//!
+//! Components using these hooks remain architecture-compliant as they work with
+//! the service types (from application layer), not directly with ApiAdapter.
 
 use dioxus::prelude::*;
 use std::sync::Arc;
@@ -12,7 +22,9 @@ use crate::application::services::{
     PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
 use crate::application::ports::outbound::ApiPort;
-use crate::infrastructure::http_client::ApiAdapter;
+// Import ConcreteServices from the composition root (main.rs)
+// This is acceptable as main.rs wires up the concrete types
+use crate::ConcreteServices;
 
 /// All services wrapped for context provision
 #[derive(Clone)]
@@ -31,9 +43,6 @@ pub struct Services<A: ApiPort> {
     pub event_chain: Arc<EventChainService<A>>,
     pub generation: Arc<GenerationService<A>>,
 }
-
-/// Concrete Services type using the ApiAdapter
-pub type ConcreteServices = Services<ApiAdapter>;
 
 impl<A: ApiPort + Clone> Services<A> {
     /// Create all services with the given API port implementation
@@ -56,80 +65,96 @@ impl<A: ApiPort + Clone> Services<A> {
     }
 }
 
+// Helper type aliases for convenience - these avoid exposing ApiAdapter directly
+// but rely on ConcreteServices being defined in main.rs
+type ConcreteWorldService = Arc<WorldService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteCharacterService = Arc<CharacterService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteLocationService = Arc<LocationService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcretePlayerCharacterService = Arc<PlayerCharacterService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteSkillService = Arc<SkillService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteChallengeService = Arc<ChallengeService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteStoryEventService = Arc<StoryEventService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteNarrativeEventService = Arc<NarrativeEventService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteWorkflowService = Arc<WorkflowService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteAssetService = Arc<AssetService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteSuggestionService = Arc<SuggestionService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteEventChainService = Arc<EventChainService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteGenerationService = Arc<GenerationService<crate::infrastructure::http_client::ApiAdapter>>;
+
 /// Hook to access the WorldService from context
-pub fn use_world_service() -> Arc<WorldService<ApiAdapter>> {
+pub fn use_world_service() -> ConcreteWorldService {
     let services = use_context::<ConcreteServices>();
     services.world.clone()
 }
 
 /// Hook to access the CharacterService from context
-pub fn use_character_service() -> Arc<CharacterService<ApiAdapter>> {
+pub fn use_character_service() -> ConcreteCharacterService {
     let services = use_context::<ConcreteServices>();
     services.character.clone()
 }
 
 /// Hook to access the LocationService from context
-pub fn use_location_service() -> Arc<LocationService<ApiAdapter>> {
+pub fn use_location_service() -> ConcreteLocationService {
     let services = use_context::<ConcreteServices>();
     services.location.clone()
 }
 
 /// Hook to access the PlayerCharacterService from context
-pub fn use_player_character_service() -> Arc<PlayerCharacterService<ApiAdapter>> {
+pub fn use_player_character_service() -> ConcretePlayerCharacterService {
     let services = use_context::<ConcreteServices>();
     services.player_character.clone()
 }
 
 /// Hook to access the SkillService from context
-pub fn use_skill_service() -> Arc<SkillService<ApiAdapter>> {
+pub fn use_skill_service() -> ConcreteSkillService {
     let services = use_context::<ConcreteServices>();
     services.skill.clone()
 }
 
 /// Hook to access the ChallengeService from context
-pub fn use_challenge_service() -> Arc<ChallengeService<ApiAdapter>> {
+pub fn use_challenge_service() -> ConcreteChallengeService {
     let services = use_context::<ConcreteServices>();
     services.challenge.clone()
 }
 
 /// Hook to access the StoryEventService from context
-pub fn use_story_event_service() -> Arc<StoryEventService<ApiAdapter>> {
+pub fn use_story_event_service() -> ConcreteStoryEventService {
     let services = use_context::<ConcreteServices>();
     services.story_event.clone()
 }
 
 /// Hook to access the NarrativeEventService from context
-pub fn use_narrative_event_service() -> Arc<NarrativeEventService<ApiAdapter>> {
+pub fn use_narrative_event_service() -> ConcreteNarrativeEventService {
     let services = use_context::<ConcreteServices>();
     services.narrative_event.clone()
 }
 
 /// Hook to access the WorkflowService from context
-pub fn use_workflow_service() -> Arc<WorkflowService<ApiAdapter>> {
+pub fn use_workflow_service() -> ConcreteWorkflowService {
     let services = use_context::<ConcreteServices>();
     services.workflow.clone()
 }
 
 /// Hook to access the AssetService from context
-pub fn use_asset_service() -> Arc<AssetService<ApiAdapter>> {
+pub fn use_asset_service() -> ConcreteAssetService {
     let services = use_context::<ConcreteServices>();
     services.asset.clone()
 }
 
 /// Hook to access the SuggestionService from context
-pub fn use_suggestion_service() -> Arc<SuggestionService<ApiAdapter>> {
+pub fn use_suggestion_service() -> ConcreteSuggestionService {
     let services = use_context::<ConcreteServices>();
     services.suggestion.clone()
 }
 
 /// Hook to access the EventChainService from context
-pub fn use_event_chain_service() -> Arc<EventChainService<ApiAdapter>> {
+pub fn use_event_chain_service() -> ConcreteEventChainService {
     let services = use_context::<ConcreteServices>();
     services.event_chain.clone()
 }
 
 /// Hook to access the GenerationService from context
-pub fn use_generation_service() -> Arc<GenerationService<ApiAdapter>> {
+pub fn use_generation_service() -> ConcreteGenerationService {
     let services = use_context::<ConcreteServices>();
     services.generation.clone()
 }

@@ -4,10 +4,10 @@
 //! js_sys and web_sys crates.
 
 use crate::application::ports::outbound::platform::{
-    DocumentProvider, LogProvider, Platform, RandomProvider, SleepProvider, StorageProvider,
-    TimeProvider,
+    DocumentProvider, EngineConfigProvider, ConnectionFactoryProvider, LogProvider,
+    Platform, RandomProvider, SleepProvider, StorageProvider, TimeProvider,
 };
-use std::{future::Future, pin::Pin};
+use std::{future::Future, pin::Pin, sync::Arc};
 
 /// WASM time provider using js_sys::Date
 #[derive(Clone, Default)]
@@ -116,6 +116,31 @@ impl SleepProvider for WasmSleepProvider {
     }
 }
 
+/// WASM engine configuration provider
+#[derive(Clone, Default)]
+pub struct WasmEngineConfigProvider;
+
+impl EngineConfigProvider for WasmEngineConfigProvider {
+    fn configure_engine_url(&self, ws_url: &str) {
+        let http_url = self.ws_to_http(ws_url);
+        crate::infrastructure::api::set_engine_url(&http_url);
+    }
+
+    fn ws_to_http(&self, ws_url: &str) -> String {
+        crate::infrastructure::api::ws_to_http(ws_url)
+    }
+}
+
+/// WASM connection factory provider
+#[derive(Clone, Default)]
+pub struct WasmConnectionFactoryProvider;
+
+impl ConnectionFactoryProvider for WasmConnectionFactoryProvider {
+    fn create_game_connection(&self, server_url: &str) -> Arc<dyn crate::application::ports::outbound::GameConnectionPort> {
+        crate::infrastructure::connection_factory::ConnectionFactory::create_game_connection(server_url)
+    }
+}
+
 /// Create platform services for WASM
 pub fn create_platform() -> Platform {
     Platform::new(
@@ -125,5 +150,7 @@ pub fn create_platform() -> Platform {
         WasmStorageProvider,
         WasmLogProvider,
         WasmDocumentProvider,
+        WasmEngineConfigProvider,
+        WasmConnectionFactoryProvider,
     )
 }

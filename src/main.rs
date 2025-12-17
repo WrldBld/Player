@@ -15,6 +15,10 @@ use presentation::state::{DialogueState, GameState, GenerationState, SessionStat
 use presentation::Services;
 use routes::Route;
 
+// Composition root: Define concrete service types using infrastructure implementations
+use crate::infrastructure::http_client::ApiAdapter;
+pub type ConcreteServices = Services<ApiAdapter>;
+
 #[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

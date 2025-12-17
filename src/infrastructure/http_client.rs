@@ -22,42 +22,9 @@
 //! ```
 
 use serde::{de::DeserializeOwned, Serialize};
-use std::fmt;
 
 use super::api::get_engine_url;
-
-/// API error type for all HTTP operations
-#[derive(Debug, Clone)]
-pub enum ApiError {
-    /// Network request failed
-    RequestFailed(String),
-    /// Server returned non-success status
-    HttpError(u16, String),
-    /// Failed to parse response JSON
-    ParseError(String),
-    /// Failed to serialize request body
-    SerializeError(String),
-}
-
-impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ApiError::RequestFailed(msg) => write!(f, "Request failed: {}", msg),
-            ApiError::HttpError(status, msg) => write!(f, "HTTP {}: {}", status, msg),
-            ApiError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            ApiError::SerializeError(msg) => write!(f, "Serialize error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ApiError {}
-
-// Allow conversion to String for backward compatibility
-impl From<ApiError> for String {
-    fn from(err: ApiError) -> String {
-        err.to_string()
-    }
-}
+use crate::application::ports::outbound::api_port::ApiError;
 
 /// Unified HTTP client for Engine API
 ///
@@ -641,17 +608,7 @@ impl HttpClient {
 // ApiPort Implementation
 // ============================================================================
 
-use crate::application::ports::outbound::{ApiError as PortApiError, ApiPort};
-
-/// Convert infrastructure ApiError to port ApiError
-fn to_port_error(err: ApiError) -> PortApiError {
-    match err {
-        ApiError::RequestFailed(msg) => PortApiError::RequestFailed(msg),
-        ApiError::HttpError(status, msg) => PortApiError::HttpError(status, msg),
-        ApiError::ParseError(msg) => PortApiError::ParseError(msg),
-        ApiError::SerializeError(msg) => PortApiError::SerializeError(msg),
-    }
-}
+use crate::application::ports::outbound::ApiPort;
 
 /// API adapter that implements the ApiPort trait
 ///
@@ -670,70 +627,70 @@ impl ApiAdapter {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 impl ApiPort for ApiAdapter {
-    async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, PortApiError> {
-        HttpClient::get(path).await.map_err(to_port_error)
+    async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
+        HttpClient::get(path).await
     }
 
-    async fn get_optional<T: DeserializeOwned>(&self, path: &str) -> Result<Option<T>, PortApiError> {
-        HttpClient::get_optional(path).await.map_err(to_port_error)
+    async fn get_optional<T: DeserializeOwned>(&self, path: &str) -> Result<Option<T>, ApiError> {
+        HttpClient::get_optional(path).await
     }
 
     async fn post<T: DeserializeOwned, B: Serialize + Send + Sync>(
         &self,
         path: &str,
         body: &B,
-    ) -> Result<T, PortApiError> {
-        HttpClient::post(path, body).await.map_err(to_port_error)
+    ) -> Result<T, ApiError> {
+        HttpClient::post(path, body).await
     }
 
     async fn post_no_response<B: Serialize + Send + Sync>(
         &self,
         path: &str,
         body: &B,
-    ) -> Result<(), PortApiError> {
-        HttpClient::post_no_response(path, body).await.map_err(to_port_error)
+    ) -> Result<(), ApiError> {
+        HttpClient::post_no_response(path, body).await
     }
 
-    async fn post_empty(&self, path: &str) -> Result<(), PortApiError> {
-        HttpClient::post_empty(path).await.map_err(to_port_error)
+    async fn post_empty(&self, path: &str) -> Result<(), ApiError> {
+        HttpClient::post_empty(path).await
     }
 
     async fn put<T: DeserializeOwned, B: Serialize + Send + Sync>(
         &self,
         path: &str,
         body: &B,
-    ) -> Result<T, PortApiError> {
-        HttpClient::put(path, body).await.map_err(to_port_error)
+    ) -> Result<T, ApiError> {
+        HttpClient::put(path, body).await
     }
 
     async fn put_no_response<B: Serialize + Send + Sync>(
         &self,
         path: &str,
         body: &B,
-    ) -> Result<(), PortApiError> {
-        HttpClient::put_no_response(path, body).await.map_err(to_port_error)
+    ) -> Result<(), ApiError> {
+        HttpClient::put_no_response(path, body).await
     }
 
-    async fn put_empty(&self, path: &str) -> Result<(), PortApiError> {
-        HttpClient::put_empty(path).await.map_err(to_port_error)
+    async fn put_empty(&self, path: &str) -> Result<(), ApiError> {
+        HttpClient::put_empty(path).await
     }
 
     async fn put_empty_with_response<T: DeserializeOwned>(
         &self,
         path: &str,
-    ) -> Result<T, PortApiError> {
-        HttpClient::put_empty_with_response(path).await.map_err(to_port_error)
+    ) -> Result<T, ApiError> {
+        HttpClient::put_empty_with_response(path).await
     }
 
     async fn patch<T: DeserializeOwned, B: Serialize + Send + Sync>(
         &self,
         path: &str,
         body: &B,
-    ) -> Result<T, PortApiError> {
-        HttpClient::patch(path, body).await.map_err(to_port_error)
+    ) -> Result<T, ApiError> {
+        HttpClient::patch(path, body).await
     }
 
-    async fn delete(&self, path: &str) -> Result<(), PortApiError> {
-        HttpClient::delete(path).await.map_err(to_port_error)
+    async fn delete(&self, path: &str) -> Result<(), ApiError> {
+        HttpClient::delete(path).await
     }
 }
