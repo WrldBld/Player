@@ -32,11 +32,15 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
     let challenges = props.challenges.clone();
     let scene_characters = props.scene_characters.clone();
 
+    let is_both_selected = !selected_challenge.read().is_empty() && !selected_character.read().is_empty();
+    let trigger_btn_bg = if is_both_selected { "bg-green-500" } else { "bg-gray-500" };
+    let trigger_btn_cursor = if is_both_selected { "cursor-pointer" } else { "cursor-not-allowed" };
+
     rsx! {
         // Modal overlay
         div {
             id: "trigger-overlay",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]",
             onclick: move |_| {
                 props.on_close.call(());
             },
@@ -44,38 +48,38 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
             // Modal content
             div {
                 id: "trigger-modal",
-                style: "background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%); padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%; border: 2px solid #f59e0b;",
+                class: "bg-gradient-to-br from-dark-surface to-dark-bg p-8 rounded-2xl max-w-[500px] w-[90%] border-2 border-amber-500",
                 onclick: move |evt| evt.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
+                    class: "flex justify-between items-center mb-6",
 
                     h2 {
-                        style: "color: #f59e0b; margin: 0; font-size: 1.5rem;",
+                        class: "text-amber-500 m-0 text-2xl",
                         "Trigger Challenge"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.5rem; padding: 0;",
+                        class: "bg-transparent border-0 text-gray-400 cursor-pointer text-2xl p-0",
                         "×"
                     }
                 }
 
                 // Challenge selection
                 div {
-                    style: "margin-bottom: 1.5rem;",
+                    class: "mb-6",
 
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm uppercase mb-2",
                         "Select Challenge"
                     }
 
                     select {
                         value: "{selected_challenge}",
                         onchange: move |e| selected_challenge.set(e.value()),
-                        style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;",
+                        class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white cursor-pointer text-sm",
 
                         option {
                             value: "",
@@ -101,29 +105,29 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
                         if let Some(challenge) = challenges.iter().find(|c| c.id == selected_id) {
                             rsx! {
                                 div {
-                                    style: "margin-bottom: 1.5rem; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 0.5rem; border-left: 3px solid #f59e0b;",
+                                    class: "mb-6 p-4 bg-black/30 rounded-lg border-l-3 border-l-amber-500",
 
                                     p {
-                                        style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+                                        class: "text-gray-400 text-xs uppercase m-0 mb-2",
                                         "Challenge Preview"
                                     }
 
                                     p {
-                                        style: "color: white; margin: 0 0 0.5rem 0; line-height: 1.4;",
+                                        class: "text-white m-0 mb-2 leading-normal",
                                         "{challenge.description}"
                                     }
 
                                     div {
-                                        style: "display: flex; gap: 1rem; font-size: 0.875rem;",
+                                        class: "flex gap-4 text-sm",
 
-                                        span { style: "color: #9ca3af;",
+                                        span { class: "text-gray-400",
                                             "Type: "
-                                            span { style: "color: #3b82f6;", "{challenge.challenge_type:?}" }
+                                            span { class: "text-blue-500", "{challenge.challenge_type:?}" }
                                         }
 
-                                        span { style: "color: #9ca3af;",
+                                        span { class: "text-gray-400",
                                             "Difficulty: "
-                                            span { style: "color: #f59e0b;", "{challenge.difficulty:?}" }
+                                            span { class: "text-amber-500", "{challenge.difficulty:?}" }
                                         }
                                     }
                                 }
@@ -136,17 +140,17 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
 
                 // Character selection
                 div {
-                    style: "margin-bottom: 1.5rem;",
+                    class: "mb-6",
 
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm uppercase mb-2",
                         "Target Character"
                     }
 
                     select {
                         value: "{selected_character}",
                         onchange: move |e| selected_character.set(e.value()),
-                        style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;",
+                        class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white cursor-pointer text-sm",
 
                         option {
                             value: "",
@@ -172,10 +176,10 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
                         if let Some(character) = scene_characters.iter().find(|c| c.id == selected_char_id) {
                             rsx! {
                                 div {
-                                    style: "margin-bottom: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.5rem; border-left: 3px solid #3b82f6;",
+                                    class: "mb-6 p-4 bg-blue-500/10 rounded-lg border-l-3 border-l-blue-500",
 
                                     p {
-                                        style: "color: white; margin: 0; font-weight: bold;",
+                                        class: "text-white m-0 font-bold",
                                         "Target: {character.name}"
                                     }
                                 }
@@ -188,7 +192,7 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
 
                 // Action buttons
                 div {
-                    style: "display: flex; gap: 0.75rem;",
+                    class: "flex gap-3",
 
                     button {
                         onclick: move |_| {
@@ -199,26 +203,14 @@ pub fn TriggerChallengeModal(props: TriggerChallengeModalProps) -> Element {
                             }
                         },
                         disabled: selected_challenge.read().is_empty() || selected_character.read().is_empty(),
-                        style: format!(
-                            "flex: 1; padding: 0.75rem; background: {}; color: white; border: none; border-radius: 0.5rem; cursor: {}; font-weight: 600;",
-                            if selected_challenge.read().is_empty() || selected_character.read().is_empty() {
-                                "#6b7280"
-                            } else {
-                                "#22c55e"
-                            },
-                            if selected_challenge.read().is_empty() || selected_character.read().is_empty() {
-                                "not-allowed"
-                            } else {
-                                "pointer"
-                            }
-                        ),
+                        class: "flex-1 p-3 {trigger_btn_bg} text-white border-0 rounded-lg {trigger_btn_cursor} font-semibold",
 
                         "Trigger Challenge"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "flex: 1; padding: 0.75rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;",
+                        class: "flex-1 p-3 bg-gray-700 text-white border-0 rounded-lg cursor-pointer font-semibold",
                         "Cancel"
                     }
                 }

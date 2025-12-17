@@ -239,6 +239,60 @@ impl SessionState {
         let engine_client = self.connection.engine_client.read().clone();
         self.approval.record_approval_decision(request_id, decision, platform, &engine_client);
     }
+
+    // =========================================================================
+    // P3.3/P3.4: Challenge Outcome Approval
+    // =========================================================================
+
+    /// Set roll as awaiting DM approval
+    pub fn set_awaiting_approval(&mut self, roll: i32, modifier: i32, total: i32, outcome_type: String) {
+        self.challenge.set_awaiting_approval(roll, modifier, total, outcome_type);
+    }
+
+    /// Set challenge result as ready to display
+    pub fn set_result_ready(&mut self, result: ChallengeResultData) {
+        self.challenge.set_result_ready(result);
+    }
+
+    /// Dismiss the result display
+    pub fn dismiss_result(&mut self) {
+        self.challenge.dismiss_result();
+    }
+
+    /// Clear the roll status
+    pub fn clear_roll_status(&mut self) {
+        self.challenge.clear_roll_status();
+    }
+
+    /// Roll submission status accessor
+    pub fn roll_status(&self) -> Signal<crate::presentation::state::challenge_state::RollSubmissionStatus> {
+        self.challenge.roll_status.clone()
+    }
+
+    /// Add a pending challenge outcome for DM approval
+    pub fn add_pending_challenge_outcome(&mut self, outcome: crate::presentation::state::approval_state::PendingChallengeOutcome) {
+        self.approval.add_pending_challenge_outcome(outcome);
+    }
+
+    /// Remove a pending challenge outcome by resolution_id
+    pub fn remove_pending_challenge_outcome(&mut self, resolution_id: &str) {
+        self.approval.remove_pending_challenge_outcome(resolution_id);
+    }
+
+    /// Update suggestions for a pending challenge outcome
+    pub fn update_challenge_suggestions(&mut self, resolution_id: &str, suggestions: Vec<String>) {
+        self.approval.update_challenge_suggestions(resolution_id, suggestions);
+    }
+
+    /// Mark a challenge outcome as generating suggestions
+    pub fn set_challenge_generating_suggestions(&mut self, resolution_id: &str, generating: bool) {
+        self.approval.set_challenge_generating_suggestions(resolution_id, generating);
+    }
+
+    /// Pending challenge outcomes accessor
+    pub fn pending_challenge_outcomes(&self) -> Signal<Vec<crate::presentation::state::approval_state::PendingChallengeOutcome>> {
+        self.approval.pending_challenge_outcomes.clone()
+    }
 }
 
 impl Default for SessionState {

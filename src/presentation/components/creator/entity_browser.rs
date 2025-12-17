@@ -23,13 +23,11 @@ pub fn EntityBrowser(
 ) -> Element {
     rsx! {
         div {
-            class: "entity-browser",
-            style: "flex: 1; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "entity-browser flex-1 flex flex-col bg-dark-surface rounded-lg overflow-hidden",
 
             // Tab buttons for entity types - uses router Links
             div {
-                class: "browser-tabs",
-                style: "display: flex; border-bottom: 1px solid #374151;",
+                class: "browser-tabs flex border-b border-gray-700",
 
                 EntityTypeTabLink {
                     world_id: world_id.clone(),
@@ -55,20 +53,18 @@ pub fn EntityBrowser(
 
             // Search/filter bar
             div {
-                class: "browser-search",
-                style: "padding: 0.5rem;",
+                class: "browser-search p-2",
 
                 input {
                     r#type: "text",
                     placeholder: "Search...",
-                    style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Entity list
             div {
-                class: "browser-list",
-                style: "flex: 1; overflow-y: auto; padding: 0.5rem;",
+                class: "browser-list flex-1 overflow-y-auto p-2",
 
                 match selected_type {
                     EntityTypeTab::Characters => rsx! {
@@ -90,12 +86,12 @@ pub fn EntityBrowser(
                         }
                     },
                     EntityTypeTab::Items => rsx! {
-                        div { style: "color: #6b7280; text-align: center; padding: 1rem;",
+                        div { class: "text-gray-500 text-center p-4",
                             "No items yet"
                         }
                     },
                     EntityTypeTab::Maps => rsx! {
-                        div { style: "color: #6b7280; text-align: center; padding: 1rem;",
+                        div { class: "text-gray-500 text-center p-4",
                             "No maps yet"
                         }
                     },
@@ -104,11 +100,10 @@ pub fn EntityBrowser(
 
             // New entity button
             div {
-                class: "browser-actions",
-                style: "padding: 0.5rem; border-top: 1px solid #374151;",
+                class: "browser-actions p-2 border-t border-gray-700",
 
                 button {
-                    style: "width: 100%; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500;",
+                    class: "w-full p-2 bg-blue-500 text-white border-0 rounded cursor-pointer font-medium",
                     onclick: move |_| on_select.call(String::new()),
                     "+ New {selected_type.label()}"
                 }
@@ -120,7 +115,7 @@ pub fn EntityBrowser(
 /// Tab link that uses router navigation
 #[component]
 fn EntityTypeTabLink(world_id: String, tab: EntityTypeTab, active: bool) -> Element {
-    let bg = if active { "#3b82f6" } else { "transparent" };
+    let bg_class = if active { "bg-blue-500" } else { "bg-transparent" };
     let short_label = match tab {
         EntityTypeTab::Characters => "Char",
         EntityTypeTab::Locations => "Loc",
@@ -140,10 +135,7 @@ fn EntityTypeTabLink(world_id: String, tab: EntityTypeTab, active: bool) -> Elem
                 world_id: world_id,
                 subtab: subtab.to_string(),
             },
-            style: format!(
-                "flex: 1; padding: 0.5rem 0.25rem; background: {}; color: white; border: none; cursor: pointer; font-size: 0.75rem; text-decoration: none; text-align: center;",
-                bg
-            ),
+            class: format!("flex-1 py-2 px-1 {} text-white border-0 cursor-pointer text-xs no-underline text-center", bg_class),
             "{short_label}"
         }
     }
@@ -161,17 +153,17 @@ fn CharacterList(
     rsx! {
         if *loading.read() {
             div {
-                style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
+                class: "flex items-center justify-center p-8 text-gray-500",
                 "Loading characters..."
             }
         } else if let Some(err) = error.read().as_ref() {
             div {
-                style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                class: "p-4 bg-red-500 bg-opacity-10 rounded-lg text-red-500 text-sm",
                 "Error: {err}"
             }
         } else {
             div {
-                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                class: "flex flex-col gap-1",
 
                 for character in characters.read().iter() {
                     EntityListItem {
@@ -188,7 +180,7 @@ fn CharacterList(
 
                 if characters.read().is_empty() {
                     div {
-                        style: "color: #6b7280; text-align: center; padding: 1rem; font-size: 0.875rem;",
+                        class: "text-gray-500 text-center p-4 text-sm",
                         "No characters yet"
                     }
                 }
@@ -209,17 +201,17 @@ fn LocationList(
     rsx! {
         if *loading.read() {
             div {
-                style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
+                class: "flex items-center justify-center p-8 text-gray-500",
                 "Loading locations..."
             }
         } else if let Some(err) = error.read().as_ref() {
             div {
-                style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                class: "p-4 bg-red-500 bg-opacity-10 rounded-lg text-red-500 text-sm",
                 "Error: {err}"
             }
         } else {
             div {
-                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                class: "flex flex-col gap-1",
 
                 for location in locations.read().iter() {
                     EntityListItem {
@@ -236,7 +228,7 @@ fn LocationList(
 
                 if locations.read().is_empty() {
                     div {
-                        style: "color: #6b7280; text-align: center; padding: 1rem; font-size: 0.875rem;",
+                        class: "text-gray-500 text-center p-4 text-sm",
                         "No locations yet"
                     }
                 }
@@ -254,19 +246,16 @@ fn EntityListItem(
     selected: bool,
     on_click: EventHandler<()>,
 ) -> Element {
-    let bg = if selected { "rgba(59, 130, 246, 0.2)" } else { "transparent" };
-    let border = if selected { "1px solid #3b82f6" } else { "1px solid transparent" };
+    let bg_class = if selected { "bg-blue-500 bg-opacity-20" } else { "bg-transparent" };
+    let border_class = if selected { "border border-blue-500" } else { "border border-transparent" };
 
     rsx! {
         div {
             onclick: move |_| on_click.call(()),
-            style: format!(
-                "padding: 0.5rem; background: {}; border: {}; border-radius: 0.25rem; cursor: pointer;",
-                bg, border
-            ),
+            class: format!("p-2 {} {} rounded cursor-pointer", bg_class, border_class),
 
-            div { style: "color: white; font-size: 0.875rem;", "{name}" }
-            div { style: "color: #6b7280; font-size: 0.75rem;", "{subtitle}" }
+            div { class: "text-white text-sm", "{name}" }
+            div { class: "text-gray-500 text-xs", "{subtitle}" }
         }
     }
 }

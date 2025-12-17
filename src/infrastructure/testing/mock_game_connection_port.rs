@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::application::ports::outbound::{
-    ApprovalDecision, ConnectionState, DirectorialContext, GameConnectionPort, ParticipantRole,
+    ApprovalDecision, ChallengeOutcomeDecisionData, ConnectionState, DirectorialContext, GameConnectionPort, ParticipantRole,
 };
 
 #[derive(Debug, Clone)]
@@ -171,6 +171,11 @@ impl GameConnectionPort for MockGameConnectionPort {
             request_id: request_id.to_string(),
             decision,
         });
+        Ok(())
+    }
+
+    fn send_challenge_outcome_decision(&self, _resolution_id: &str, _decision: ChallengeOutcomeDecisionData) -> anyhow::Result<()> {
+        // Mock implementation - does nothing for now
         Ok(())
     }
 

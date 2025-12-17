@@ -22,20 +22,19 @@ pub struct SheetSectionProps {
 pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
     let mut is_collapsed = use_signal(|| props.section.collapsed_by_default);
 
-    let section_style = match props.section.layout {
+    let section_class = match props.section.layout {
         crate::application::dto::SectionLayout::Vertical => {
-            "display: flex; flex-direction: column; gap: 0.75rem;"
+            "flex flex-col gap-3"
         }
         crate::application::dto::SectionLayout::Grid { columns } => {
             let _cols = columns.min(4).max(1);
-            // We'll use inline grid
-            "display: grid; gap: 0.75rem;"
+            "grid gap-3"
         }
         crate::application::dto::SectionLayout::TwoColumn => {
-            "display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;"
+            "grid grid-cols-2 gap-3"
         }
         crate::application::dto::SectionLayout::Flow => {
-            "display: flex; flex-wrap: wrap; gap: 0.5rem;"
+            "flex flex-wrap gap-2"
         }
     };
 
@@ -45,12 +44,11 @@ pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
 
     rsx! {
         div {
-            class: "sheet-section",
-            style: "background: rgba(0,0,0,0.2); border-radius: 0.5rem; overflow: hidden;",
+            class: "sheet-section bg-black/20 rounded-lg overflow-hidden",
 
             // Section header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); cursor: pointer;",
+                class: "flex justify-between items-center px-4 py-3 bg-black/30 cursor-pointer",
                 onclick: move |_| {
                     if props.section.collapsible {
                         let current = *is_collapsed.read();
@@ -59,13 +57,13 @@ pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
                 },
 
                 h4 {
-                    style: "color: #e5e7eb; font-size: 0.875rem; margin: 0; font-weight: 600;",
+                    class: "text-gray-200 text-sm m-0 font-semibold",
                     "{props.section.name}"
                 }
 
                 if props.section.collapsible {
                     span {
-                        style: "color: #6b7280; font-size: 0.75rem;",
+                        class: "text-gray-500 text-xs",
                         if *is_collapsed.read() { "+" } else { "-" }
                     }
                 }
@@ -74,7 +72,7 @@ pub fn SheetSectionInput(props: SheetSectionProps) -> Element {
             // Section content
             if !*is_collapsed.read() {
                 div {
-                    style: "padding: 1rem; {section_style}",
+                    class: "p-4 {section_class}",
 
                     for field in sorted_fields {
                         {
@@ -111,22 +109,18 @@ pub struct SheetFieldInputProps {
 /// Renders a single field input based on its type
 #[component]
 pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
-    let field_style = "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;";
-    let label_style = "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem; display: block;";
-
     let is_read_only = props.read_only || props.field.read_only;
 
     rsx! {
         div {
-            class: "sheet-field",
-            style: "display: flex; flex-direction: column;",
+            class: "sheet-field flex flex-col",
 
             // Label
             label {
-                style: "{label_style}",
+                class: "text-gray-400 text-xs mb-1 block",
                 "{props.field.name}"
                 if props.field.required {
-                    span { style: "color: #ef4444; margin-left: 0.25rem;", "*" }
+                    span { class: "text-red-500 ml-1", "*" }
                 }
             }
 
@@ -148,7 +142,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                             min: min_val.map(|v| v.to_string()),
                             max: max_val.map(|v| v.to_string()),
                             disabled: is_read_only,
-                            style: "{field_style}",
+                            class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                             oninput: move |e| {
                                 if let Ok(n) = e.value().parse::<i32>() {
                                     on_change.call(FieldValue::Number(n));
@@ -171,7 +165,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                             textarea {
                                 value: "{current}",
                                 disabled: is_read_only,
-                                style: "{field_style} min-height: 60px; resize: vertical;",
+                                class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border min-h-[60px] resize-y",
                                 oninput: move |e| {
                                     on_change.call(FieldValue::Text(e.value()));
                                 },
@@ -183,7 +177,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                                 r#type: "text",
                                 value: "{current}",
                                 disabled: is_read_only,
-                                style: "{field_style}",
+                                class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                                 oninput: move |e| {
                                     on_change.call(FieldValue::Text(e.value()));
                                 },
@@ -204,7 +198,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                             r#type: "checkbox",
                             checked: current,
                             disabled: is_read_only,
-                            style: "width: auto; margin: 0.25rem 0;",
+                            class: "w-auto my-1",
                             onchange: move |e| {
                                 on_change.call(FieldValue::Boolean(e.checked()));
                             },
@@ -224,7 +218,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                         select {
                             value: "{current}",
                             disabled: is_read_only,
-                            style: "{field_style}",
+                            class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                             onchange: move |e| {
                                 on_change.call(FieldValue::Text(e.value()));
                             },
@@ -249,7 +243,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
 
                     rsx! {
                         div {
-                            style: "display: flex; align-items: center; gap: 0.5rem;",
+                            class: "flex items-center gap-2",
 
                             input {
                                 r#type: "number",
@@ -257,7 +251,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                                 min: "0",
                                 max: "{max}",
                                 disabled: is_read_only,
-                                style: "width: 60px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                                class: "w-[60px] p-2 bg-dark-bg border border-gray-700 rounded text-white text-center",
                                 oninput: move |e| {
                                     if let Ok(n) = e.value().parse::<i32>() {
                                         on_change.call(FieldValue::Resource { current: n, max });
@@ -265,14 +259,14 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                                 },
                             }
 
-                            span { style: "color: #6b7280;", "/" }
+                            span { class: "text-gray-500", "/" }
 
                             input {
                                 r#type: "number",
                                 value: "{max}",
                                 min: "1",
                                 disabled: is_read_only,
-                                style: "width: 60px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                                class: "w-[60px] p-2 bg-dark-bg border border-gray-700 rounded text-white text-center",
                                 oninput: move |e| {
                                     if let Ok(n) = e.value().parse::<i32>() {
                                         on_change2.call(FieldValue::Resource { current, max: n });
@@ -293,10 +287,10 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
 
                     rsx! {
                         div {
-                            style: "padding: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 0.25rem; color: #9ca3af;",
+                            class: "p-2 bg-black/30 border border-gray-700 rounded text-gray-400",
                             "{display}"
                             span {
-                                style: "color: #6b7280; font-size: 0.75rem; margin-left: 0.5rem;",
+                                class: "text-gray-500 text-xs ml-2",
                                 "(calculated)"
                             }
                         }
@@ -316,7 +310,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     };
                     rsx! {
                         div {
-                            style: "padding: 0.5rem; background: rgba(0,0,0,0.2); border: 1px solid #374151; border-radius: 0.25rem; color: #d1d5db; font-size: 0.875rem;",
+                            class: "p-2 bg-black/20 border border-gray-700 rounded text-gray-300 text-sm",
                             "{display}"
                         }
                     }
@@ -331,19 +325,19 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     let max_display = max_items.map(|m| format!(" (max: {})", m)).unwrap_or_default();
                     rsx! {
                         div {
-                            style: "padding: 0.5rem; background: rgba(0,0,0,0.2); border: 1px solid #374151; border-radius: 0.25rem;",
+                            class: "p-2 bg-black/20 border border-gray-700 rounded",
 
                             if items.is_empty() {
                                 span {
-                                    style: "color: #6b7280; font-size: 0.875rem;",
+                                    class: "text-gray-500 text-sm",
                                     "No items{max_display}"
                                 }
                             } else {
                                 div {
-                                    style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                                    class: "flex flex-col gap-1",
                                     for item in items.iter() {
                                         div {
-                                            style: "color: #d1d5db; font-size: 0.875rem; padding: 0.25rem 0;",
+                                            class: "text-gray-300 text-sm py-1",
                                             "• {item}"
                                         }
                                     }
@@ -363,29 +357,29 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
                     let show_prof = *show_proficiency;
                     rsx! {
                         div {
-                            style: "padding: 0.5rem; background: rgba(0,0,0,0.2); border: 1px solid #374151; border-radius: 0.25rem;",
+                            class: "p-2 bg-black/20 border border-gray-700 rounded",
 
                             if skills.is_empty() {
                                 span {
-                                    style: "color: #6b7280; font-size: 0.875rem;",
+                                    class: "text-gray-500 text-sm",
                                     "No skills configured"
                                 }
                             } else {
                                 div {
-                                    style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                                    class: "flex flex-col gap-1",
                                     for skill in skills.iter() {
                                         div {
-                                            style: "display: flex; align-items: center; gap: 0.5rem; color: #d1d5db; font-size: 0.875rem; padding: 0.25rem 0;",
+                                            class: "flex items-center gap-2 text-gray-300 text-sm py-1",
                                             span { "{skill}" }
                                             if show_prof {
                                                 span {
-                                                    style: "color: #6b7280; font-size: 0.75rem;",
+                                                    class: "text-gray-500 text-xs",
                                                     "(prof)"
                                                 }
                                             }
                                             if show_mod {
                                                 span {
-                                                    style: "color: #9ca3af; font-size: 0.75rem;",
+                                                    class: "text-gray-400 text-xs",
                                                     "+0"
                                                 }
                                             }
@@ -401,7 +395,7 @@ pub fn SheetFieldInput(props: SheetFieldInputProps) -> Element {
             // Description/help text
             if let Some(desc) = &props.field.description {
                 p {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; margin-bottom: 0;",
+                    class: "text-gray-500 text-xs mt-1 mb-0",
                     "{desc}"
                 }
             }
@@ -431,8 +425,7 @@ pub fn CharacterSheetForm(props: CharacterSheetFormProps) -> Element {
 
     rsx! {
         div {
-            class: "character-sheet-form",
-            style: "display: flex; flex-direction: column; gap: 1rem;",
+            class: "character-sheet-form flex flex-col gap-4",
 
             for section in sorted_sections {
                 {

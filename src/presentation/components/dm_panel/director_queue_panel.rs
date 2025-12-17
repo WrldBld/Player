@@ -33,47 +33,46 @@ pub fn DirectorQueuePanel(props: DirectorQueuePanelProps) -> Element {
 
     rsx! {
         div {
-            class: "director-queue-panel",
-            style: "position: fixed; top: 0; right: 0; bottom: 0; width: 400px; background: #1a1a2e; border-left: 1px solid #374151; z-index: 1000; display: flex; flex-direction: column; box-shadow: -4px 0 6px rgba(0, 0, 0, 0.3);",
+            class: "director-queue-panel fixed top-0 right-0 bottom-0 w-[400px] bg-dark-surface border-l border-gray-700 z-[1000] flex flex-col shadow-[-4px_0_6px_rgba(0,0,0,0.3)]",
 
             // Header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #374151;",
-                h3 { style: "color: white; margin: 0; font-size: 1rem;", "Generation Queue" }
+                class: "flex justify-between items-center p-4 border-b border-gray-700",
+                h3 { class: "text-white m-0 text-base", "Generation Queue" }
                 button {
                     onclick: move |_| props.on_close.call(()),
-                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                    class: "py-1 px-2 bg-transparent text-gray-400 border-none cursor-pointer text-xl",
                     "×"
                 }
             }
 
             // Content
             div {
-                style: "flex: 1; overflow-y: auto; padding: 1rem;",
+                class: "flex-1 overflow-y-auto p-4",
                 if active_batches.is_empty() && active_suggestions.is_empty() {
                     div {
-                        style: "text-align: center; color: #6b7280; padding: 2rem;",
+                        class: "text-center text-gray-500 p-8",
                         "No active generations"
                     }
                 } else {
                     div {
-                        style: "display: flex; flex-direction: column; gap: 0.75rem;",
-                        
+                        class: "flex flex-col gap-3",
+
                         // Active batches
                         for batch in active_batches.iter() {
                             div {
                                 key: "{batch.batch_id}",
-                                style: "padding: 0.75rem; background: #0f0f23; border-radius: 0.5rem; border-left: 3px solid #8b5cf6;",
+                                class: "p-3 bg-dark-bg rounded-lg border-l-[3px] border-l-purple-500",
                                 div {
-                                    style: "display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;",
+                                    class: "flex justify-between items-start mb-2",
                                     div {
-                                        style: "flex: 1;",
+                                        class: "flex-1",
                                         div {
-                                            style: "color: white; font-size: 0.875rem; font-weight: 500;",
+                                            class: "text-white text-sm font-medium",
                                             "{batch.entity_type} - {batch.asset_type}"
                                         }
                                         div {
-                                            style: "color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;",
+                                            class: "text-gray-400 text-xs mt-1",
                                             match &batch.status {
                                                 BatchStatus::Queued { position } => format!("#{} in queue", position),
                                                 BatchStatus::Generating { progress } => format!("Generating... {}%", progress),
@@ -89,17 +88,17 @@ pub fn DirectorQueuePanel(props: DirectorQueuePanelProps) -> Element {
                         for suggestion in active_suggestions.iter() {
                             div {
                                 key: "{suggestion.request_id}",
-                                style: "padding: 0.75rem; background: #0f0f23; border-radius: 0.5rem; border-left: 3px solid #3b82f6;",
+                                class: "p-3 bg-dark-bg rounded-lg border-l-[3px] border-l-blue-500",
                                 div {
-                                    style: "display: flex; justify-content: space-between; align-items: start;",
+                                    class: "flex justify-between items-start",
                                     div {
-                                        style: "flex: 1;",
+                                        class: "flex-1",
                                         div {
-                                            style: "color: white; font-size: 0.875rem; font-weight: 500;",
+                                            class: "text-white text-sm font-medium",
                                             "{suggestion.field_type} suggestion"
                                         }
                                         div {
-                                            style: "color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;",
+                                            class: "text-gray-400 text-xs mt-1",
                                             match &suggestion.status {
                                                 SuggestionStatus::Queued => "Queued",
                                                 SuggestionStatus::Processing => "Processing...",

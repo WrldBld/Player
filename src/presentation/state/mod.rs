@@ -11,9 +11,9 @@ pub mod generation_state;
 pub mod session_state;
 
 // Export individual substates
-pub use approval_state::{ApprovalState, ApprovalHistoryEntry, ConversationLogEntry, PendingApproval};
-pub use challenge_state::{ChallengeState, ChallengePromptData, ChallengeResultData};
-pub use connection_state::{ConnectionState, ConnectionStatus};
+pub use approval_state::{ConversationLogEntry, PendingApproval, PendingChallengeOutcome};
+pub use challenge_state::RollSubmissionStatus;
+pub use connection_state::ConnectionStatus;
 pub use dialogue_state::{use_typewriter_effect, DialogueState};
 pub use game_state::GameState;
 pub use generation_state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};

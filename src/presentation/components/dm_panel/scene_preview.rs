@@ -6,12 +6,12 @@ use dioxus::prelude::*;
 use crate::application::dto::websocket_messages::{CharacterData, CharacterPosition};
 
 impl CharacterPosition {
-    fn as_style(&self) -> &'static str {
+    fn as_tailwind_classes(&self) -> &'static str {
         match self {
-            CharacterPosition::Left => "left: 10%; transform: translateX(0);",
-            CharacterPosition::Center => "left: 50%; transform: translateX(-50%);",
-            CharacterPosition::Right => "right: 10%; transform: translateX(0);",
-            CharacterPosition::OffScreen => "display: none;",
+            CharacterPosition::Left => "left-[10%]",
+            CharacterPosition::Center => "left-1/2 -translate-x-1/2",
+            CharacterPosition::Right => "right-[10%]",
+            CharacterPosition::OffScreen => "hidden",
         }
     }
 }
@@ -46,6 +46,7 @@ pub struct ScenePreviewProps {
 /// along with current dialogue. Useful for DMs to see what players are experiencing.
 #[component]
 pub fn ScenePreview(props: ScenePreviewProps) -> Element {
+    // Extract background style before rsx! block
     let bg_style = match &props.scene {
         Some(scene) => match &scene.backdrop_url {
             Some(url) => format!(
@@ -65,25 +66,22 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
 
     rsx! {
         div {
-            class: "scene-preview",
-            style: "height: 100%; width: 100%; position: relative; overflow: hidden; border-radius: 0.5rem;",
+            class: "scene-preview h-full w-full relative overflow-hidden rounded-lg",
 
             // Backdrop
             div {
-                style: format!(
-                    "position: absolute; inset: 0; {}",
-                    bg_style
-                ),
+                class: "absolute inset-0 bg-cover bg-center",
+                style: "{bg_style}",
             }
 
             // Vignette effect
             div {
-                style: "position: absolute; inset: 0; box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.4); pointer-events: none;",
+                class: "absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.4)]",
             }
 
             // Character sprites
             div {
-                style: "position: absolute; bottom: 20%; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; padding: 0 2rem;",
+                class: "absolute bottom-[20%] w-full flex justify-around items-end px-8",
 
                 for character in props.characters.iter() {
                     CharacterSpritePreview {
@@ -96,19 +94,19 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
             if has_dialogue {
                 if let Some(scene) = &props.scene {
                     div {
-                        style: "position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #1a1a2e 0%, rgba(26, 26, 46, 0.8) 100%); padding: 1rem; border-top: 1px solid #374151;",
+                        class: "absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 bg-gradient-to-t from-dark-surface to-dark-surface/80",
 
                         // Speaker name
                         if !scene.speaker_name.is_empty() {
                             div {
-                                style: "color: #3b82f6; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem;",
+                                class: "text-blue-500 text-sm font-semibold mb-1",
                                 "{scene.speaker_name}"
                             }
                         }
 
                         // Dialogue text
                         p {
-                            style: "color: white; font-size: 0.875rem; line-height: 1.4; margin: 0;",
+                            class: "text-white text-sm leading-snug m-0",
                             "{scene.dialogue_text}"
                         }
                     }
@@ -118,7 +116,7 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
             // Empty state
             if props.scene.is_none() {
                 div {
-                    style: "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 0.875rem;",
+                    class: "absolute inset-0 flex items-center justify-center text-gray-500 text-sm",
                     "No scene loaded"
                 }
             }
@@ -129,17 +127,19 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
 /// Character sprite preview component
 #[component]
 fn CharacterSpritePreview(character: CharacterData) -> Element {
+    let position_classes = character.position.as_tailwind_classes();
+
     let sprite_content = match &character.sprite_asset {
         Some(url) => rsx! {
             img {
                 src: "{url}",
                 alt: "{character.name}",
-                style: "width: 100%; height: 100%; object-fit: contain;",
+                class: "w-full h-full object-contain",
             }
         },
         None => rsx! {
             div {
-                style: "width: 100%; height: 100%; background: rgba(59, 130, 246, 0.2); border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #3b82f6;",
+                class: "w-full h-full bg-blue-500 bg-opacity-20 rounded flex items-center justify-center text-xs text-blue-500",
                 "[{character.name}]"
             }
         },
@@ -147,27 +147,24 @@ fn CharacterSpritePreview(character: CharacterData) -> Element {
 
     rsx! {
         div {
-            style: format!(
-                "position: relative; width: 80px; height: 120px; {} display: flex; flex-direction: column; align-items: center;",
-                character.position.as_style()
-            ),
+            class: "relative w-20 h-30 flex flex-col items-center {position_classes}",
 
             // Sprite container
             div {
-                style: "width: 100%; height: 100%; position: relative; overflow: visible;",
+                class: "w-full h-full relative overflow-visible",
                 {sprite_content}
             }
 
             // Name label
             div {
-                style: "position: absolute; bottom: -1.5rem; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 0.75rem; color: #9ca3af; background: rgba(0, 0, 0, 0.5); padding: 0.25rem 0.5rem; border-radius: 0.25rem;",
+                class: "absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-gray-400 bg-black bg-opacity-50 py-1 px-2 rounded",
                 "{character.name}"
             }
 
             // Emotion indicator
             if !character.emotion.is_empty() {
                 div {
-                    style: "position: absolute; top: -0.5rem; right: -0.5rem; background: #8b5cf6; color: white; font-size: 0.625rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; white-space: nowrap;",
+                    class: "absolute -top-2 -right-2 bg-purple-500 text-white text-xs py-1 px-2 rounded-md whitespace-nowrap",
                     "{character.emotion}"
                 }
             }

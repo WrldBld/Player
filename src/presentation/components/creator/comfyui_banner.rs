@@ -19,30 +19,21 @@ pub fn ComfyUIBanner(props: ComfyUIBannerProps) -> Element {
         return rsx! {};
     }
 
-    let bg_color = match props.state.as_str() {
-        "degraded" => "#f59e0b",
-        "disconnected" | "circuit_open" => "#ef4444",
-        _ => "#6b7280",
-    };
-
-    let icon = match props.state.as_str() {
-        "degraded" => "⚠️",
-        "disconnected" | "circuit_open" => "🔴",
-        _ => "❓",
+    let (icon, bg_class) = match props.state.as_str() {
+        "degraded" => ("⚠️", "bg-amber-500"),
+        "disconnected" | "circuit_open" => ("🔴", "bg-red-500"),
+        _ => ("❓", "bg-gray-500"),
     };
 
     rsx! {
         div {
-            style: format!(
-                "background: {}; color: white; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; border-radius: 0.375rem; margin-bottom: 1rem;",
-                bg_color
-            ),
+            class: format!("{} text-white py-3 px-4 flex items-center justify-between rounded-md mb-4", bg_class),
             div {
-                style: "display: flex; align-items: center; gap: 0.5rem;",
-                span { style: "font-size: 1.25rem;", "{icon}" }
+                class: "flex items-center gap-2",
+                span { class: "text-xl", "{icon}" }
                 div {
                     div {
-                        style: "font-weight: 500; font-size: 0.875rem;",
+                        class: "font-medium text-sm",
                         if let Some(msg) = props.message.as_ref() {
                             "{msg}"
                         } else {
@@ -51,7 +42,7 @@ pub fn ComfyUIBanner(props: ComfyUIBannerProps) -> Element {
                     }
                     if let Some(seconds) = props.retry_in_seconds {
                         div {
-                            style: "font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem;",
+                            class: "text-xs opacity-90 mt-1",
                             "Reconnecting in {seconds}s..."
                         }
                     }
@@ -59,9 +50,9 @@ pub fn ComfyUIBanner(props: ComfyUIBannerProps) -> Element {
             }
             button {
                 onclick: move |_| {
-                    // TODO: Trigger manual retry
+                    // TODO (Phase 18 Polish): Trigger manual ComfyUI health check retry via WebSocket
                 },
-                style: "background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                class: "bg-white bg-opacity-20 border border-white border-opacity-30 text-white py-1.5 px-3 rounded cursor-pointer text-xs",
                 "Retry Now"
             }
         }

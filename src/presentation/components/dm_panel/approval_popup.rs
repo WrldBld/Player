@@ -85,36 +85,35 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
     rsx! {
         div {
-            class: "approval-popup",
-            style: "background: #1f2937; border: 2px solid #f59e0b; border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);",
+            class: "approval-popup bg-gray-700 border-2 border-amber-500 rounded-xl p-5 shadow-2xl",
 
             // Header
             h3 {
-                style: "color: #f59e0b; margin: 0 0 1rem 0; font-size: 1rem;",
+                class: "text-amber-500 m-0 mb-4 text-base",
                 "Approval Required"
             }
 
             // NPC and action info
             div {
-                style: "margin-bottom: 1rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.5rem;",
+                class: "mb-4 p-3 bg-black bg-opacity-20 rounded-lg",
 
                 p {
-                    style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                    class: "text-gray-400 text-xs uppercase m-0 mb-1",
                     "Action from: {props.npc_name}"
                 }
             }
 
             // Dialogue box
             div {
-                style: "margin-bottom: 1rem; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-left: 3px solid #3b82f6; border-radius: 0.5rem;",
+                class: "mb-4 p-4 bg-black bg-opacity-30 border-l-4 border-blue-500 rounded-lg",
 
                 p {
-                    style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+                    class: "text-gray-400 text-xs uppercase m-0 mb-2",
                     "Proposed Dialogue"
                 }
 
                 p {
-                    style: "color: white; font-style: italic; margin: 0; line-height: 1.5;",
+                    class: "text-white italic m-0 leading-normal",
                     "\"{props.dialogue}\""
                 }
             }
@@ -129,14 +128,14 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
                     rsx! {
                         div {
-                            style: "margin-bottom: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 0.5rem;",
+                            class: "mb-4 p-4 bg-amber-500 bg-opacity-10 border border-amber-500 rounded-lg",
 
                             // Header with title and discard button
                             div {
-                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;",
+                                class: "flex justify-between items-center mb-3",
 
                                 h4 {
-                                    style: "color: #f59e0b; margin: 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
+                                    class: "text-amber-500 m-0 text-sm flex gap-2 items-center",
                                     "Challenge Suggested"
                                 }
 
@@ -155,7 +154,7 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
                                                         });
                                                     }
                                                 },
-                                                style: "padding: 0.25rem 0.5rem; background: rgba(107, 114, 128, 0.5); color: #9ca3af; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                                class: "py-1 px-2 bg-gray-500 bg-opacity-50 text-gray-400 border-0 rounded cursor-pointer text-xs uppercase",
                                                 "Discard"
                                             }
                                         }
@@ -165,34 +164,34 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
                             // Challenge info
                             div {
-                                style: "margin-bottom: 0.75rem;",
+                                class: "mb-3",
 
                                 div {
-                                    style: "display: flex; justify-content: space-between; align-items: baseline;",
+                                    class: "flex justify-between items-baseline",
 
                                     span {
-                                        style: "color: white; font-weight: bold; font-size: 0.875rem;",
+                                        class: "text-white font-bold text-sm",
                                         "{suggestion.challenge_name}"
                                     }
 
                                     span {
-                                        style: "color: #9ca3af; margin-left: 0.5rem; font-size: 0.75rem;",
+                                        class: "text-gray-400 ml-2 text-xs",
                                         "({suggestion.skill_name} - {suggestion.difficulty_display})"
                                     }
                                 }
                             }
 
                             div {
-                                style: "margin-bottom: 0.5rem;",
+                                class: "mb-2",
 
                                 p {
-                                    style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.25rem 0;",
+                                    class: "text-gray-400 text-xs m-0 mb-1",
                                     "Confidence: {suggestion.confidence}"
                                 }
                             }
 
                             p {
-                                style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                                class: "text-gray-400 text-xs italic m-0 mb-3 leading-snug",
                                 "\"{suggestion.reasoning}\""
                             }
 
@@ -207,15 +206,15 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
                             // Action buttons
                             div {
-                                style: "display: flex; gap: 0.5rem;",
+                                class: "flex gap-2",
 
                                 button {
-                                    style: "flex: 1; padding: 0.5rem; background: rgba(34, 197, 94, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                                    class: "flex-1 p-2 bg-green-500 bg-opacity-80 text-white border-0 rounded-md cursor-pointer text-xs font-semibold",
                                     "Approve Challenge"
                                 }
 
                                 button {
-                                    style: "flex: 1; padding: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                                    class: "flex-1 p-2 bg-red-500 bg-opacity-80 text-white border-0 rounded-md cursor-pointer text-xs font-semibold",
                                     "Skip Challenge"
                                 }
                             }
@@ -227,57 +226,57 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
             // Narrative event suggestion section
             if let Some(suggestion) = &props.narrative_event_suggestion {
                 div {
-                    style: "margin-bottom: 1rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 0.5rem;",
+                    class: "mb-4 p-4 bg-purple-500 bg-opacity-10 border border-purple-500 rounded-lg",
 
                     h4 {
-                        style: "color: #8b5cf6; margin: 0 0 0.75rem 0; font-size: 0.875rem; display: flex; gap: 0.5rem; align-items: center;",
+                        class: "text-purple-500 m-0 mb-3 text-sm flex gap-2 items-center",
                         "Narrative Event Suggested"
                     }
 
                     div {
-                        style: "margin-bottom: 0.75rem;",
+                        class: "mb-3",
 
                         div {
-                            style: "display: flex; justify-content: space-between; align-items: baseline;",
+                            class: "flex justify-between items-baseline",
 
                             span {
-                                style: "color: white; font-weight: bold; font-size: 0.875rem;",
+                                class: "text-white font-bold text-sm",
                                 "{suggestion.event_name}"
                             }
                         }
 
                         if let Some(outcome) = &suggestion.suggested_outcome {
                             p {
-                                style: "color: #9ca3af; font-size: 0.75rem; margin: 0.5rem 0 0 0;",
+                                class: "text-gray-400 text-xs m-0 mt-2",
                                 "Suggested Outcome: {outcome}"
                             }
                         }
                     }
 
                     div {
-                        style: "margin-bottom: 0.5rem;",
+                        class: "mb-2",
 
                         p {
-                            style: "color: #9ca3af; font-size: 0.75rem; margin: 0 0 0.25rem 0;",
+                            class: "text-gray-400 text-xs m-0 mb-1",
                             "Confidence: {suggestion.confidence}"
                         }
                     }
 
                     p {
-                        style: "color: #9ca3af; font-size: 0.75rem; font-style: italic; margin: 0 0 0.75rem 0; line-height: 1.4;",
+                        class: "text-gray-400 text-xs italic m-0 mb-3 leading-snug",
                         "\"{suggestion.reasoning}\""
                     }
 
                     div {
-                        style: "display: flex; gap: 0.5rem;",
+                        class: "flex gap-2",
 
                         button {
-                            style: "flex: 1; padding: 0.5rem; background: rgba(139, 92, 246, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                            class: "flex-1 p-2 bg-purple-500 bg-opacity-80 text-white border-0 rounded-md cursor-pointer text-xs font-semibold",
                             "Trigger Event"
                         }
 
                         button {
-                            style: "flex: 1; padding: 0.5rem; background: rgba(107, 114, 128, 0.8); color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 600;",
+                            class: "flex-1 p-2 bg-gray-500 bg-opacity-80 text-white border-0 rounded-md cursor-pointer text-xs font-semibold",
                             "Skip Event"
                         }
                     }
@@ -287,15 +286,15 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
             // Proposed actions list
             if !props.proposed_actions.is_empty() {
                 div {
-                    style: "margin-bottom: 1rem;",
+                    class: "mb-4",
 
                     p {
-                        style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+                        class: "text-gray-400 text-xs uppercase m-0 mb-2",
                         "Proposed Actions"
                     }
 
                     div {
-                        style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        class: "flex flex-col gap-2",
 
                         for (idx, action) in actions.read().iter().enumerate() {
                             ProposedActionCheckbox {
@@ -315,24 +314,24 @@ pub fn ApprovalPopup(props: ApprovalPopupProps) -> Element {
 
             // Action buttons
             div {
-                style: "display: flex; gap: 0.75rem;",
+                class: "flex gap-3",
 
                 button {
                     onclick: move |_| props.on_accept.call(actions.read().to_vec()),
-                    style: "flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: background 0.2s;",
+                    class: "flex-1 p-3 bg-green-500 text-white border-0 rounded-lg cursor-pointer font-semibold text-sm transition-colors duration-200",
                     onmouseover: move |_| {},
                     "Accept"
                 }
 
                 button {
                     onclick: move |_| props.on_modify.call(()),
-                    style: "flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: background 0.2s;",
+                    class: "flex-1 p-3 bg-blue-500 text-white border-0 rounded-lg cursor-pointer font-semibold text-sm transition-colors duration-200",
                     "Modify"
                 }
 
                 button {
                     onclick: move |_| props.on_reject.call(()),
-                    style: "flex: 1; padding: 0.75rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: background 0.2s;",
+                    class: "flex-1 p-3 bg-red-500 text-white border-0 rounded-lg cursor-pointer font-semibold text-sm transition-colors duration-200",
                     "Reject"
                 }
             }
@@ -348,25 +347,25 @@ fn ProposedActionCheckbox(
 ) -> Element {
     rsx! {
         label {
-            style: "display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem; cursor: pointer; transition: background 0.2s;",
+            class: "flex items-start gap-3 p-3 bg-black bg-opacity-20 rounded-md cursor-pointer transition-colors duration-200",
 
             input {
                 r#type: "checkbox",
                 checked: action.checked,
                 onchange: move |_| on_toggle.call(()),
-                style: "margin-top: 0.25rem; cursor: pointer;",
+                class: "mt-1 cursor-pointer",
             }
 
             div {
-                style: "flex: 1;",
+                class: "flex-1",
 
                 div {
-                    style: "color: white; font-size: 0.875rem; font-weight: 500;",
+                    class: "text-white text-sm font-medium",
                     "{action.name}"
                 }
 
                 div {
-                    style: "color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;",
+                    class: "text-gray-400 text-xs mt-1",
                     "{action.description}"
                 }
             }
@@ -389,14 +388,14 @@ fn OutcomeDetailsSection(props: OutcomeDetailsSectionProps) -> Element {
 
     rsx! {
         div {
-            style: "margin-bottom: 0.75rem; border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 0.75rem;",
+            class: "mb-3 border-t border-amber-500 border-opacity-30 pt-3",
 
             // Header with "Regenerate All" button
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;",
+                class: "flex justify-between items-center mb-2",
 
                 p {
-                    style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0;",
+                    class: "text-gray-400 text-xs uppercase m-0",
                     "Outcomes"
                 }
 
@@ -415,7 +414,7 @@ fn OutcomeDetailsSection(props: OutcomeDetailsSectionProps) -> Element {
                                         });
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.5); color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                class: "py-1 px-2 bg-blue-500 bg-opacity-50 text-white border-0 rounded cursor-pointer text-xs uppercase",
                                 "Regenerate All"
                             }
                         }
@@ -425,7 +424,7 @@ fn OutcomeDetailsSection(props: OutcomeDetailsSectionProps) -> Element {
 
             // Outcome tabs
             div {
-                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                class: "flex flex-col gap-1",
 
                 // Success outcome
                 if let Some(ref outcome) = props.outcomes.success {
@@ -531,29 +530,33 @@ struct OutcomeTabProps {
 /// Individual outcome tab with expandable details and inline editing
 #[component]
 fn OutcomeTab(props: OutcomeTabProps) -> Element {
-    let border_color = props.color;
+    // Extract style variables before rsx! block
+    let border_style = format!("border-left-color: {};", props.color);
+    let text_color_style = format!("color: {};", props.color);
     let label = props.label;
     let is_expanded = props.is_expanded;
-    let mut editing = use_signal(|| false);
+    let editing = use_signal(|| false);
     let mut edited_flavor = use_signal(|| props.outcome.flavor_text.clone());
     let mut edited_direction = use_signal(|| props.outcome.scene_direction.clone());
 
     rsx! {
         div {
-            style: "background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem; border-left: 3px solid {border_color};",
+            class: "bg-black bg-opacity-20 rounded-md border-l-4",
+            style: "{border_style}",
 
             // Header (clickable to expand)
             button {
                 onclick: move |_| props.on_toggle.call(()),
-                style: "width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: none; border: none; cursor: pointer; text-align: left;",
+                class: "w-full flex justify-between items-center p-2 px-3 bg-transparent border-0 cursor-pointer text-left",
 
                 span {
-                    style: "color: {border_color}; font-size: 0.75rem; font-weight: 600;",
+                    class: "text-xs font-semibold",
+                    style: "{text_color_style}",
                     "{label}"
                 }
 
                 span {
-                    style: "color: #6b7280; font-size: 0.75rem;",
+                    class: "text-gray-500 text-xs",
                     if is_expanded { "v" } else { ">" }
                 }
             }
@@ -561,26 +564,26 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
             // Expanded content
             if is_expanded {
                 div {
-                    style: "padding: 0 0.75rem 0.75rem 0.75rem;",
+                    class: "px-3 pb-3",
 
                     // Flavor text
                     if !props.outcome.flavor_text.is_empty() || *editing.read() {
                         div {
-                            style: "margin-bottom: 0.5rem;",
+                            class: "mb-2",
 
                             p {
-                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                class: "text-gray-500 text-xs uppercase m-0 mb-1",
                                 "Flavor"
                             }
                             if *editing.read() {
                                 textarea {
                                     value: "{edited_flavor}",
                                     oninput: move |e| edited_flavor.set(e.value()),
-                                    style: "width: 100%; padding: 0.5rem; background: #020617; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.75rem; min-height: 60px; resize: vertical;",
+                                    class: "w-full p-2 bg-dark-bg border border-gray-700 rounded-md text-white text-xs min-h-[60px] resize-y",
                                 }
                             } else {
                                 p {
-                                    style: "color: white; font-size: 0.75rem; font-style: italic; margin: 0; line-height: 1.4;",
+                                    class: "text-white text-xs italic m-0 leading-snug",
                                     "\"{props.outcome.flavor_text}\""
                                 }
                             }
@@ -590,21 +593,21 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                     // Scene direction
                     if !props.outcome.scene_direction.is_empty() || *editing.read() {
                         div {
-                            style: "margin-bottom: 0.5rem;",
+                            class: "mb-2",
 
                             p {
-                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                class: "text-gray-500 text-xs uppercase m-0 mb-1",
                                 "Scene Direction"
                             }
                             if *editing.read() {
                                 textarea {
                                     value: "{edited_direction}",
                                     oninput: move |e| edited_direction.set(e.value()),
-                                    style: "width: 100%; padding: 0.5rem; background: #020617; border: 1px solid #374151; border-radius: 0.375rem; color: #d1d5db; font-size: 0.75rem; min-height: 60px; resize: vertical;",
+                                    class: "w-full p-2 bg-dark-bg border border-gray-700 rounded-md text-gray-300 text-xs min-h-[60px] resize-y",
                                 }
                             } else {
                                 p {
-                                    style: "color: #d1d5db; font-size: 0.75rem; margin: 0; line-height: 1.4;",
+                                    class: "text-gray-300 text-xs m-0 leading-snug",
                                     "{props.outcome.scene_direction}"
                                 }
                             }
@@ -614,19 +617,19 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                     // Tool calls (if any)
                     if !props.outcome.proposed_tools.is_empty() {
                         div {
-                            style: "margin-bottom: 0.5rem;",
+                            class: "mb-2",
 
                             p {
-                                style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; margin: 0 0 0.25rem 0;",
+                                class: "text-gray-500 text-xs uppercase m-0 mb-1",
                                 "Tool Calls ({props.outcome.proposed_tools.len()})"
                             }
                             div {
-                                style: "display: flex; flex-wrap: wrap; gap: 0.25rem;",
+                                class: "flex flex-wrap gap-1",
 
                                 for tool in props.outcome.proposed_tools.iter() {
                                     span {
                                         key: "{tool.id}",
-                                        style: "padding: 0.125rem 0.375rem; background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-radius: 0.25rem; font-size: 0.625rem;",
+                                        class: "py-0.5 px-1.5 bg-blue-500 bg-opacity-20 text-blue-300 rounded text-xs",
                                         "{tool.name}"
                                     }
                                 }
@@ -637,7 +640,7 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                     // Edit / Regenerate controls
                     if props.on_regenerate.is_some() {
                         div {
-                            style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
+                            class: "flex justify-end gap-2",
 
                             // Toggle edit/save
                             {
@@ -648,7 +651,7 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                                             let current = *editing_sig.read();
                                             editing_sig.set(!current);
                                         },
-                                        style: "padding: 0.25rem 0.5rem; background: rgba(148, 163, 184, 0.3); color: #e5e7eb; border: 1px solid #64748b; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                        class: "py-1 px-2 bg-slate-400 bg-opacity-30 text-gray-200 border border-slate-600 rounded cursor-pointer text-xs uppercase",
                                         if *editing.read() { "Done Editing" } else { "Edit" }
                                     }
                                 }
@@ -688,7 +691,7 @@ fn OutcomeTab(props: OutcomeTabProps) -> Element {
                                                 });
                                             }
                                         },
-                                        style: "padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.3); color: #93c5fd; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem; text-transform: uppercase;",
+                                        class: "py-1 px-2 bg-blue-500 bg-opacity-30 text-blue-300 border-0 rounded cursor-pointer text-xs uppercase",
                                         "Regenerate"
                                     }
                                 }

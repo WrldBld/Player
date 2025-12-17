@@ -46,36 +46,34 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
 
     rsx! {
         div {
-            class: "modal-overlay",
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; max-width: 500px; width: 90%;",
+                class: "modal-content bg-dark-surface rounded-xl p-6 max-w-[500px] w-[90%]",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
+                    class: "flex justify-between items-center mb-6",
 
-                    h2 { style: "color: white; margin: 0; font-size: 1.25rem;", "📝 Add DM Marker" }
+                    h2 { class: "text-white m-0 text-xl", "📝 Add DM Marker" }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer;",
+                        class: "bg-transparent border-none text-gray-400 text-2xl cursor-pointer",
                         "×"
                     }
                 }
 
                 // Form
                 div {
-                    style: "display: flex; flex-direction: column; gap: 1rem;",
+                    class: "flex flex-col gap-4",
 
                     // Title
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.375rem;",
+                            class: "block text-gray-400 text-sm mb-1.5",
                             "Title *"
                         }
                         input {
@@ -83,48 +81,46 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                             placeholder: "Enter marker title...",
                             value: "{title}",
                             oninput: move |e| title.set(e.value()),
-                            style: "width: 100%; padding: 0.625rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.9375rem; box-sizing: border-box;",
+                            class: "w-full px-2.5 py-2.5 bg-dark-bg border border-gray-700 rounded-md text-white text-[0.9375rem] box-border",
                         }
                     }
 
                     // Note
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.375rem;",
+                            class: "block text-gray-400 text-sm mb-1.5",
                             "Note"
                         }
                         textarea {
                             placeholder: "Add details, context, or reminders...",
                             value: "{note}",
                             oninput: move |e| note.set(e.value()),
-                            style: "width: 100%; min-height: 100px; padding: 0.625rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.9375rem; resize: vertical; box-sizing: border-box;",
+                            class: "w-full min-h-[100px] px-2.5 py-2.5 bg-dark-bg border border-gray-700 rounded-md text-white text-[0.9375rem] resize-y box-border",
                         }
                     }
 
                     // Marker Type
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.375rem;",
+                            class: "block text-gray-400 text-sm mb-1.5",
                             "Marker Type"
                         }
                         div {
-                            style: "display: flex; flex-wrap: wrap; gap: 0.5rem;",
+                            class: "flex flex-wrap gap-2",
 
                             for (value, label, icon) in marker_type_options.iter() {
                                 {
                                     let is_selected = *marker_type.read() == *value;
                                     let value = *value;
+                                    let button_classes = if is_selected {
+                                        "bg-blue-500 text-white border-blue-500"
+                                    } else {
+                                        "bg-dark-bg text-gray-400 border-gray-700"
+                                    };
                                     rsx! {
                                         button {
                                             onclick: move |_| marker_type.set(value.to_string()),
-                                            style: format!(
-                                                "padding: 0.5rem 0.75rem; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; {}",
-                                                if is_selected {
-                                                    "background: #3b82f6; color: white; border: 1px solid #3b82f6;"
-                                                } else {
-                                                    "background: #0f0f23; color: #9ca3af; border: 1px solid #374151;"
-                                                }
-                                            ),
+                                            class: "px-3 py-2 rounded-md cursor-pointer flex items-center gap-1.5 text-[0.8125rem] border {button_classes}",
                                             span { "{icon}" }
                                             span { "{label}" }
                                         }
@@ -137,29 +133,31 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                     // Importance
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.375rem;",
+                            class: "block text-gray-400 text-sm mb-1.5",
                             "Importance"
                         }
                         div {
-                            style: "display: flex; gap: 0.5rem;",
+                            class: "flex gap-2",
 
                             for (value, label, description) in importance_options.iter() {
                                 {
                                     let is_selected = *importance.read() == *value;
                                     let value = *value;
-                                    let color = get_importance_color(value);
+                                    let color_bg = get_importance_color(value);
                                     rsx! {
                                         button {
                                             onclick: move |_| importance.set(value.to_string()),
                                             title: "{description}",
-                                            style: format!(
-                                                "flex: 1; padding: 0.5rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.8125rem; {}",
-                                                if is_selected {
-                                                    format!("background: {}; color: white; border: 1px solid {};", color, color)
-                                                } else {
-                                                    "background: #0f0f23; color: #9ca3af; border: 1px solid #374151;".to_string()
-                                                }
-                                            ),
+                                            class: if is_selected {
+                                                "flex-1 px-2 py-2 rounded-md cursor-pointer text-[0.8125rem] text-white border"
+                                            } else {
+                                                "flex-1 px-2 py-2 rounded-md cursor-pointer text-[0.8125rem] bg-dark-bg text-gray-400 border border-gray-700"
+                                            },
+                                            style: if is_selected {
+                                                format!("background-color: {}; border-color: {}", color_bg, color_bg)
+                                            } else {
+                                                String::new()
+                                            },
                                             "{label}"
                                         }
                                     }
@@ -171,7 +169,7 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                     // Tags
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.375rem;",
+                            class: "block text-gray-400 text-sm mb-1.5",
                             "Tags (comma separated)"
                         }
                         input {
@@ -179,81 +177,85 @@ pub fn AddDmMarkerModal(props: AddDmMarkerModalProps) -> Element {
                             placeholder: "e.g., act1, villain, mystery",
                             value: "{tags_input}",
                             oninput: move |e| tags_input.set(e.value()),
-                            style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem; box-sizing: border-box;",
+                            class: "w-full px-2 py-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm box-border",
                         }
                     }
 
                     // Error display
                     if let Some(err) = error.read().as_ref() {
                         div {
-                            style: "background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.375rem; padding: 0.75rem; color: #ef4444; font-size: 0.875rem;",
+                            class: "bg-red-500 bg-opacity-10 border border-red-500 rounded-md p-3 text-red-500 text-sm",
                             "{err}"
                         }
                     }
 
                     // Buttons
                     div {
-                        style: "display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;",
+                        class: "flex justify-end gap-3 mt-2",
 
                         button {
                             onclick: move |_| props.on_close.call(()),
-                            style: "padding: 0.625rem 1.25rem; background: #374151; color: white; border: none; border-radius: 0.375rem; cursor: pointer;",
+                            class: "px-5 py-2.5 bg-gray-700 text-white border-none rounded-md cursor-pointer",
                             "Cancel"
                         }
 
-                        button {
-                            onclick: {
-                                let world_id = props.world_id.clone();
-                                let session_id = props.session_id.clone();
-                                let service = story_event_service.clone();
-                                move |_| {
-                                    if !can_save { return; }
+                        {
+                            let save_disabled = !can_save || *is_saving.read();
+                            let save_bg = if can_save { "bg-purple-500" } else { "bg-gray-600 opacity-50" };
+                            let save_cursor = if can_save && !*is_saving.read() { "cursor-pointer" } else { "cursor-not-allowed" };
+                            let save_text = if *is_saving.read() { "Saving..." } else { "Create Marker" };
+                            rsx! {
+                                button {
+                                    onclick: {
+                                        let world_id = props.world_id.clone();
+                                        let session_id = props.session_id.clone();
+                                        let service = story_event_service.clone();
+                                        move |_| {
+                                            if !can_save { return; }
 
-                                    let title_val = title.read().trim().to_string();
-                                    let note_val = note.read().trim().to_string();
-                                    let importance_val = importance.read().clone();
-                                    let marker_type_val = marker_type.read().clone();
-                                    let tags: Vec<String> = tags_input.read()
-                                        .split(',')
-                                        .map(|s| s.trim().to_string())
-                                        .filter(|s| !s.is_empty())
-                                        .collect();
+                                            let title_val = title.read().trim().to_string();
+                                            let note_val = note.read().trim().to_string();
+                                            let importance_val = importance.read().clone();
+                                            let marker_type_val = marker_type.read().clone();
+                                            let tags: Vec<String> = tags_input.read()
+                                                .split(',')
+                                                .map(|s| s.trim().to_string())
+                                                .filter(|s| !s.is_empty())
+                                                .collect();
 
-                                    let world_id = world_id.clone();
-                                    let session_id = session_id.clone();
-                                    let service = service.clone();
-                                    spawn(async move {
-                                        is_saving.set(true);
-                                        error.set(None);
+                                            let world_id = world_id.clone();
+                                            let session_id = session_id.clone();
+                                            let service = service.clone();
+                                            spawn(async move {
+                                                is_saving.set(true);
+                                                error.set(None);
 
-                                        let request = CreateDmMarkerRequest {
-                                            title: title_val,
-                                            note: note_val,
-                                            importance: importance_val,
-                                            marker_type: marker_type_val,
-                                            tags,
-                                        };
+                                                let request = CreateDmMarkerRequest {
+                                                    title: title_val,
+                                                    note: note_val,
+                                                    importance: importance_val,
+                                                    marker_type: marker_type_val,
+                                                    tags,
+                                                };
 
-                                        match service.create_dm_marker(&world_id, session_id.as_deref(), &request).await {
-                                            Ok(_) => {
-                                                props.on_created.call(());
-                                            }
-                                            Err(e) => {
-                                                error.set(Some(format!("Failed to create marker: {}", e)));
-                                            }
+                                                match service.create_dm_marker(&world_id, session_id.as_deref(), &request).await {
+                                                    Ok(_) => {
+                                                        props.on_created.call(());
+                                                    }
+                                                    Err(e) => {
+                                                        error.set(Some(format!("Failed to create marker: {}", e)));
+                                                    }
+                                                }
+
+                                                is_saving.set(false);
+                                            });
                                         }
-
-                                        is_saving.set(false);
-                                    });
+                                    },
+                                    disabled: save_disabled,
+                                    class: "px-5 py-2.5 text-white border-none rounded-md {save_bg} {save_cursor}",
+                                    "{save_text}"
                                 }
-                            },
-                            disabled: !can_save || *is_saving.read(),
-                            style: format!(
-                                "padding: 0.625rem 1.25rem; color: white; border: none; border-radius: 0.375rem; cursor: {}; {}",
-                                if can_save && !*is_saving.read() { "pointer" } else { "not-allowed" },
-                                if can_save { "background: #8b5cf6;" } else { "background: #4b5563; opacity: 0.5;" }
-                            ),
-                            if *is_saving.read() { "Saving..." } else { "Create Marker" }
+                            }
                         }
                     }
                 }

@@ -7,15 +7,21 @@
 pub mod adhoc_challenge_modal;
 pub mod approval_popup;
 pub mod challenge_library;
+pub mod challenge_outcome_approval;
+pub mod character_perspective;
 pub mod conversation_log;
+pub mod decision_queue;
 pub mod directorial_notes;
-pub mod location_navigator;
-pub mod npc_motivation;
 pub mod director_generate_modal;
 pub mod director_queue_panel;
+pub mod location_navigator;
+pub mod log_entry;
+pub mod npc_motivation;
 pub mod pc_management;
 pub mod scene_preview;
 pub mod tone_selector;
 pub mod trigger_challenge_modal;
-pub mod decision_queue;
-pub mod character_perspective;
+
+// Re-export key types for external use
+pub use challenge_outcome_approval::{ChallengeOutcomeApprovalCard, ChallengeOutcomesSection};
+pub use conversation_log::{ChallengeResultInfo, ConversationLog, ConversationTurn};

@@ -6,6 +6,32 @@ use dioxus::prelude::*;
 
 use crate::presentation::components::tactical::PlayerSkillData;
 
+/// Roll submission status for challenge outcomes (P3.3/P3.4)
+///
+/// Tracks the state of a submitted roll as it goes through DM approval.
+#[derive(Debug, Clone, PartialEq)]
+pub enum RollSubmissionStatus {
+    /// No roll has been submitted
+    NotSubmitted,
+    /// Roll submitted, waiting for DM approval
+    AwaitingApproval {
+        roll: i32,
+        modifier: i32,
+        total: i32,
+        outcome_type: String,
+    },
+    /// Result received and ready to display
+    ResultReady(ChallengeResultData),
+    /// Result has been displayed, ready to close
+    Dismissed,
+}
+
+impl Default for RollSubmissionStatus {
+    fn default() -> Self {
+        Self::NotSubmitted
+    }
+}
+
 /// Challenge prompt data shown to player
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChallengePromptData {
@@ -61,6 +87,8 @@ pub struct ChallengeState {
     pub challenge_results: Signal<Vec<ChallengeResultData>>,
     /// Player character skills with modifiers
     pub player_skills: Signal<Vec<PlayerSkillData>>,
+    /// Roll submission status for the active challenge (P3.3/P3.4)
+    pub roll_status: Signal<RollSubmissionStatus>,
 }
 
 impl ChallengeState {
@@ -70,6 +98,7 @@ impl ChallengeState {
             active_challenge: Signal::new(None),
             challenge_results: Signal::new(Vec::new()),
             player_skills: Signal::new(Vec::new()),
+            roll_status: Signal::new(RollSubmissionStatus::default()),
         }
     }
 
@@ -103,6 +132,32 @@ impl ChallengeState {
         self.active_challenge.set(None);
         self.challenge_results.set(Vec::new());
         self.player_skills.set(Vec::new());
+        self.roll_status.set(RollSubmissionStatus::NotSubmitted);
+    }
+
+    /// Set roll as awaiting DM approval (P3.3/P3.4)
+    pub fn set_awaiting_approval(&mut self, roll: i32, modifier: i32, total: i32, outcome_type: String) {
+        self.roll_status.set(RollSubmissionStatus::AwaitingApproval {
+            roll,
+            modifier,
+            total,
+            outcome_type,
+        });
+    }
+
+    /// Set result as ready to display (P3.3/P3.4)
+    pub fn set_result_ready(&mut self, result: ChallengeResultData) {
+        self.roll_status.set(RollSubmissionStatus::ResultReady(result));
+    }
+
+    /// Dismiss the result display (P3.3/P3.4)
+    pub fn dismiss_result(&mut self) {
+        self.roll_status.set(RollSubmissionStatus::Dismissed);
+    }
+
+    /// Clear the roll status (P3.3/P3.4)
+    pub fn clear_roll_status(&mut self) {
+        self.roll_status.set(RollSubmissionStatus::NotSubmitted);
     }
 }
 

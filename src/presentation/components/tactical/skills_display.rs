@@ -49,7 +49,7 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
         // Modal overlay
         div {
             id: "skills-overlay",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]",
             onclick: move |_| {
                 props.on_close.call(());
             },
@@ -57,23 +57,23 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
             // Modal content
             div {
                 id: "skills-modal",
-                style: "background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%); padding: 2rem; border-radius: 1rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; border: 2px solid #3b82f6; box-shadow: 0 20px 60px rgba(59, 130, 246, 0.2);",
+                class: "bg-gradient-to-br from-dark-surface to-dark-bg p-8 rounded-2xl max-w-2xl w-[90%] max-h-[80vh] overflow-y-auto border-2 border-blue-500 shadow-[0_20px_60px_rgba(59,130,246,0.2)]",
                 onclick: move |e: dioxus::prelude::MouseEvent| {
                     e.stop_propagation();
                 },
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
+                    class: "flex justify-between items-center mb-6",
 
                     h2 {
-                        style: "color: #3b82f6; margin: 0; font-size: 1.5rem;",
+                        class: "text-blue-500 m-0 text-2xl",
                         "Skills"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.5rem; padding: 0;",
+                        class: "bg-transparent border-0 text-gray-400 cursor-pointer text-2xl p-0 hover:text-gray-300",
                         "×"
                     }
                 }
@@ -81,7 +81,7 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
                 // Skills by category
                 if categories.is_empty() {
                     p {
-                        style: "color: #9ca3af; text-align: center; margin: 2rem 0;",
+                        class: "text-gray-400 text-center my-8",
                         "No skills available"
                     }
                 } else {
@@ -90,46 +90,51 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
                             rsx! {
                                 div {
                                     key: "{category}",
-                                    style: "margin-bottom: 1.5rem;",
+                                    class: "mb-6",
 
                                     // Category header
                                     h3 {
-                                        style: "color: #f59e0b; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.75rem 0;",
+                                        class: "text-amber-500 text-sm uppercase tracking-wide m-0 mb-3",
                                         "{category}"
                                     }
 
                                     // Skills in this category
                                     div {
-                                        style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                                        class: "flex flex-col gap-2",
 
                                         {
                                             skills.iter().map(|skill| {
-                                                let modifier_color = if skill.modifier >= 0 {
-                                                    "#22c55e"
+                                                // CRITICAL: Extract conditional classes BEFORE rsx! - no inline if in class strings
+                                                let modifier_color_class = if skill.modifier >= 0 {
+                                                    "text-green-500"
                                                 } else {
-                                                    "#ef4444"
+                                                    "text-red-500"
                                                 };
 
-                                                let border_color = if skill.proficient { "#f59e0b" } else { "transparent" };
+                                                let border_color_class = if skill.proficient {
+                                                    "border-l-amber-500"
+                                                } else {
+                                                    "border-l-transparent"
+                                                };
 
                                                 rsx! {
                                                     div {
                                                         key: "{skill.id}",
-                                                        style: "display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: rgba(0, 0, 0, 0.3); border-radius: 0.5rem; border-left: 3px solid {border_color};",
+                                                        class: "flex items-center justify-between px-3 py-3 bg-black/30 rounded-lg border-l-[3px] {border_color_class}",
 
                                                         // Skill name
                                                         div {
-                                                            style: "display: flex; align-items: center; gap: 0.5rem;",
+                                                            class: "flex items-center gap-2",
 
                                                             span {
-                                                                style: "color: white; flex: 1;",
+                                                                class: "text-white flex-1",
                                                                 "{skill.name}"
                                                             }
 
                                                             // Proficiency indicator
                                                             if skill.proficient {
                                                                 span {
-                                                                    style: "color: #f59e0b; font-size: 0.75rem; font-weight: bold;",
+                                                                    class: "text-amber-500 text-xs font-bold",
                                                                     "Prof"
                                                                 }
                                                             }
@@ -137,7 +142,7 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
 
                                                         // Modifier
                                                         div {
-                                                            style: "color: {modifier_color}; font-weight: bold; font-size: 1rem; min-width: 3rem; text-align: right;",
+                                                            class: "{modifier_color_class} font-bold text-base min-w-[3rem] text-right",
                                                             if skill.modifier >= 0 {
                                                                 "+{skill.modifier}"
                                                             } else {
@@ -157,11 +162,11 @@ pub fn SkillsDisplay(props: SkillsDisplayProps) -> Element {
 
                 // Footer
                 div {
-                    style: "margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);",
+                    class: "mt-6 pt-4 border-t border-white/10",
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "width: 100%; padding: 0.75rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                        class: "w-full py-3 bg-gray-700 text-white border-0 rounded-lg cursor-pointer text-sm hover:bg-gray-600",
                         "Close"
                     }
                 }

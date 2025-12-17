@@ -4,6 +4,25 @@
 
 use dioxus::prelude::*;
 
+/// Challenge result information for special rendering
+#[derive(Clone, PartialEq)]
+pub struct ChallengeResultInfo {
+    /// Name of the challenge
+    pub challenge_name: String,
+    /// Character who performed the challenge
+    pub character_name: String,
+    /// The roll value
+    pub roll: i32,
+    /// The modifier applied
+    pub modifier: i32,
+    /// Total (roll + modifier)
+    pub total: i32,
+    /// Outcome type (success, failure, critical_success, critical_failure)
+    pub outcome_type: String,
+    /// Description of the outcome
+    pub outcome_description: String,
+}
+
 /// A single turn in the conversation
 #[derive(Clone, PartialEq)]
 pub struct ConversationTurn {
@@ -15,6 +34,8 @@ pub struct ConversationTurn {
     pub timestamp: String,
     /// Whether this is a system message
     pub is_system: bool,
+    /// Optional challenge result data for special rendering
+    pub challenge_result: Option<ChallengeResultInfo>,
 }
 
 /// Props for the ConversationLog component
@@ -43,28 +64,26 @@ pub fn ConversationLog(props: ConversationLogProps) -> Element {
 
     rsx! {
         div {
-            class: "conversation-log {props.class}",
-            style: "display: flex; flex-direction: column; height: 100%; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "conversation-log {props.class} flex flex-col h-full bg-dark-surface rounded-lg overflow-hidden",
 
             // Header
             div {
-                style: "padding: 0.75rem 1rem; border-bottom: 1px solid #374151;",
+                class: "py-3 px-4 border-b border-gray-700",
 
                 h3 {
-                    style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin: 0;",
+                    class: "text-gray-400 text-sm uppercase m-0",
                     "Conversation Log"
                 }
             }
 
             // Log entries (scrollable)
             div {
-                class: "log-entries",
-                style: "flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;",
+                class: "log-entries flex-1 overflow-y-auto p-4 flex flex-col gap-3",
 
                 // Empty state
                 if props.turns.is_empty() {
                     div {
-                        style: "display: flex; align-items: center; justify-content: center; height: 100%; color: #6b7280; font-size: 0.875rem;",
+                        class: "flex items-center justify-center h-full text-gray-500 text-sm",
                         "Waiting for dialogue..."
                     }
                 } else {
@@ -82,40 +101,115 @@ pub fn ConversationLog(props: ConversationLogProps) -> Element {
 /// Individual conversation entry
 #[component]
 fn ConversationEntry(turn: ConversationTurn) -> Element {
-    let (bg_color, text_color, speaker_color) = if turn.is_system {
-        ("rgba(59, 130, 246, 0.1)", "#60a5fa", "#60a5fa")
+    // Check if this is a challenge result
+    if let Some(ref result) = turn.challenge_result {
+        return rsx! { ChallengeResultEntry { result: result.clone(), timestamp: turn.timestamp.clone() } };
+    }
+
+    let (bg_class, text_class, border_class, speaker_class) = if turn.is_system {
+        ("bg-blue-500 bg-opacity-10", "text-blue-400", "border-blue-400", "text-blue-400")
     } else {
-        ("rgba(0, 0, 0, 0.3)", "white", "#3b82f6")
+        ("bg-black bg-opacity-30", "text-white", "border-blue-500", "text-blue-500")
     };
 
     rsx! {
         div {
-            class: "log-entry",
-            style: format!(
-                "padding: 0.75rem; background: {}; border-radius: 0.375rem; border-left: 2px solid {};",
-                bg_color,
-                speaker_color
-            ),
+            class: "log-entry p-3 rounded-md border-l-2 {bg_class} {border_class}",
 
             // Header with speaker and timestamp
             div {
-                style: "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;",
+                class: "flex items-center gap-2 mb-1",
 
                 span {
-                    style: format!("color: {}; font-weight: 600; font-size: 0.875rem;", speaker_color),
+                    class: "font-semibold text-sm {speaker_class}",
                     "{turn.speaker}"
                 }
 
                 span {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-left: auto;",
+                    class: "text-gray-500 text-xs ml-auto",
                     "{turn.timestamp}"
                 }
             }
 
             // Message text
             p {
-                style: format!("color: {}; font-size: 0.875rem; line-height: 1.4; margin: 0;", text_color),
+                class: "text-sm leading-snug m-0 {text_class}",
                 "{turn.text}"
+            }
+        }
+    }
+}
+
+/// Challenge result entry with special amber styling (P3.3/P3.4)
+#[component]
+fn ChallengeResultEntry(result: ChallengeResultInfo, timestamp: String) -> Element {
+    // Determine colors based on outcome type
+    let (border_color, outcome_color, outcome_label) = match result.outcome_type.as_str() {
+        "critical_success" => ("border-yellow-400", "text-yellow-400", "CRITICAL SUCCESS"),
+        "success" => ("border-green-500", "text-green-500", "SUCCESS"),
+        "failure" => ("border-red-500", "text-red-500", "FAILURE"),
+        "critical_failure" => ("border-red-700", "text-red-700", "CRITICAL FAILURE"),
+        _ => ("border-amber-500", "text-amber-500", "RESULT"),
+    };
+
+    // Format modifier with sign
+    let modifier_display = if result.modifier >= 0 {
+        format!("+{}", result.modifier)
+    } else {
+        format!("{}", result.modifier)
+    };
+
+    rsx! {
+        div {
+            class: "log-entry p-3 rounded-md border-l-2 bg-amber-500 bg-opacity-10 {border_color}",
+
+            // Header with challenge name and timestamp
+            div {
+                class: "flex items-center justify-between mb-2",
+
+                div {
+                    span {
+                        class: "font-semibold text-sm text-amber-500",
+                        "{result.challenge_name}"
+                    }
+                    span {
+                        class: "text-gray-400 text-xs ml-2",
+                        "by {result.character_name}"
+                    }
+                }
+
+                span {
+                    class: "text-gray-500 text-xs",
+                    "{timestamp}"
+                }
+            }
+
+            // Roll breakdown
+            div {
+                class: "flex items-center gap-4 bg-black/30 rounded px-3 py-2 mb-2",
+
+                span {
+                    class: "text-gray-400 text-sm",
+                    "Roll: {result.roll}"
+                }
+                span {
+                    class: "text-gray-400 text-sm",
+                    "Mod: {modifier_display}"
+                }
+                span {
+                    class: "text-white text-sm font-bold",
+                    "Total: {result.total}"
+                }
+                span {
+                    class: "text-xs font-bold uppercase ml-auto {outcome_color}",
+                    "{outcome_label}"
+                }
+            }
+
+            // Outcome description
+            p {
+                class: "text-sm leading-snug m-0 text-gray-300 italic",
+                "{result.outcome_description}"
             }
         }
     }

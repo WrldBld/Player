@@ -4,7 +4,7 @@
 //! allowing application services to manage real-time game sessions without
 //! depending on concrete WebSocket client implementations.
 
-pub use crate::application::dto::websocket_messages::DiceInputType;
+pub use crate::application::dto::websocket_messages::{ChallengeOutcomeDecisionData, DiceInputType};
 
 /// Connection state for the game session
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,6 +123,9 @@ pub trait GameConnectionPort: Send + Sync {
     /// Send an approval decision (DM only)
     fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> anyhow::Result<()>;
 
+    /// Send a challenge outcome decision (DM only)
+    fn send_challenge_outcome_decision(&self, resolution_id: &str, decision: ChallengeOutcomeDecisionData) -> anyhow::Result<()>;
+
     /// Trigger a challenge (DM only)
     fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;
 
@@ -193,6 +196,9 @@ pub trait GameConnectionPort {
 
     /// Send approval decision (DM only)
     fn send_approval_decision(&self, request_id: &str, decision: ApprovalDecision) -> anyhow::Result<()>;
+
+    /// Send a challenge outcome decision (DM only)
+    fn send_challenge_outcome_decision(&self, resolution_id: &str, decision: ChallengeOutcomeDecisionData) -> anyhow::Result<()>;
 
     /// Trigger a challenge for a character (DM only)
     fn trigger_challenge(&self, challenge_id: &str, target_character_id: &str) -> anyhow::Result<()>;

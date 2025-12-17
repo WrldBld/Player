@@ -42,8 +42,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
 
     rsx! {
         div {
-            class: "action-panel",
-            style: "position: absolute; bottom: 1rem; left: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; z-index: 20;",
+            class: "action-panel absolute bottom-4 left-4 flex flex-wrap gap-2 z-20",
 
             // System buttons
             if let Some(ref handler) = props.on_inventory {
@@ -85,8 +84,7 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
             // Divider between system and scene actions
             if !available_interactions.is_empty() {
                 div {
-                    class: "action-divider",
-                    style: "width: 1px; height: 32px; background: #374151; margin: 0 0.25rem;",
+                    class: "action-divider w-px h-8 bg-gray-700 mx-1",
                 }
             }
 
@@ -128,13 +126,13 @@ pub fn SystemButton(props: SystemButtonProps) -> Element {
         _ => "⚙️",
     };
 
-    let opacity = if props.disabled { "0.5" } else { "1.0" };
-    let cursor = if props.disabled { "not-allowed" } else { "pointer" };
+    // CRITICAL: Extract conditional classes BEFORE rsx! - no inline if in class strings
+    let opacity_class = if props.disabled { "opacity-50" } else { "opacity-100" };
+    let cursor_class = if props.disabled { "cursor-not-allowed" } else { "cursor-pointer" };
 
     rsx! {
         button {
-            class: "btn btn-secondary",
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; opacity: {opacity}; cursor: {cursor};",
+            class: "btn btn-secondary flex items-center gap-2 px-3 py-2 {opacity_class} {cursor_class}",
             disabled: props.disabled,
             onclick: move |_| {
                 if !props.disabled {
@@ -166,13 +164,13 @@ pub fn InteractionButton(props: InteractionButtonProps) -> Element {
     let icon = get_interaction_icon(&props.interaction.interaction_type);
     let interaction = props.interaction.clone();
 
-    let opacity = if props.disabled { "0.5" } else { "1.0" };
-    let cursor = if props.disabled { "not-allowed" } else { "pointer" };
+    // CRITICAL: Extract conditional classes BEFORE rsx! - no inline if in class strings
+    let opacity_class = if props.disabled { "opacity-50" } else { "opacity-100" };
+    let cursor_class = if props.disabled { "cursor-not-allowed" } else { "cursor-pointer" };
 
     rsx! {
         button {
-            class: "btn btn-secondary",
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; opacity: {opacity}; cursor: {cursor};",
+            class: "btn btn-secondary flex items-center gap-2 px-3 py-2 {opacity_class} {cursor_class}",
             disabled: props.disabled,
             onclick: move |_| {
                 if !props.disabled {
@@ -186,7 +184,7 @@ pub fn InteractionButton(props: InteractionButtonProps) -> Element {
             // Show target if available
             if let Some(ref target) = props.interaction.target_name {
                 span {
-                    style: "color: #9ca3af; font-size: 0.75rem;",
+                    class: "text-gray-400 text-xs",
                     "({target})"
                 }
             }
@@ -226,12 +224,10 @@ pub struct CompactActionPanelProps {
 pub fn CompactActionPanel(props: CompactActionPanelProps) -> Element {
     rsx! {
         div {
-            class: "compact-action-panel",
-            style: "position: absolute; bottom: 1rem; right: 1rem; z-index: 20;",
+            class: "compact-action-panel absolute bottom-4 right-4 z-20",
 
             button {
-                class: "btn btn-primary",
-                style: "width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem;",
+                class: "btn btn-primary w-12 h-12 rounded-full text-2xl",
                 onclick: move |_| props.on_menu.call(()),
 
                 "≡"

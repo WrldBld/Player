@@ -95,6 +95,22 @@ pub enum ClientMessage {
         /// Outcome descriptions
         outcomes: AdHocOutcomes,
     },
+
+    /// DM approves/edits/requests suggestions for a challenge outcome (P3.3/P3.4)
+    ChallengeOutcomeDecision {
+        /// Resolution ID for the pending outcome
+        resolution_id: String,
+        /// The decision
+        decision: ChallengeOutcomeDecisionData,
+    },
+
+    /// DM requests LLM suggestions for a challenge outcome (P3.3/P3.4)
+    RequestOutcomeSuggestion {
+        /// Resolution ID for the pending outcome
+        resolution_id: String,
+        /// Optional guidance for the LLM
+        guidance: Option<String>,
+    },
 }
 
 /// Messages received from Engine
@@ -264,6 +280,39 @@ pub enum ServerMessage {
         challenge_id: String,
         challenge_name: String,
         target_pc_id: String,
+    },
+
+    /// Player's roll submitted, awaiting DM approval (P3.3/P3.4)
+    ChallengeRollSubmitted {
+        challenge_id: String,
+        challenge_name: String,
+        roll: i32,
+        modifier: i32,
+        total: i32,
+        outcome_type: String,
+        status: String, // "awaiting_dm_approval"
+    },
+
+    /// Challenge outcome pending DM approval (sent to DM) (P3.3/P3.4)
+    ChallengeOutcomePending {
+        resolution_id: String,
+        challenge_id: String,
+        challenge_name: String,
+        character_id: String,
+        character_name: String,
+        roll: i32,
+        modifier: i32,
+        total: i32,
+        outcome_type: String,
+        outcome_description: String,
+        outcome_triggers: Vec<ProposedTool>,
+        roll_breakdown: Option<String>,
+    },
+
+    /// LLM suggestions ready for challenge outcome (sent to DM) (P3.3/P3.4)
+    OutcomeSuggestionReady {
+        resolution_id: String,
+        suggestions: Vec<String>,
     },
 }
 
@@ -461,5 +510,21 @@ pub struct OutcomeDetailData {
     /// Proposed tool calls for this outcome
     #[serde(default)]
     pub proposed_tools: Vec<ProposedTool>,
+}
+
+/// DM's decision on a challenge outcome (P3.3/P3.4)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "action", rename_all = "snake_case")]
+pub enum ChallengeOutcomeDecisionData {
+    /// Accept the outcome as-is
+    Accept,
+    /// Accept with modified description
+    Edit {
+        modified_description: String,
+    },
+    /// Request LLM suggestions
+    Suggest {
+        guidance: Option<String>,
+    },
 }
 

@@ -61,7 +61,7 @@ pub fn CharacterSprite(props: CharacterSpriteProps) -> Element {
                 img {
                     src: "{sprite_url}",
                     alt: "{character_name}",
-                    style: "max-height: 400px; object-fit: contain; pointer-events: none;",
+                    class: "max-h-[400px] object-contain pointer-events-none",
                 }
             } else {
                 // Placeholder sprite when no image is available
@@ -77,25 +77,25 @@ pub fn CharacterSprite(props: CharacterSpriteProps) -> Element {
 /// Placeholder sprite for characters without images
 #[component]
 fn PlaceholderSprite(name: String, is_speaking: bool) -> Element {
-    let border_color = if is_speaking {
-        "border-color: #d4af37;"
+    let border_class = if is_speaking {
+        "border-[#d4af37]"
     } else {
-        "border-color: #374151;"
+        "border-gray-700"
     };
 
     rsx! {
         div {
-            style: "width: 180px; height: 280px; background: rgba(255,255,255,0.1); border-radius: 0.5rem; border: 2px solid; {border_color} display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;",
+            class: "w-[180px] h-[280px] bg-white/10 rounded-lg border-2 {border_class} flex flex-col items-center justify-center text-gray-400",
 
             // Character silhouette icon
             div {
-                style: "font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;",
+                class: "text-6xl mb-4 opacity-50",
                 "👤"
             }
 
             // Character name
             div {
-                style: "font-size: 0.875rem; text-align: center; padding: 0 0.5rem;",
+                class: "text-sm text-center px-2",
                 "{name}"
             }
         }
@@ -118,8 +118,7 @@ pub struct CharacterLayerProps {
 pub fn CharacterLayer(props: CharacterLayerProps) -> Element {
     rsx! {
         div {
-            class: "character-layer",
-            style: "position: absolute; inset: 0; pointer-events: none; z-index: 1;",
+            class: "character-layer absolute inset-0 pointer-events-none z-[1]",
 
             for character in props.characters.iter() {
                 CharacterSprite {

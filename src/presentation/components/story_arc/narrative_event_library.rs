@@ -92,18 +92,17 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 
     rsx! {
         div {
-            class: "narrative-event-library",
-            style: "height: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 1rem;",
+            class: "narrative-event-library h-full flex flex-col gap-4 p-4",
 
             // Header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center;",
+                class: "flex justify-between items-center",
 
-                h2 { style: "color: white; margin: 0; font-size: 1.25rem;", "Narrative Events" }
+                h2 { class: "text-white m-0 text-xl", "Narrative Events" }
 
                 button {
                     onclick: move |_| show_create_form.set(true),
-                    style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;",
+                    class: "px-4 py-2 bg-purple-500 text-white border-none rounded-lg cursor-pointer flex items-center gap-2",
                     span { "+" }
                     span { "New Event" }
                 }
@@ -111,7 +110,7 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 
             // Filters
             div {
-                style: "background: #1a1a2e; border-radius: 0.5rem; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;",
+                class: "bg-dark-surface rounded-lg p-3 flex gap-3 items-center flex-wrap",
 
                 // Search
                 input {
@@ -119,14 +118,14 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                     placeholder: "Search events...",
                     value: "{search_text}",
                     oninput: move |e| search_text.set(e.value()),
-                    style: "flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem;",
+                    class: "flex-1 min-w-[200px] px-3 py-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm",
                 }
 
                 // Status filter
                 select {
                     value: "{filter_status}",
                     onchange: move |e| filter_status.set(e.value()),
-                    style: "padding: 0.5rem 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem;",
+                    class: "px-3 py-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm",
 
                     option { value: "all", "All Events" }
                     option { value: "active", "Active Only" }
@@ -139,7 +138,7 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
                     let is_favorites = *show_favorites_only.read();
                     rsx! {
                         label {
-                            style: "display: flex; align-items: center; gap: 0.375rem; color: #9ca3af; font-size: 0.875rem; cursor: pointer;",
+                            class: "flex items-center gap-1.5 text-gray-400 text-sm cursor-pointer",
 
                             input {
                                 r#type: "checkbox",
@@ -154,7 +153,7 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 
             // Stats bar
             div {
-                style: "display: flex; gap: 1rem; color: #6b7280; font-size: 0.875rem;",
+                class: "flex gap-4 text-gray-500 text-sm",
 
                 span { "{events.read().len()} total" }
                 span { "{events.read().iter().filter(|e| e.is_active).count()} active" }
@@ -164,34 +163,34 @@ pub fn NarrativeEventLibrary(props: NarrativeEventLibraryProps) -> Element {
 
             // Event list
             div {
-                style: "flex: 1; overflow-y: auto;",
+                class: "flex-1 overflow-y-auto",
 
                 if *is_loading.read() {
                     div {
-                        style: "display: flex; justify-content: center; align-items: center; padding: 3rem; color: #9ca3af;",
+                        class: "flex justify-center items-center p-12 text-gray-400",
                         "Loading narrative events..."
                     }
                 } else if let Some(err) = error.read().as_ref() {
                     div {
-                        style: "background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; padding: 1rem; color: #ef4444;",
+                        class: "bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-4 text-red-500",
                         "Error: {err}"
                     }
                 } else if filtered_events.is_empty() {
                     div {
-                        style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; color: #6b7280;",
+                        class: "flex flex-col items-center justify-center p-12 text-gray-500",
 
-                        div { style: "font-size: 3rem; margin-bottom: 1rem;", "⭐" }
+                        div { class: "text-5xl mb-4", "⭐" }
 
                         if events.read().is_empty() {
                             p { "No narrative events yet" }
-                            p { style: "font-size: 0.875rem;", "Create events to set up story hooks and branching narratives" }
+                            p { class: "text-sm", "Create events to set up story hooks and branching narratives" }
                         } else {
                             p { "No events match your filters" }
                         }
                     }
                 } else {
                     div {
-                        style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;",
+                        class: "grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4",
 
                         for event in filtered_events.iter() {
                             NarrativeEventCard {
@@ -323,32 +322,32 @@ fn NarrativeEventFormModal(props: NarrativeEventFormModalProps) -> Element {
 
     rsx! {
         div {
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                style: "background: #1a1a2e; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;",
+                class: "bg-dark-surface rounded-xl max-w-[500px] w-[90%] max-h-[90vh] overflow-y-auto",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #374151;",
-                    h3 { style: "color: white; margin: 0;", "New Narrative Event" }
+                    class: "flex justify-between items-center px-6 py-4 border-b border-gray-700",
+                    h3 { class: "text-white m-0", "New Narrative Event" }
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer;",
+                        class: "bg-transparent border-none text-gray-400 text-2xl cursor-pointer",
                         "×"
                     }
                 }
 
                 // Form
                 div {
-                    style: "padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;",
+                    class: "p-6 flex flex-col gap-4",
 
                     // Name field
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-sm mb-1",
                             "Event Name *"
                         }
                         input {
@@ -356,42 +355,42 @@ fn NarrativeEventFormModal(props: NarrativeEventFormModalProps) -> Element {
                             placeholder: "Enter event name...",
                             value: "{name}",
                             oninput: move |e| name.set(e.value()),
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; box-sizing: border-box;",
+                            class: "w-full px-3 py-3 bg-dark-bg border border-gray-700 rounded-lg text-white box-border",
                         }
                     }
 
                     // Description field
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-sm mb-1",
                             "Description"
                         }
                         textarea {
                             placeholder: "What happens when this event triggers?",
                             value: "{description}",
                             oninput: move |e| description.set(e.value()),
-                            style: "width: 100%; min-height: 80px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; resize: vertical; box-sizing: border-box;",
+                            class: "w-full min-h-[80px] px-3 py-3 bg-dark-bg border border-gray-700 rounded-lg text-white resize-y box-border",
                         }
                     }
 
                     // Scene direction field
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-sm mb-1",
                             "Scene Direction"
                         }
                         textarea {
                             placeholder: "How should the DM/AI present this event?",
                             value: "{scene_direction}",
                             oninput: move |e| scene_direction.set(e.value()),
-                            style: "width: 100%; min-height: 60px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; resize: vertical; box-sizing: border-box;",
+                            class: "w-full min-h-[60px] px-3 py-3 bg-dark-bg border border-gray-700 rounded-lg text-white resize-y box-border",
                         }
                     }
 
                     // Error message
                     if let Some(err) = save_error.read().as_ref() {
                         div {
-                            style: "background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; padding: 0.75rem; color: #ef4444; font-size: 0.875rem;",
+                            class: "bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-3 text-red-500 text-sm",
                             "{err}"
                         }
                     }
@@ -399,18 +398,18 @@ fn NarrativeEventFormModal(props: NarrativeEventFormModalProps) -> Element {
 
                 // Footer
                 div {
-                    style: "display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid #374151;",
+                    class: "flex justify-end gap-3 px-6 py-4 border-t border-gray-700",
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        class: "px-4 py-2 bg-gray-700 text-white border-none rounded-lg cursor-pointer",
                         "Cancel"
                     }
 
                     button {
                         onclick: save_event,
                         disabled: *is_saving.read(),
-                        style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        class: "px-4 py-2 bg-purple-500 text-white border-none rounded-lg cursor-pointer",
                         if *is_saving.read() { "Creating..." } else { "Create Event" }
                     }
                 }

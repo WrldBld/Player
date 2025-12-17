@@ -137,14 +137,13 @@ pub fn SuggestionButton(
 
     rsx! {
         div {
-            class: "suggestion-button-container",
-            style: "position: relative; display: inline-block;",
+            class: "suggestion-button-container relative inline-block",
 
             // The button
             button {
                 onclick: fetch_suggestions,
                 disabled: *loading.read() || request_id.read().is_some(),
-                style: "padding: 0.5rem 0.75rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem; white-space: nowrap; transition: background 0.2s;",
+                class: "py-2 px-3 bg-purple-500 text-white border-0 rounded cursor-pointer text-xs whitespace-nowrap transition-colors",
                 onmouseenter: move |_| {},  // Could add hover state
                 if *loading.read() || request_id.read().is_some() {
                     "Queued..."
@@ -156,7 +155,7 @@ pub fn SuggestionButton(
             // Error tooltip
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "position: absolute; top: 100%; left: 0; margin-top: 0.25rem; padding: 0.5rem; background: #ef4444; color: white; border-radius: 0.25rem; font-size: 0.75rem; white-space: nowrap; z-index: 100;",
+                    class: "absolute top-full left-0 mt-1 p-2 bg-red-500 text-white rounded text-xs whitespace-nowrap z-100",
                     "{err}"
                 }
             }
@@ -166,13 +165,12 @@ pub fn SuggestionButton(
                 // Backdrop to catch outside clicks
                 div {
                     onclick: close_dropdown,
-                    style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99;",
+                    class: "fixed inset-0 z-99",
                 }
 
                 // Dropdown menu
                 div {
-                    class: "suggestion-dropdown",
-                    style: "position: absolute; top: 100%; right: 0; margin-top: 0.25rem; min-width: 200px; max-width: 400px; max-height: 300px; overflow-y: auto; background: #1f2937; border: 1px solid #374151; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); z-index: 100;",
+                    class: "suggestion-dropdown absolute top-full right-0 mt-1 min-w-48 max-w-md max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-md z-100 shadow-lg",
 
                     for (i, suggestion) in suggestions.read().iter().enumerate() {
                         SuggestionItem {
@@ -199,7 +197,7 @@ fn SuggestionItem(text: String, on_click: EventHandler<()>) -> Element {
     rsx! {
         div {
             onclick: move |_| on_click.call(()),
-            style: "padding: 0.75rem 1rem; color: #e5e7eb; cursor: pointer; border-bottom: 1px solid #374151; transition: background 0.15s;",
+            class: "py-3 px-4 text-gray-200 cursor-pointer border-b border-gray-700 transition-colors",
             onmouseenter: move |_evt| {
                 // Would be nice to highlight on hover, but we can't easily change style here
                 // In real app, would use a class and CSS hover state

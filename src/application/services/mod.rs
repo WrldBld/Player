@@ -14,6 +14,7 @@ pub mod narrative_event_service;
 pub mod player_character_service;
 pub mod session_service;
 pub mod session_command_service;
+pub mod settings_service;
 pub mod skill_service;
 pub mod story_event_service;
 pub mod suggestion_service;
@@ -40,9 +41,7 @@ pub use character_service::{CharacterData, CharacterService, CharacterSheetDataA
 
 // Re-export player character service types
 pub use player_character_service::{
-    CreatePlayerCharacterRequest, PlayerCharacterData, PlayerCharacterService,
-    UpdateLocationRequest, UpdateLocationResponse, UpdatePlayerCharacterRequest,
-    CharacterSheetDataApi as PlayerCharacterSheetDataApi,
+    CreatePlayerCharacterRequest, PlayerCharacterData, PlayerCharacterService, UpdatePlayerCharacterRequest,
 };
 
 // Re-export location service types
@@ -79,9 +78,12 @@ pub use suggestion_service::{SuggestionContext, SuggestionService};
 
 // Re-export event chain service types
 pub use event_chain_service::{
-    AddEventRequest, ChainStatusData, CreateEventChainRequest, EventChainData,
+    CreateEventChainRequest, EventChainData,
     EventChainService, UpdateEventChainRequest,
 };
 
 // Re-export generation service types
 pub use generation_service::GenerationService;
+
+// Re-export settings service types
+pub use settings_service::SettingsService;

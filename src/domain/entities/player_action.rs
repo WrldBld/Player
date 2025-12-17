@@ -1,6 +1,15 @@
 //! Player action types
 //!
 //! Defines the actions a player can perform in the game.
+//!
+//! # Architectural Note (ADR-001: Domain Serialization)
+//!
+//! `PlayerActionType` intentionally includes serde derives because:
+//! 1. It is serialized directly in WebSocket messages to the Engine
+//! 2. The wire format IS the domain contract - no translation layer adds value
+//! 3. This is a simple enum with no domain behavior beyond categorization
+//!
+//! This is an accepted exception to the "no serde in domain" rule.
 
 use serde::{Deserialize, Serialize};
 

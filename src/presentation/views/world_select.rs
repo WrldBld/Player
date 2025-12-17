@@ -151,32 +151,31 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
 
     rsx! {
         div {
-            class: "world-select-view",
-            style: "height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;",
+            class: "world-select-view h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-dark-surface to-dark-gradient-end",
 
             div {
-                style: "max-width: 700px; width: 100%;",
+                class: "max-w-[700px] w-full",
 
                 // Back button
                 button {
                     onclick: move |_| props.on_back.call(()),
-                    style: "margin-bottom: 1.5rem; padding: 0.5rem 1rem; background: transparent; color: #9ca3af; border: 1px solid #374151; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem;",
+                    class: "mb-6 px-4 py-2 bg-transparent text-gray-400 border border-gray-700 rounded-md cursor-pointer text-sm",
                     "← Back to Role Selection"
                 }
 
                 h1 {
-                    style: "color: white; text-align: center; margin-bottom: 0.5rem; font-size: 2rem;",
+                    class: "text-white text-center mb-2 text-3xl",
                     "{title}"
                 }
                 p {
-                    style: "color: #9ca3af; text-align: center; margin-bottom: 2rem;",
+                    class: "text-gray-400 text-center mb-8",
                     "{subtitle}"
                 }
 
                 // Error message
                 if let Some(err) = error.read().as_ref() {
                     div {
-                        style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #ef4444; margin-bottom: 1rem;",
+                        class: "p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 mb-4",
                         "{err}"
                     }
                 }
@@ -184,7 +183,7 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                 // Loading state
                 if *is_loading.read() {
                     div {
-                        style: "text-align: center; color: #6b7280; padding: 2rem;",
+                        class: "text-center text-gray-500 p-8",
                         "Loading worlds..."
                     }
                 } else if *show_create_form.read() && is_dm {
@@ -199,20 +198,20 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
                 } else {
                     // World list
                     div {
-                        style: "background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+                        class: "bg-dark-surface rounded-lg overflow-hidden",
 
                         // Header with create button (DM only)
                         div {
-                            style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #374151;",
+                            class: "flex justify-between items-center p-4 border-b border-gray-700",
 
-                            h2 { style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin: 0;",
+                            h2 { class: "text-gray-400 text-sm uppercase m-0",
                                 if is_dm { "Your Worlds" } else { "Available Worlds" }
                             }
 
                             if is_dm {
                                 button {
                                     onclick: move |_| show_create_form.set(true),
-                                    style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                                    class: "px-4 py-2 bg-purple-500 text-white border-0 rounded cursor-pointer text-sm",
                                     "+ Create New World"
                                 }
                             }
@@ -220,17 +219,17 @@ pub fn WorldSelectView(props: WorldSelectViewProps) -> Element {
 
                         // World list
                         div {
-                            style: "max-height: 400px; overflow-y: auto;",
+                            class: "max-h-[400px] overflow-y-auto",
 
                             if filtered_worlds.is_empty() {
                                 div {
-                                    style: "padding: 2rem; text-align: center; color: #6b7280;",
+                                    class: "p-8 text-center text-gray-500",
                                     if is_dm {
                                         p { "No worlds yet." }
-                                        p { style: "font-size: 0.875rem;", "Create your first world to get started!" }
+                                        p { class: "text-sm", "Create your first world to get started!" }
                                     } else {
                                         p { "No worlds available." }
-                                        p { style: "font-size: 0.875rem;", "Ask your DM to create a world first." }
+                                        p { class: "text-sm", "Ask your DM to create a world first." }
                                     }
                                 }
                             }
@@ -309,19 +308,19 @@ fn WorldCard(
 
     rsx! {
         div {
-            style: "padding: 1rem; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center;",
+            class: "p-4 border-b border-gray-700 flex justify-between items-center",
 
             div {
-                style: "flex: 1;",
-                h3 { style: "color: white; margin: 0 0 0.25rem 0; font-size: 1rem;", "{world.name}" }
+                class: "flex-1",
+                h3 { class: "text-white m-0 mb-1 text-base", "{world.name}" }
                 if let Some(desc) = &world.description {
-                    p { style: "color: #9ca3af; margin: 0; font-size: 0.875rem; line-height: 1.4;", "{desc}" }
+                    p { class: "text-gray-400 m-0 text-sm leading-snug", "{desc}" }
                 }
             }
 
             button {
                 onclick: move |_| on_select.call(world_id.clone()),
-                style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem; white-space: nowrap;",
+                class: "px-4 py-2 bg-blue-500 text-white border-0 rounded cursor-pointer text-sm whitespace-nowrap",
                 "{button_label}"
             }
         }
@@ -468,55 +467,55 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
     rsx! {
         div {
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 1.5rem; max-height: 80vh; overflow-y: auto;",
+            class: "bg-dark-surface rounded-lg p-6 max-h-[80vh] overflow-y-auto",
 
-            h2 { style: "color: white; margin: 0 0 1rem 0;", "Create New World" }
+            h2 { class: "text-white m-0 mb-4", "Create New World" }
 
             // Error
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.25rem; color: #ef4444; margin-bottom: 1rem; font-size: 0.875rem;",
+                    class: "p-3 bg-red-500/10 rounded text-red-500 mb-4 text-sm",
                     "{err}"
                 }
             }
 
             // Name field
-            div { style: "margin-bottom: 1rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Name *" }
+            div { class: "mb-4",
+                label { class: "block text-gray-400 text-sm mb-1", "Name *" }
                 input {
                     r#type: "text",
                     value: "{name}",
                     oninput: move |e| name.set(e.value()),
                     placeholder: "The Dragon's Bane",
                     disabled: *is_creating.read(),
-                    style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-3 bg-dark-bg border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Description field
-            div { style: "margin-bottom: 1rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Description" }
+            div { class: "mb-4",
+                label { class: "block text-gray-400 text-sm mb-1", "Description" }
                 textarea {
                     value: "{description}",
                     oninput: move |e| description.set(e.value()),
                     placeholder: "A dark fantasy campaign in the realm of Valdris...",
                     disabled: *is_creating.read(),
-                    style: "width: 100%; min-height: 80px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                    class: "w-full min-h-[80px] p-3 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                 }
             }
 
             // Rule System Selection
-            div { style: "margin-bottom: 1rem; padding: 1rem; background: #0f0f23; border-radius: 0.5rem; border: 1px solid #374151;",
-                h3 { style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin: 0 0 0.75rem 0;", "Rule System" }
+            div { class: "mb-4 p-4 bg-dark-bg rounded-lg border border-gray-700",
+                h3 { class: "text-gray-400 text-sm uppercase m-0 mb-3", "Rule System" }
 
                 // System Type dropdown
-                div { style: "margin-bottom: 0.75rem;",
-                    label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "System Type" }
+                div { class: "mb-3",
+                    label { class: "block text-gray-500 text-xs mb-1", "System Type" }
                     select {
                         value: "{current_type:?}",
                         onchange: move |e| handle_type_change(e.value()),
                         disabled: *is_creating.read(),
-                        style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                        class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                         option { value: "D20", "D20 System (D&D, Pathfinder)" }
                         option { value: "D100", "D100 System (Call of Cthulhu)" }
                         option { value: "Narrative", "Narrative (Kids on Bikes, FATE)" }
@@ -533,13 +532,13 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
                             .unwrap_or_default();
 
                         rsx! {
-                            div { style: "margin-bottom: 0.5rem;",
-                                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Preset" }
+                            div { class: "mb-2",
+                                label { class: "block text-gray-500 text-xs mb-1", "Preset" }
                                 select {
                                     value: "{current_variant_value}",
                                     onchange: move |e| handle_variant_change(e.value()),
                                     disabled: *is_creating.read() || *is_loading_preset.read(),
-                                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                                     for variant in available_variants.iter() {
                                         option {
                                             value: "{variant:?}",
@@ -554,18 +553,18 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
                 // Show selected preset description
                 if let Some(variant) = selected_variant.read().as_ref() {
-                    p { style: "color: #6b7280; font-size: 0.75rem; margin: 0.5rem 0 0 0;",
+                    p { class: "text-gray-500 text-xs mt-2 mb-0",
                         "{variant.description()}"
                     }
                 } else {
-                    p { style: "color: #6b7280; font-size: 0.75rem; margin: 0.5rem 0 0 0;",
+                    p { class: "text-gray-500 text-xs mt-2 mb-0",
                         "{current_type.description()}"
                     }
                 }
 
                 // Loading indicator
                 if *is_loading_preset.read() {
-                    p { style: "color: #8b5cf6; font-size: 0.75rem; margin: 0.5rem 0 0 0;",
+                    p { class: "text-purple-500 text-xs mt-2 mb-0",
                         "Loading preset..."
                     }
                 }
@@ -573,13 +572,13 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
             // Advanced Configuration (collapsible)
             if rule_config.read().is_some() {
-                div { style: "margin-bottom: 1rem;",
+                div { class: "mb-4",
                     {
                         let is_expanded = *show_advanced.read();
                         rsx! {
                             button {
                                 onclick: move |_| show_advanced.set(!is_expanded),
-                                style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: #9ca3af; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;",
+                                class: "w-full p-3 bg-dark-bg border border-gray-700 rounded text-gray-400 cursor-pointer text-left flex justify-between items-center",
                                 span { "Advanced Configuration" }
                                 span { if is_expanded { "▼" } else { "▶" } }
                             }
@@ -604,17 +603,17 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
             }
 
             // Buttons
-            div { style: "display: flex; gap: 0.75rem;",
+            div { class: "flex gap-3",
                 button {
                     onclick: handle_create,
                     disabled: *is_creating.read() || *is_loading_preset.read(),
-                    style: "flex: 1; padding: 0.75rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 600;",
+                    class: "flex-1 p-3 bg-purple-500 text-white border-0 rounded cursor-pointer font-semibold",
                     if *is_creating.read() { "Creating..." } else { "Create World" }
                 }
                 button {
                     onclick: move |_| on_cancel.call(()),
                     disabled: *is_creating.read(),
-                    style: "padding: 0.75rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                    class: "py-3 px-6 bg-gray-700 text-white border-0 rounded cursor-pointer",
                     "Cancel"
                 }
             }
@@ -652,11 +651,11 @@ fn RuleSystemConfigEditor(
     };
 
     rsx! {
-        div { style: "padding: 1rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0 0 0.25rem 0.25rem; border-top: none;",
+        div { class: "p-4 bg-dark-bg border border-gray-700 rounded-b border-t-0",
 
             // Rule System Name
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Rule System Name" }
+            div { class: "mb-3",
+                label { class: "block text-gray-500 text-xs mb-1", "Rule System Name" }
                 input {
                     r#type: "text",
                     value: "{config_read.name}",
@@ -667,13 +666,13 @@ fn RuleSystemConfigEditor(
                         on_change.call(cfg);
                     },
                     disabled: disabled,
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Rule System Description
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Description" }
+            div { class: "mb-3",
+                label { class: "block text-gray-500 text-xs mb-1", "Description" }
                 textarea {
                     value: "{config_read.description}",
                     oninput: move |e| {
@@ -683,13 +682,13 @@ fn RuleSystemConfigEditor(
                         on_change.call(cfg);
                     },
                     disabled: disabled,
-                    style: "width: 100%; min-height: 60px; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                    class: "w-full min-h-[60px] p-2 bg-dark-surface border border-gray-700 rounded text-white resize-y box-border",
                 }
             }
 
             // Dice System
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Dice System" }
+            div { class: "mb-3",
+                label { class: "block text-gray-500 text-xs mb-1", "Dice System" }
                 select {
                     value: "{dice_str}",
                     onchange: move |e| {
@@ -704,7 +703,7 @@ fn RuleSystemConfigEditor(
                         on_change.call(cfg);
                     },
                     disabled: disabled,
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                     option { value: "D20", "D20 (d20 + modifier)" }
                     option { value: "D100", "D100 (percentile)" }
                     option { value: "Fate", "Fate Dice (4dF)" }
@@ -713,8 +712,8 @@ fn RuleSystemConfigEditor(
             }
 
             // Success Comparison
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Success Comparison" }
+            div { class: "mb-3",
+                label { class: "block text-gray-500 text-xs mb-1", "Success Comparison" }
                 select {
                     value: "{comparison_str}",
                     onchange: move |e| {
@@ -728,7 +727,7 @@ fn RuleSystemConfigEditor(
                         on_change.call(cfg);
                     },
                     disabled: disabled,
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                     option { value: "GreaterOrEqual", "Roll >= Target (D20 style)" }
                     option { value: "LessOrEqual", "Roll <= Target (D100 style)" }
                     option { value: "Narrative", "Narrative (story-driven)" }
@@ -736,8 +735,8 @@ fn RuleSystemConfigEditor(
             }
 
             // Skill Check Formula
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;", "Skill Check Formula" }
+            div { class: "mb-3",
+                label { class: "block text-gray-500 text-xs mb-1", "Skill Check Formula" }
                 input {
                     r#type: "text",
                     value: "{config_read.skill_check_formula}",
@@ -749,30 +748,30 @@ fn RuleSystemConfigEditor(
                     },
                     disabled: disabled,
                     placeholder: "e.g., 1d20 + modifier vs DC",
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Stats Section
-            div { style: "margin-top: 1rem;",
-                h4 { style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+            div { class: "mt-4",
+                h4 { class: "text-gray-400 text-xs uppercase m-0 mb-2",
                     "Character Stats ({config_read.stat_definitions.len()})"
                 }
 
                 // Stats header row
-                div { style: "display: grid; grid-template-columns: 1fr 60px 60px 60px 60px 30px; gap: 0.5rem; margin-bottom: 0.25rem; padding: 0 0.25rem;",
-                    span { style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase;", "Name" }
-                    span { style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; text-align: center;", "Abbr" }
-                    span { style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; text-align: center;", "Min" }
-                    span { style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; text-align: center;", "Max" }
-                    span { style: "color: #6b7280; font-size: 0.625rem; text-transform: uppercase; text-align: center;", "Default" }
+                div { class: "grid grid-cols-[1fr_60px_60px_60px_60px_30px] gap-2 mb-1 px-1",
+                    span { class: "text-gray-500 text-[0.625rem] uppercase", "Name" }
+                    span { class: "text-gray-500 text-[0.625rem] uppercase text-center", "Abbr" }
+                    span { class: "text-gray-500 text-[0.625rem] uppercase text-center", "Min" }
+                    span { class: "text-gray-500 text-[0.625rem] uppercase text-center", "Max" }
+                    span { class: "text-gray-500 text-[0.625rem] uppercase text-center", "Default" }
                     span {}
                 }
 
                 for (i, stat) in config_read.stat_definitions.iter().enumerate() {
                     div {
                         key: "{i}",
-                        style: "display: grid; grid-template-columns: 1fr 60px 60px 60px 60px 30px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;",
+                        class: "grid grid-cols-[1fr_60px_60px_60px_60px_30px] gap-2 items-center mb-2",
 
                         input {
                             r#type: "text",
@@ -786,7 +785,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.375rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                            class: "p-1.5 bg-dark-surface border border-gray-700 rounded text-white",
                         }
                         input {
                             r#type: "text",
@@ -800,7 +799,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.375rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                            class: "p-1.5 bg-dark-surface border border-gray-700 rounded text-white text-center",
                         }
                         input {
                             r#type: "number",
@@ -814,7 +813,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.375rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                            class: "p-1.5 bg-dark-surface border border-gray-700 rounded text-white text-center",
                         }
                         input {
                             r#type: "number",
@@ -828,7 +827,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.375rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                            class: "p-1.5 bg-dark-surface border border-gray-700 rounded text-white text-center",
                         }
                         input {
                             r#type: "number",
@@ -842,7 +841,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.375rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; text-align: center;",
+                            class: "p-1.5 bg-dark-surface border border-gray-700 rounded text-white text-center",
                         }
                         button {
                             onclick: move |_| {
@@ -852,7 +851,7 @@ fn RuleSystemConfigEditor(
                                 on_change.call(cfg);
                             },
                             disabled: disabled,
-                            style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "py-1 px-2 bg-red-500 text-white border-0 rounded cursor-pointer text-xs",
                             "X"
                         }
                     }
@@ -873,7 +872,7 @@ fn RuleSystemConfigEditor(
                         on_change.call(cfg);
                     },
                     disabled: disabled,
-                    style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                    class: "py-2 px-4 bg-gray-700 text-white border-0 rounded cursor-pointer text-xs",
                     "+ Add Stat"
                 }
             }

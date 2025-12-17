@@ -4,13 +4,12 @@ use dioxus::prelude::*;
 pub fn FormField(label: &'static str, required: bool, children: Element) -> Element {
     rsx! {
         div {
-            class: "form-field",
-            style: "display: flex; flex-direction: column; gap: 0.25rem;",
+            class: "form-field flex flex-col gap-1",
             label {
-                style: "color: #9ca3af; font-size: 0.875rem;",
+                class: "text-gray-400 text-sm",
                 "{label}"
                 if required {
-                    span { style: "color: #ef4444; margin-left: 0.25rem;", "*" }
+                    span { class: "text-red-500 ml-1", "*" }
                 }
             }
             {children}

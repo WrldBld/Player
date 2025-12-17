@@ -56,11 +56,13 @@ tasks:
   # Web tasks
   web:
     desc: Start web development server with hot reload
+    deps: [css]
     cmds:
       - trunk serve
 
   web:build:
     desc: Build web app for production
+    deps: [css]
     cmds:
       - trunk build --release
 
@@ -97,10 +99,16 @@ tasks:
   dev:web:
     desc: Start full web development environment (clean rebuild)
     cmds:
+      - task: css
       - rm -rf dist/
       - rm -rf target/wasm32-unknown-unknown/
       - mkdir -p target
-      - trunk serve
+      - |
+        # Run CSS watcher in background
+        npm run watch:css &
+        CSS_PID=$!
+        trap "kill $CSS_PID 2>/dev/null" EXIT
+        trunk serve
 
   # Code quality tasks
   check:

@@ -30,46 +30,42 @@ pub fn CharacterSheetViewer(props: CharacterSheetViewerProps) -> Element {
     rsx! {
         // Overlay background
         div {
-            class: "character-sheet-overlay",
-            style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
+            class: "character-sheet-overlay fixed inset-0 bg-black/85 z-[1000] flex items-center justify-center p-8",
             onclick: move |_| props.on_close.call(()),
 
             // Sheet container (prevent click propagation)
             div {
-                class: "character-sheet-modal",
-                style: "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 1rem; width: 100%; max-width: 800px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);",
+                class: "character-sheet-modal bg-gradient-to-br from-dark-surface to-dark-gradient-end rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    class: "sheet-header",
-                    style: "display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 2px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);",
+                    class: "sheet-header flex justify-between items-center p-6 border-b-2 border-white/10 bg-black/20",
 
                     div {
                         h2 {
-                            style: "color: #f3f4f6; font-size: 1.5rem; margin: 0; font-weight: 600;",
+                            class: "text-gray-100 text-2xl m-0 font-semibold",
                             "{props.character_name}"
                         }
                         p {
-                            style: "color: #9ca3af; font-size: 0.875rem; margin: 0.25rem 0 0 0;",
+                            class: "text-gray-400 text-sm mt-1 mb-0",
                             "{props.template.name}"
                         }
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "width: 36px; height: 36px; background: rgba(255,255,255,0.1); border: none; border-radius: 0.5rem; color: #9ca3af; cursor: pointer; font-size: 1.25rem; display: flex; align-items: center; justify-content: center;",
+                        class: "w-9 h-9 bg-white/10 border-0 rounded-lg text-gray-400 cursor-pointer text-xl flex items-center justify-center hover:bg-white/20",
                         "×"
                     }
                 }
 
                 // Scrollable content
                 div {
-                    class: "sheet-content",
-                    style: "flex: 1; overflow-y: auto; padding: 1.5rem;",
+                    class: "sheet-content flex-1 overflow-y-auto p-6",
 
                     div {
-                        style: "display: flex; flex-direction: column; gap: 1.5rem;",
+                        class: "flex flex-col gap-6",
 
                         for section in sorted_sections {
                             SheetSectionViewer {
@@ -97,19 +93,19 @@ struct SheetSectionViewerProps {
 fn SheetSectionViewer(props: SheetSectionViewerProps) -> Element {
     let mut is_collapsed = use_signal(|| props.section.collapsed_by_default);
 
-    // Determine layout style
-    let content_style = match props.section.layout {
+    // CRITICAL: Extract layout classes BEFORE rsx! block - no inline conditionals in class strings
+    let content_layout_class = match props.section.layout {
         crate::application::dto::SectionLayout::Vertical => {
-            "display: flex; flex-direction: column; gap: 0.5rem;"
+            "flex flex-col gap-2"
         }
         crate::application::dto::SectionLayout::Grid { columns: _ } => {
-            "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;"
+            "grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3"
         }
         crate::application::dto::SectionLayout::TwoColumn => {
-            "display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;"
+            "grid grid-cols-2 gap-3"
         }
         crate::application::dto::SectionLayout::Flow => {
-            "display: flex; flex-wrap: wrap; gap: 0.75rem;"
+            "flex flex-wrap gap-3"
         }
     };
 
@@ -119,12 +115,11 @@ fn SheetSectionViewer(props: SheetSectionViewerProps) -> Element {
 
     rsx! {
         div {
-            class: "sheet-section",
-            style: "background: rgba(0,0,0,0.2); border-radius: 0.75rem; overflow: hidden;",
+            class: "sheet-section bg-black/20 rounded-xl overflow-hidden",
 
             // Section header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); cursor: pointer;",
+                class: "flex justify-between items-center px-4 py-3 bg-black/30 cursor-pointer",
                 onclick: move |_| {
                     if props.section.collapsible {
                         let current = *is_collapsed.read();
@@ -133,13 +128,13 @@ fn SheetSectionViewer(props: SheetSectionViewerProps) -> Element {
                 },
 
                 h3 {
-                    style: "color: #e5e7eb; font-size: 0.875rem; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;",
+                    class: "text-gray-200 text-sm m-0 font-semibold uppercase tracking-wide",
                     "{props.section.name}"
                 }
 
                 if props.section.collapsible {
                     span {
-                        style: "color: #6b7280; font-size: 0.875rem;",
+                        class: "text-gray-500 text-sm",
                         if *is_collapsed.read() { "+" } else { "−" }
                     }
                 }
@@ -148,7 +143,7 @@ fn SheetSectionViewer(props: SheetSectionViewerProps) -> Element {
             // Section content
             if !*is_collapsed.read() {
                 div {
-                    style: "padding: 1rem; {content_style}",
+                    class: "p-4 {content_layout_class}",
 
                     for field in sorted_fields {
                         SheetFieldViewer {
@@ -180,12 +175,11 @@ fn SheetFieldViewer(props: SheetFieldViewerProps) -> Element {
 
     rsx! {
         div {
-            class: "sheet-field",
-            style: "display: flex; flex-direction: column;",
+            class: "sheet-field flex flex-col",
 
             // Label
             span {
-                style: "color: #6b7280; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                class: "text-gray-500 text-xs mb-1",
                 "{props.field.name}"
             }
 
@@ -195,24 +189,33 @@ fn SheetFieldViewer(props: SheetFieldViewerProps) -> Element {
                 {
                     if let Some(FieldValue::Resource { current, max }) = &props.value {
                         let percentage = if *max > 0 { (*current as f32 / *max as f32) * 100.0 } else { 0.0 };
-                        let bar_color = if percentage > 50.0 { "#22c55e" } else if percentage > 25.0 { "#f59e0b" } else { "#ef4444" };
+                        // CRITICAL: Extract bar color class BEFORE rsx! - no inline if in class strings
+                        let bar_color_class = if percentage > 50.0 {
+                            "bg-green-500"
+                        } else if percentage > 25.0 {
+                            "bg-amber-500"
+                        } else {
+                            "bg-red-500"
+                        };
+                        let width_style = format!("width: {}%", percentage);
 
                         rsx! {
                             div {
-                                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                                class: "flex flex-col gap-1",
 
                                 // Text value
                                 span {
-                                    style: "color: #f3f4f6; font-size: 1rem; font-weight: 500;",
+                                    class: "text-gray-100 text-base font-medium",
                                     "{current} / {max}"
                                 }
 
                                 // Progress bar
                                 div {
-                                    style: "height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden;",
+                                    class: "h-1.5 bg-black/30 rounded overflow-hidden",
 
                                     div {
-                                        style: "height: 100%; width: {percentage}%; background: {bar_color}; transition: width 0.3s ease;",
+                                        class: "h-full {bar_color_class} transition-all duration-300",
+                                        style: "{width_style}",
                                     }
                                 }
                             }
@@ -220,7 +223,7 @@ fn SheetFieldViewer(props: SheetFieldViewerProps) -> Element {
                     } else {
                         rsx! {
                             span {
-                                style: "color: #6b7280; font-size: 1rem;",
+                                class: "text-gray-500 text-base",
                                 "—"
                             }
                         }
@@ -229,7 +232,7 @@ fn SheetFieldViewer(props: SheetFieldViewerProps) -> Element {
             } else {
                 // Regular value display
                 span {
-                    style: "color: #f3f4f6; font-size: 1.125rem; font-weight: 500;",
+                    class: "text-gray-100 text-lg font-medium",
                     "{value_display}"
                 }
             }

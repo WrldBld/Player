@@ -52,16 +52,15 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
 
     rsx! {
         div {
-            class: "timeline-filters",
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 0.75rem;",
+            class: "timeline-filters bg-dark-surface rounded-lg p-3",
 
             // Compact filter bar
             div {
-                style: "display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;",
+                class: "flex gap-3 items-center flex-wrap",
 
                 // Search input
                 div {
-                    style: "flex: 1; min-width: 200px;",
+                    class: "flex-1 min-w-[200px]",
                     input {
                         r#type: "text",
                         placeholder: "Search events...",
@@ -73,7 +72,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                 props.on_filter_change.call(filters.clone());
                             }
                         },
-                        style: "width: 100%; padding: 0.5rem 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem;",
+                        class: "w-full px-3 py-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm",
                     }
                 }
 
@@ -91,7 +90,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                     props.on_filter_change.call(filters.clone());
                                 }
                             },
-                            style: "padding: 0.5rem 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem;",
+                            class: "px-3 py-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm",
 
                             for (value, label) in event_types.iter() {
                                 option { value: "{value}", "{label}" }
@@ -102,7 +101,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
 
                 // Show hidden toggle
                 label {
-                    style: "display: flex; align-items: center; gap: 0.375rem; color: #9ca3af; font-size: 0.875rem; cursor: pointer; white-space: nowrap;",
+                    class: "flex items-center gap-1.5 text-gray-400 text-sm cursor-pointer whitespace-nowrap",
 
                     input {
                         r#type: "checkbox",
@@ -114,7 +113,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                 props.on_filter_change.call(filters.clone());
                             }
                         },
-                        style: "cursor: pointer;",
+                        class: "cursor-pointer",
                     }
                     "Show hidden"
                 }
@@ -125,7 +124,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                     rsx! {
                         button {
                             onclick: move |_| expanded.set(!is_expanded),
-                            style: "background: none; border: none; color: #60a5fa; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: 0.25rem;",
+                            class: "bg-transparent border-none text-blue-400 cursor-pointer text-sm flex items-center gap-1",
                             if is_expanded { "Less ▲" } else { "More ▼" }
                         }
                     }
@@ -137,7 +136,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         onclick: {
                             move |_| props.on_filter_change.call(TimelineFilterState::default())
                         },
-                        style: "padding: 0.375rem 0.75rem; background: #374151; color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem;",
+                        class: "px-3 py-1.5 bg-gray-700 text-white border-none rounded-md cursor-pointer text-xs",
                         "Clear"
                     }
                 }
@@ -146,7 +145,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
             // Advanced filters (expandable)
             if *expanded.read() {
                 div {
-                    style: "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #374151; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;",
+                    class: "mt-3 pt-3 border-t border-gray-700 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3",
 
                     // Date from
                     {
@@ -154,7 +153,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         rsx! {
                             div {
                                 label {
-                                    style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                                    class: "block text-gray-400 text-xs mb-1",
                                     "From Date"
                                 }
                                 input {
@@ -168,7 +167,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                             props.on_filter_change.call(filters.clone());
                                         }
                                     },
-                                    style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
+                                    class: "w-full p-1.5 bg-dark-bg border border-gray-700 rounded text-white text-[0.8125rem]",
                                 }
                             }
                         }
@@ -180,7 +179,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         rsx! {
                             div {
                                 label {
-                                    style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                                    class: "block text-gray-400 text-xs mb-1",
                                     "To Date"
                                 }
                                 input {
@@ -194,7 +193,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                             props.on_filter_change.call(filters.clone());
                                         }
                                     },
-                                    style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
+                                    class: "w-full p-1.5 bg-dark-bg border border-gray-700 rounded text-white text-[0.8125rem]",
                                 }
                             }
                         }
@@ -207,7 +206,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         rsx! {
                             div {
                                 label {
-                                    style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                                    class: "block text-gray-400 text-xs mb-1",
                                     "Character"
                                 }
                                 select {
@@ -220,7 +219,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                             props.on_filter_change.call(filters.clone());
                                         }
                                     },
-                                    style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
+                                    class: "w-full p-1.5 bg-dark-bg border border-gray-700 rounded text-white text-[0.8125rem]",
 
                                     option { value: "", "All Characters" }
                                     for character in characters.iter() {
@@ -238,7 +237,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                         rsx! {
                             div {
                                 label {
-                                    style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                                    class: "block text-gray-400 text-xs mb-1",
                                     "Location"
                                 }
                                 select {
@@ -251,7 +250,7 @@ pub fn TimelineFilters(props: TimelineFiltersProps) -> Element {
                                             props.on_filter_change.call(filters.clone());
                                         }
                                     },
-                                    style: "width: 100%; padding: 0.375rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.8125rem;",
+                                    class: "w-full p-1.5 bg-dark-bg border border-gray-700 rounded text-white text-[0.8125rem]",
 
                                     option { value: "", "All Locations" }
                                     for location in locations.iter() {

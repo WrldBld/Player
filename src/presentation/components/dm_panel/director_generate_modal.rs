@@ -54,47 +54,47 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
         });
     });
 
+    let button_text = if *is_generating.read() { "Generating..." } else { "Generate" };
+
     rsx! {
         div {
-            class: "modal-overlay",
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-overlay fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;",
+                class: "modal-content bg-dark-surface rounded-xl p-6 w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto",
                 onclick: move |e| e.stop_propagation(),
 
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
-                    h3 { style: "color: white; margin: 0;", "Generate {props.asset_type} for {props.character_name}" }
+                    class: "flex justify-between items-center mb-4",
+                    h3 { class: "text-white m-0", "Generate {props.asset_type} for {props.character_name}" }
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                        class: "px-2 py-1 bg-transparent text-gray-400 border-0 cursor-pointer text-xl",
                         "×"
                     }
                 }
 
                 // Workflow slot field (optional)
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Workflow Slot (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Workflow Slot (optional)" }
                     input {
                         r#type: "text",
                         value: "{workflow_slot}",
                         oninput: move |e| workflow_slot.set(e.value()),
                         placeholder: "Leave empty for default workflow...",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                        class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                     }
                 }
 
                 // Style Reference field
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Style Reference (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Style Reference (optional)" }
                     if let Some(ref_id) = style_reference_id.read().as_ref() {
                         div {
-                            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem;",
+                            class: "flex items-center gap-2 p-2 bg-dark-bg border border-gray-700 rounded",
                             span {
-                                style: "flex: 1; color: white; font-size: 0.875rem;",
+                                class: "flex-1 text-white text-sm",
                                 if let Some(label) = style_reference_label.read().as_ref() {
                                     "{label}"
                                 } else {
@@ -106,16 +106,16 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                                     style_reference_id.set(None);
                                     style_reference_label.set(None);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-red-500 text-white border-0 rounded cursor-pointer text-xs",
                                 "Clear"
                             }
                         }
                     } else {
                         div {
-                            style: "display: flex; gap: 0.5rem;",
+                            class: "flex gap-2",
                             button {
                                 onclick: move |_| show_style_selector.set(true),
-                                style: "flex: 1; padding: 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "flex-1 p-2 bg-gray-700 text-white border-0 rounded cursor-pointer text-sm",
                                 "Select from Gallery..."
                             }
                         }
@@ -125,15 +125,14 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                 // Style reference selector modal
                 if *show_style_selector.read() {
                     div {
-                        class: "modal-overlay",
-                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1001;",
+                        class: "modal-overlay fixed inset-0 bg-black/90 flex items-center justify-center z-[1001]",
                         onclick: move |_| show_style_selector.set(false),
                         div {
-                            style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;",
+                            class: "bg-dark-surface rounded-xl p-6 w-[90%] max-w-[600px] max-h-[80vh] overflow-y-auto",
                             onclick: move |e| e.stop_propagation(),
-                            h3 { style: "color: white; margin: 0 0 1rem 0;", "Select Style Reference" }
+                            h3 { class: "text-white m-0 mb-4", "Select Style Reference" }
                             div {
-                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;",
+                                class: "grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3",
                                 for asset in available_assets.read().iter() {
                                     button {
                                         onclick: {
@@ -145,13 +144,13 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                                                 show_style_selector.set(false);
                                             }
                                         },
-                                        style: "display: flex; flex-direction: column; align-items: center; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer; transition: all 0.2s;",
+                                        class: "flex flex-col items-center p-2 bg-dark-bg border border-gray-700 rounded cursor-pointer transition-all",
                                         div {
-                                            style: "width: 80px; height: 80px; background: #374151; border-radius: 0.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;",
-                                            span { style: "color: #9ca3af; font-size: 0.75rem;", "📷" }
+                                            class: "w-20 h-20 bg-gray-700 rounded mb-2 flex items-center justify-center",
+                                            span { class: "text-gray-400 text-xs", "📷" }
                                         }
                                         span {
-                                            style: "color: white; font-size: 0.75rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;",
+                                            class: "text-white text-xs text-center overflow-hidden text-ellipsis whitespace-nowrap w-full",
                                             "{asset.label.as_ref().unwrap_or(&asset.id)}"
                                         }
                                     }
@@ -159,7 +158,7 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                             }
                             if available_assets.read().is_empty() {
                                 div {
-                                    style: "color: #6b7280; text-align: center; padding: 2rem;",
+                                    class: "text-gray-500 text-center p-8",
                                     "No assets available for style reference"
                                 }
                             }
@@ -168,31 +167,31 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                 }
 
                 // Prompt field (pre-populated)
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Prompt" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Prompt" }
                     textarea {
                         value: "{prompt}",
                         oninput: move |e| prompt.set(e.value()),
                         placeholder: "Describe the {props.asset_type} you want to generate...",
-                        style: "width: 100%; min-height: 100px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                        class: "w-full min-h-[100px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                     }
                 }
 
                 // Negative prompt field
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Negative Prompt (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Negative Prompt (optional)" }
                     input {
                         r#type: "text",
                         value: "{negative_prompt}",
                         oninput: move |e| negative_prompt.set(e.value()),
                         placeholder: "Things to avoid...",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                        class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                     }
                 }
 
                 // Variation count
-                div { style: "margin-bottom: 1.5rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Variations: {count}" }
+                div { class: "mb-6",
+                    label { class: "block text-gray-400 text-sm mb-1", "Variations: {count}" }
                     input {
                         r#type: "range",
                         min: "1",
@@ -203,16 +202,16 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                                 count.set(v);
                             }
                         },
-                        style: "width: 100%;",
+                        class: "w-full",
                     }
                 }
 
                 // Action buttons
-                div { style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
+                div { class: "flex justify-end gap-2",
                     button {
                         onclick: move |_| props.on_close.call(()),
                         disabled: *is_generating.read(),
-                        style: "padding: 0.5rem 1rem; background: transparent; color: #9ca3af; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer;",
+                        class: "px-4 py-2 bg-transparent text-gray-400 border border-gray-700 rounded cursor-pointer",
                         "Cancel"
                     }
                     button {
@@ -247,8 +246,8 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                             }
                         },
                         disabled: *is_generating.read(),
-                        style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500;",
-                        if *is_generating.read() { "Generating..." } else { "Generate" }
+                        class: "px-4 py-2 bg-purple-500 text-white border-0 rounded cursor-pointer font-medium",
+                        "{button_text}"
                     }
                 }
             }

@@ -24,31 +24,33 @@ pub struct BackdropProps {
 /// Falls back to a gradient if no image is provided.
 #[component]
 pub fn Backdrop(props: BackdropProps) -> Element {
-    let bg_style = match &props.image_url {
-        Some(url) => format!(
-            "background-image: url('{}'); background-size: cover; background-position: center;",
-            url
+    // Extract conditionals BEFORE rsx! block (CRITICAL for Dioxus)
+    let (bg_class, bg_style) = match &props.image_url {
+        Some(url) => (
+            "bg-cover bg-center",
+            format!("background-image: url('{}');", url)
         ),
-        None => "background: linear-gradient(to bottom, #1a1a2e, #2d1b3d);".to_string(),
+        None => (
+            "bg-gradient-to-b from-dark-surface to-dark-purple-end",
+            String::new()
+        ),
     };
 
     rsx! {
         div {
-            class: "vn-backdrop",
-            style: "position: absolute; inset: 0; {bg_style}",
+            class: "vn-backdrop absolute inset-0 {bg_class}",
+            style: if !bg_style.is_empty() { "{bg_style}" } else { "" },
 
             // Fade overlay for scene transitions
             if props.transitioning {
                 div {
-                    class: "backdrop-fade",
-                    style: "position: absolute; inset: 0; background: black; animation: fadeOut 0.5s ease-out forwards;",
+                    class: "backdrop-fade absolute inset-0 bg-black animate-fadeOut",
                 }
             }
 
             // Vignette effect
             div {
-                class: "backdrop-vignette",
-                style: "position: absolute; inset: 0; box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.5); pointer-events: none;",
+                class: "backdrop-vignette absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.5)]",
             }
 
             // Children (character sprites, etc.)
@@ -62,20 +64,18 @@ pub fn Backdrop(props: BackdropProps) -> Element {
 pub fn LoadingBackdrop() -> Element {
     rsx! {
         div {
-            class: "vn-backdrop",
-            style: "position: absolute; inset: 0; background: linear-gradient(to bottom, #1a1a2e, #2d1b3d); display: flex; align-items: center; justify-content: center;",
+            class: "vn-backdrop absolute inset-0 flex items-center justify-center bg-gradient-to-b from-dark-surface to-dark-purple-end",
 
             div {
-                style: "text-align: center; color: #9ca3af;",
+                class: "text-center text-gray-400",
 
                 div {
-                    style: "font-size: 1.5rem; margin-bottom: 1rem;",
+                    class: "text-2xl mb-4",
                     "Loading..."
                 }
 
                 div {
-                    class: "loading-spinner",
-                    style: "width: 40px; height: 40px; border: 3px solid #374151; border-top-color: #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;",
+                    class: "loading-spinner w-10 h-10 border-[3px] border-gray-700 border-t-[#d4af37] rounded-full animate-spin mx-auto",
                 }
             }
         }

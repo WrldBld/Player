@@ -125,8 +125,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
     
     rsx! {
         div {
-            class: "creator-mode",
-            style: "height: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 1rem;",
+            class: "creator-mode h-full flex flex-col gap-4 p-4",
 
             // ComfyUI status banner
             if *session_state.comfyui_state().read() != "connected" {
@@ -138,11 +137,11 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
             }
 
             div {
-                style: "display: grid; grid-template-columns: 280px 1fr; gap: 1rem; flex: 1; overflow: hidden;",
+                class: "grid gap-4 flex-1 overflow-hidden",
+                style: "grid-template-columns: 280px 1fr;",
                 // Left panel - Entity browser and generation queue
             div {
-                class: "left-panel",
-                style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
+                class: "left-panel flex flex-col gap-4 overflow-hidden",
 
                 // Entity browser (tree view) - now uses router for tab changes
                 entity_browser::EntityBrowser {
@@ -175,8 +174,7 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
 
             // Right panel - Editor/Form area
             div {
-                class: "editor-panel",
-                style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
+                class: "editor-panel flex flex-col gap-4 overflow-hidden",
 
                 match (selected_entity_type, selected_entity_id.read().clone()) {
                     (EntityTypeTab::Characters, Some(id)) => rsx! {
@@ -250,10 +248,9 @@ impl EntityTypeTab {
 fn PlaceholderPanel(title: &'static str, message: &'static str) -> Element {
     rsx! {
         div {
-            class: "placeholder-panel",
-            style: "flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a2e; border-radius: 0.5rem; color: #6b7280;",
+            class: "placeholder-panel flex-1 flex flex-col items-center justify-center bg-dark-surface rounded-lg text-gray-500",
 
-            h2 { style: "color: #9ca3af; margin-bottom: 0.5rem;", "{title}" }
+            h2 { class: "text-gray-400 mb-2", "{title}" }
             p { "{message}" }
         }
     }

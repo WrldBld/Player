@@ -27,50 +27,49 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
     // Parse and format timestamp
     let formatted_time = format_timestamp(&event.timestamp);
 
+    let opacity_class = if event.is_hidden { "opacity-50" } else { "opacity-100" };
+
     rsx! {
         div {
-            class: "timeline-event-card",
-            style: format!(
-                "background: #1a1a2e; border-radius: 0.5rem; padding: 1rem; cursor: pointer; transition: all 0.2s; border-left: 3px solid {}; opacity: {};",
-                type_color,
-                if event.is_hidden { "0.5" } else { "1" }
-            ),
+            class: "timeline-event-card bg-dark-surface rounded-lg p-4 cursor-pointer transition-all duration-200 border-l-[3px] {opacity_class}",
+            style: "border-left-color: {type_color}",
             onclick: move |_| props.on_click.call(()),
 
             // Top row: Icon, summary, timestamp
             div {
-                style: "display: flex; align-items: flex-start; gap: 0.75rem;",
+                class: "flex items-start gap-3",
 
                 // Icon
                 div {
-                    style: format!("font-size: 1.25rem; padding: 0.5rem; background: {}20; border-radius: 0.5rem;", type_color),
+                    class: "text-xl p-2 rounded-lg",
+                    style: "background-color: {type_color}20",
                     "{icon}"
                 }
 
                 // Content
                 div {
-                    style: "flex: 1; min-width: 0;",
+                    class: "flex-1 min-w-0",
 
                     // Summary
                     p {
-                        style: "color: white; margin: 0 0 0.25rem 0; font-size: 0.9375rem; line-height: 1.4;",
+                        class: "text-white m-0 mb-1 text-[0.9375rem] leading-normal",
                         "{event.summary}"
                     }
 
                     // Metadata row
                     div {
-                        style: "display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;",
+                        class: "flex flex-wrap gap-2 items-center",
 
                         // Timestamp
                         span {
-                            style: "color: #6b7280; font-size: 0.75rem;",
+                            class: "text-gray-500 text-xs",
                             "{formatted_time}"
                         }
 
                         // Game time if available
                         if let Some(ref game_time) = event.game_time {
                             span {
-                                style: "color: #8b5cf6; font-size: 0.75rem;",
+                                class: "text-purple-500 text-xs",
                                 "🕐 {game_time}"
                             }
                         }
@@ -78,7 +77,7 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
                         // Tags
                         for tag in event.tags.iter().take(3) {
                             span {
-                                style: "background: #374151; color: #9ca3af; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.6875rem;",
+                                class: "bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded text-[0.6875rem]",
                                 "#{tag}"
                             }
                         }
@@ -87,7 +86,7 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
                                 let extra = event.tags.len() - 3;
                                 rsx! {
                                     span {
-                                        style: "color: #6b7280; font-size: 0.6875rem;",
+                                        class: "text-gray-500 text-[0.6875rem]",
                                         "+{extra}"
                                     }
                                 }
@@ -98,7 +97,7 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
 
                 // Actions
                 div {
-                    style: "display: flex; gap: 0.25rem;",
+                    class: "flex gap-1",
 
                     // Visibility toggle
                     button {
@@ -106,7 +105,7 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
                             e.stop_propagation();
                             props.on_toggle_visibility.call(());
                         },
-                        style: "background: none; border: none; cursor: pointer; padding: 0.25rem; color: #6b7280;",
+                        class: "bg-transparent border-none cursor-pointer p-1 text-gray-500",
                         title: if event.is_hidden { "Show in timeline" } else { "Hide from timeline" },
                         if event.is_hidden { "👁️‍🗨️" } else { "👁️" }
                     }
@@ -117,67 +116,73 @@ pub fn TimelineEventCard(props: TimelineEventCardProps) -> Element {
             match &event.event_type {
                 StoryEventTypeData::DialogueExchange { npc_name, npc_response, .. } => rsx! {
                     div {
-                        style: "margin-top: 0.75rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 0.375rem;",
+                        class: "mt-3 p-3 bg-black bg-opacity-20 rounded-md",
                         p {
-                            style: "color: #60a5fa; font-size: 0.8125rem; margin: 0 0 0.25rem 0;",
+                            class: "text-blue-400 text-[0.8125rem] m-0 mb-1",
                             "{npc_name}:"
                         }
                         p {
-                            style: "color: #9ca3af; font-size: 0.8125rem; margin: 0; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;",
+                            class: "text-gray-400 text-[0.8125rem] m-0 italic overflow-hidden text-ellipsis line-clamp-2",
                             "\"{npc_response}\""
                         }
                     }
                 },
-                StoryEventTypeData::ChallengeAttempted { challenge_name, outcome, roll_result, .. } => rsx! {
-                    div {
-                        style: "margin-top: 0.5rem; display: flex; gap: 0.75rem; align-items: center;",
-                        span {
-                            style: "color: #9ca3af; font-size: 0.8125rem;",
-                            "{challenge_name}"
-                        }
-                        if let Some(roll) = roll_result {
+                StoryEventTypeData::ChallengeAttempted { challenge_name, outcome, roll_result, .. } => {
+                    let outcome_bg = get_outcome_color(outcome);
+                    rsx! {
+                        div {
+                            class: "mt-2 flex gap-3 items-center",
                             span {
-                                style: "background: #374151; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-family: monospace;",
-                                "🎲 {roll}"
+                                class: "text-gray-400 text-[0.8125rem]",
+                                "{challenge_name}"
                             }
-                        }
-                        span {
-                            style: format!("padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; background: {}; color: white;",
-                                get_outcome_color(outcome)),
-                            "{outcome}"
+                            if let Some(roll) = roll_result {
+                                span {
+                                    class: "bg-gray-700 text-white px-2 py-1 rounded text-xs font-mono",
+                                    "🎲 {roll}"
+                                }
+                            }
+                            span {
+                                class: "px-2 py-1 rounded text-xs text-white",
+                                style: "background-color: {outcome_bg}",
+                                "{outcome}"
+                            }
                         }
                     }
                 },
-                StoryEventTypeData::DmMarker { title, importance, .. } => rsx! {
-                    div {
-                        style: "margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;",
-                        span {
-                            style: format!("padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; background: {}; color: white;",
-                                get_importance_color(importance)),
-                            "{importance}"
-                        }
-                        span {
-                            style: "color: #9ca3af; font-size: 0.8125rem;",
-                            "{title}"
+                StoryEventTypeData::DmMarker { title, importance, .. } => {
+                    let importance_bg = get_importance_color(importance);
+                    rsx! {
+                        div {
+                            class: "mt-2 flex items-center gap-2",
+                            span {
+                                class: "px-2 py-1 rounded text-xs text-white",
+                                style: "background-color: {importance_bg}",
+                                "{importance}"
+                            }
+                            span {
+                                class: "text-gray-400 text-[0.8125rem]",
+                                "{title}"
+                            }
                         }
                     }
                 },
                 StoryEventTypeData::RelationshipChanged { previous_sentiment, new_sentiment, .. } => {
                     let change = new_sentiment - previous_sentiment.unwrap_or(0.0);
                     let change_icon = if change > 0.0 { "📈" } else { "📉" };
-                    let change_color = if change > 0.0 { "#22c55e" } else { "#ef4444" };
+                    let change_color_class = if change > 0.0 { "text-green-500" } else { "text-red-500" };
                     let change_str = format!("{:+.1}", change);
                     let sentiment_str = format!("{:.1}", new_sentiment);
                     rsx! {
                         div {
-                            style: "margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;",
+                            class: "mt-2 flex items-center gap-2",
                             span { "{change_icon}" }
                             span {
-                                style: format!("color: {}; font-size: 0.8125rem;", change_color),
+                                class: "{change_color_class} text-[0.8125rem]",
                                 "{change_str}"
                             }
                             span {
-                                style: "color: #6b7280; font-size: 0.8125rem;",
+                                class: "text-gray-500 text-[0.8125rem]",
                                 "→ {sentiment_str}"
                             }
                         }

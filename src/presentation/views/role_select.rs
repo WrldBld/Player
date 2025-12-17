@@ -8,16 +8,15 @@ use crate::UserRole;
 pub fn RoleSelect(on_select_role: EventHandler<UserRole>) -> Element {
     rsx! {
         div {
-            class: "role-select",
-            style: "display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);",
+            class: "role-select flex flex-col items-center justify-center h-full bg-gradient-to-br from-dark-surface to-dark-gradient-end",
 
             h2 {
-                style: "color: white; margin-bottom: 2rem; font-size: 1.75rem;",
+                class: "text-white mb-8 text-3xl",
                 "Select Your Role"
             }
 
             div {
-                style: "display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center;",
+                class: "flex gap-6 flex-wrap justify-center",
 
                 // Dungeon Master card
                 RoleCard {
@@ -58,24 +57,32 @@ fn RoleCard(
     color: &'static str,
     on_click: EventHandler<()>,
 ) -> Element {
+    // Extract conditional classes before rsx! block
+    let (border_class, title_class) = match color {
+        "#ef4444" => ("border-red-500", "text-red-500"),
+        "#3b82f6" => ("border-blue-500", "text-blue-500"),
+        "#8b5cf6" => ("border-purple-500", "text-purple-500"),
+        _ => ("border-gray-500", "text-gray-500"),
+    };
+
+    let button_classes = format!("bg-dark-bg border-2 {} rounded-xl p-8 w-[250px] cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-xl", border_class);
+    let title_classes = format!("mb-2 text-xl {}", title_class);
+
     rsx! {
         button {
             onclick: move |_| on_click.call(()),
-            style: format!(
-                "background: #0f0f23; border: 2px solid {}; border-radius: 1rem; padding: 2rem; width: 250px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;",
-                color
-            ),
+            class: "{button_classes}",
 
             div {
-                style: "font-size: 3rem; margin-bottom: 1rem;",
+                class: "text-5xl mb-4",
                 "{icon}"
             }
             h3 {
-                style: format!("color: {}; margin-bottom: 0.5rem; font-size: 1.25rem;", color),
+                class: "{title_classes}",
                 "{title}"
             }
             p {
-                style: "color: #9ca3af; font-size: 0.875rem; line-height: 1.5;",
+                class: "text-gray-400 text-sm leading-6",
                 "{description}"
             }
         }

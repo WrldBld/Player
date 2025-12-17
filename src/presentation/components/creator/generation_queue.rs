@@ -127,22 +127,21 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
 
     rsx! {
         div {
-            class: "generation-queue",
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 0.75rem;",
+            class: "generation-queue bg-dark-surface rounded-lg p-3",
 
             // Header with filter tabs and toggle for read items
             div {
-                style: "margin-bottom: 0.5rem;",
+                class: "mb-2",
                 
                 // Title and badge
                 div {
-                    style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;",
+                    class: "flex items-center justify-between mb-2",
                     h3 {
-                        style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 0.5rem;",
+                        class: "text-gray-400 text-xs uppercase m-0 flex items-center gap-2",
                         "Generation Queue"
                         if total_active > 0 {
                             span {
-                                style: "background: #f59e0b; color: white; border-radius: 0.75rem; padding: 0.125rem 0.375rem; font-size: 0.625rem; font-weight: bold;",
+                                class: "bg-amber-500 text-white rounded-xl px-1.5 py-0.5 text-[0.625rem] font-bold",
                                 "{total_active}"
                             }
                         }
@@ -168,7 +167,7 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
                                             }
                                         }
                                     },
-                                    style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                    class: "px-2 py-1 bg-gray-500 text-white border-none rounded cursor-pointer text-xs",
                                     "Clear All Completed"
                                 }
                             }
@@ -177,7 +176,7 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
                         }
                     }
                     label {
-                        style: "display: inline-flex; align-items: center; gap: 0.25rem; color: #9ca3af; font-size: 0.75rem;",
+                        class: "inline-flex items-center gap-1 text-gray-400 text-xs",
                         input {
                             r#type: "checkbox",
                             checked: *show_read.read(),
@@ -192,10 +191,10 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
                 
                 // Filter tabs and sort dropdown
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;",
+                    class: "flex justify-between items-center gap-2 mb-2",
                     // Filter tabs
                     div {
-                        style: "display: flex; gap: 0.25rem; border-bottom: 1px solid #374151; flex: 1;",
+                        class: "flex gap-1 border-b border-gray-700 flex-1",
                     FilterTab {
                         label: "All",
                         count: total_count,
@@ -232,7 +231,7 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
                                 _ => SortOrder::NewestFirst,
                             });
                         },
-                        style: "padding: 0.25rem 0.5rem; background: #0f0f23; color: #9ca3af; border: 1px solid #374151; border-radius: 0.25rem; font-size: 0.75rem; cursor: pointer;",
+                        class: "px-2 py-1 bg-dark-bg text-gray-400 border border-gray-700 rounded text-xs cursor-pointer",
                         option { value: "newest", "Newest First" }
                         option { value: "oldest", "Oldest First" }
                         option { value: "status", "By Status" }
@@ -243,12 +242,12 @@ pub fn GenerationQueuePanel(props: GenerationQueuePanelProps) -> Element {
 
             if total_items == 0 {
                 div {
-                    style: "color: #6b7280; font-size: 0.875rem; text-align: center; padding: 1rem;",
+                    class: "text-gray-500 text-sm text-center p-4",
                     "No generations in progress"
                 }
             } else {
                 div {
-                    style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                    class: "flex flex-col gap-2",
 
                     // Show image batches
                     for batch in visible_batches.iter() {
@@ -314,18 +313,17 @@ fn FilterTab(
     is_active: bool,
     onclick: EventHandler<()>,
 ) -> Element {
+    let border_class = if is_active { "border-b-2 border-purple-500" } else { "border-b-2 border-transparent" };
+    let text_class = if is_active { "text-white" } else { "text-gray-400" };
+
     rsx! {
         button {
             onclick: move |_| onclick.call(()),
-            style: format!(
-                "flex: 1; padding: 0.375rem 0.5rem; background: transparent; border: none; border-bottom: 2px solid {}; color: {}; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;",
-                if is_active { "#8b5cf6" } else { "transparent" },
-                if is_active { "white" } else { "#9ca3af" }
-            ),
+            class: "flex-1 px-2 py-1.5 bg-transparent border-none {border_class} {text_class} text-xs cursor-pointer transition-all",
             "{label}"
             if count > 0 {
                 span {
-                    style: "margin-left: 0.25rem; color: #6b7280;",
+                    class: "ml-1 text-gray-500",
                     "({count})"
                 }
             }
@@ -357,43 +355,39 @@ fn QueueItemRow(
     let display_name = format!("{} ({})", batch.entity_id, batch.entity_type);
 
     // Dim read items when history is shown
-    let opacity_style = if batch.is_read && show_read {
-        "opacity: 0.6;"
+    let opacity_class = if batch.is_read && show_read {
+        "opacity-60"
     } else {
         ""
     };
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column;",
-            
+            class: "flex flex-col",
+
             div {
-                class: "queue-item",
-                style: format!(
-                    "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border-radius: 0.25rem; {}",
-                    opacity_style
-                ),
+                class: "queue-item flex items-center gap-2 p-2 bg-dark-bg rounded {opacity_class}",
 
                 span { style: format!("color: {};", status_color), "{status_icon}" }
 
-                div { style: "flex: 1; min-width: 0;",
-                    div { style: "color: white; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                div { class: "flex-1 min-w-0",
+                    div { class: "text-white text-sm overflow-hidden text-ellipsis whitespace-nowrap",
                         "{display_name}"
                     }
-                    div { style: "color: #6b7280; font-size: 0.75rem;",
+                    div { class: "text-gray-500 text-xs",
                         "{batch.asset_type}"
                     }
                 }
 
                 div {
-                    style: "display: flex; align-items: center; gap: 0.25rem;",
+                    class: "flex items-center gap-1",
                     match &batch.status {
                         BatchStatus::Queued { .. } => rsx! {
                             button {
                                 onclick: {
                                     let batch_id = batch.batch_id.clone();
                                     let asset_service = use_asset_service();
-                                    let mut state = use_generation_state();
+                                    let state = use_generation_state();
                                     move |_| {
                                         let bid = batch_id.clone();
                                         let svc = asset_service.clone();
@@ -411,7 +405,7 @@ fn QueueItemRow(
                                         });
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-red-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Cancel"
                             }
                             button {
@@ -419,13 +413,13 @@ fn QueueItemRow(
                                     let current = *expanded_details.read();
                                     expanded_details.set(!current);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-700 text-white border-none rounded cursor-pointer text-xs",
                                 if *expanded_details.read() { "Hide Details" } else { "Details" }
                             }
                         },
                         BatchStatus::Generating { progress } => rsx! {
                             div {
-                                style: "width: 50px; height: 4px; background: #374151; border-radius: 2px; overflow: hidden;",
+                                class: "w-[50px] h-1 bg-gray-700 rounded-sm overflow-hidden",
                                 div {
                                     style: format!("width: {}%; height: 100%; background: #f59e0b;", progress),
                                 }
@@ -434,7 +428,7 @@ fn QueueItemRow(
                                 onclick: {
                                     let batch_id = batch.batch_id.clone();
                                     let asset_service = use_asset_service();
-                                    let mut state = use_generation_state();
+                                    let state = use_generation_state();
                                     move |_| {
                                         let bid = batch_id.clone();
                                         let svc = asset_service.clone();
@@ -452,7 +446,7 @@ fn QueueItemRow(
                                         });
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-red-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Cancel"
                             }
                             button {
@@ -460,7 +454,7 @@ fn QueueItemRow(
                                     let current = *expanded_details.read();
                                     expanded_details.set(!current);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-700 text-white border-none rounded cursor-pointer text-xs",
                                 if *expanded_details.read() { "Hide Details" } else { "Details" }
                             }
                         },
@@ -470,7 +464,7 @@ fn QueueItemRow(
                                     let batch_id = batch.batch_id.clone();
                                     let entity_type = batch.entity_type.clone();
                                     let entity_id = batch.entity_id.clone();
-                                    let mut state = use_generation_state();
+                                    let state = use_generation_state();
                                     let world_id_clone = world_id.clone();
                                     let nav_handler = on_navigate_to_entity.clone();
                                     let gen_svc = generation_service.clone();
@@ -493,7 +487,7 @@ fn QueueItemRow(
                                         }
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-green-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Select"
                             }
                             button {
@@ -504,7 +498,7 @@ fn QueueItemRow(
                                         state.remove_batch(&batch_id);
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Clear"
                             }
                             button {
@@ -512,7 +506,7 @@ fn QueueItemRow(
                                     let current = *expanded_details.read();
                                     expanded_details.set(!current);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-700 text-white border-none rounded cursor-pointer text-xs",
                                 if *expanded_details.read() { "Hide Details" } else { "Details" }
                             }
                         },
@@ -522,14 +516,14 @@ fn QueueItemRow(
                                     let current = *expanded_error.read();
                                     expanded_error.set(!current);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-red-500 text-white border-none rounded cursor-pointer text-xs",
                                 if *expanded_error.read() { "Hide Error" } else { "Show Error" }
                             }
                             button {
                                 onclick: {
                                     let batch_id = batch.batch_id.clone();
                                     let asset_service = use_asset_service();
-                                    let mut state = use_generation_state();
+                                    let state = use_generation_state();
                                     move |_| {
                                         let bid = batch_id.clone();
                                         let svc = asset_service.clone();
@@ -549,7 +543,7 @@ fn QueueItemRow(
                                         });
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-amber-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Retry"
                             }
                             button {
@@ -560,7 +554,7 @@ fn QueueItemRow(
                                         state.remove_batch(&batch_id_copy);
                                     }
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-500 text-white border-none rounded cursor-pointer text-xs",
                                 "Clear"
                             }
                             button {
@@ -568,7 +562,7 @@ fn QueueItemRow(
                                     let current = *expanded_details.read();
                                     expanded_details.set(!current);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "px-2 py-1 bg-gray-700 text-white border-none rounded cursor-pointer text-xs",
                                 if *expanded_details.read() { "Hide Details" } else { "Details" }
                             }
                         },
@@ -576,22 +570,22 @@ fn QueueItemRow(
                 }
             }
             
-            
+
             // Expanded error details for failed batches
             if let BatchStatus::Failed { error } = &batch.status {
                 if *expanded_error.read() {
                     div {
-                        style: "margin-top: 0.5rem; padding: 0.75rem; background: #1f2937; border-radius: 0.375rem; border-left: 3px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.2);",
+                        class: "mt-2 p-3 bg-gray-800 rounded-md border-l-4 border-red-500 shadow-md",
                         div {
-                            style: "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;",
-                            span { style: "color: #ef4444; font-size: 1rem;", "⚠️" }
+                            class: "flex items-center gap-2 mb-2",
+                            span { class: "text-red-500 text-base", "⚠️" }
                             div {
-                                style: "color: #ef4444; font-size: 0.75rem; font-weight: bold;",
+                                class: "text-red-500 text-xs font-bold",
                                 "Error Details"
                             }
                         }
                         div {
-                            style: "color: #e5e7eb; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-family: 'Courier New', monospace;",
+                            class: "text-gray-200 text-xs whitespace-pre-wrap break-words leading-relaxed font-mono",
                             "{error}"
                         }
                     }
@@ -601,17 +595,17 @@ fn QueueItemRow(
             // Expanded batch details
             if *expanded_details.read() {
                 div {
-                    style: "margin-top: 0.5rem; padding: 0.75rem; background: #1f2937; border-radius: 0.375rem; border-left: 3px solid #8b5cf6;",
+                    class: "mt-2 p-3 bg-gray-800 rounded-md border-l-4 border-purple-500",
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                        class: "text-gray-400 text-xs mb-2",
                         "Entity: {batch.entity_type} - {batch.entity_id}"
                     }
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                        class: "text-gray-400 text-xs mb-2",
                         "Asset Type: {batch.asset_type}"
                     }
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem;",
+                        class: "text-gray-400 text-xs",
                         "Batch ID: {batch.batch_id}"
                     }
                 }
@@ -649,35 +643,31 @@ fn SuggestionQueueRow(
     let request_id_for_clear = suggestion.request_id.clone();
     let request_id_for_failed_clear = suggestion.request_id.clone();
 
-    let opacity_style = if suggestion.is_read && show_read {
-        "opacity: 0.6;"
+    let opacity_class = if suggestion.is_read && show_read {
+        "opacity-60"
     } else {
         ""
     };
 
     rsx! {
         div {
-            class: "queue-item",
-            style: format!(
-                "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border-radius: 0.25rem; {}",
-                opacity_style
-            ),
+            class: "queue-item flex items-center gap-2 p-2 bg-dark-bg rounded {opacity_class}",
 
             span { style: format!("color: {};", status_color), "{status_icon}" }
 
-            div { style: "flex: 1; min-width: 0;",
-                div { style: "color: white; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+            div { class: "flex-1 min-w-0",
+                div { class: "text-white text-sm overflow-hidden text-ellipsis whitespace-nowrap",
                     "{display_name}"
                 }
                 if let Some(entity_id) = &suggestion.entity_id {
-                    div { style: "color: #6b7280; font-size: 0.75rem;",
+                    div { class: "text-gray-500 text-xs",
                         "{entity_id}"
                     }
                 }
             }
 
             div {
-                style: "display: flex; align-items: center; gap: 0.25rem;",
+                class: "flex items-center gap-1",
                 match &suggestion.status {
                     SuggestionStatus::Ready { .. } => rsx! {
                         button {
@@ -685,7 +675,7 @@ fn SuggestionQueueRow(
                                 let req_id = request_id_for_view.clone();
                                 let entity_id = suggestion.entity_id.clone();
                                 let field_type = suggestion.field_type.clone();
-                                let mut state = use_generation_state();
+                                let state = use_generation_state();
                                 let world_id_clone = world_id.clone();
                                 let nav_handler = on_navigate_to_entity.clone();
                                 let gen_svc = generation_service.clone();
@@ -717,7 +707,7 @@ fn SuggestionQueueRow(
                                     }
                                 }
                             },
-                            style: "padding: 0.25rem 0.5rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "px-2 py-1 bg-green-500 text-white border-none rounded cursor-pointer text-xs",
                             "View"
                         }
                         button {
@@ -725,7 +715,7 @@ fn SuggestionQueueRow(
                                 let mut state = use_generation_state();
                                 state.remove_suggestion(&request_id_for_clear);
                             },
-                            style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "px-2 py-1 bg-gray-500 text-white border-none rounded cursor-pointer text-xs",
                             "Clear"
                         }
                     },
@@ -734,12 +724,12 @@ fn SuggestionQueueRow(
                         button {
                             onclick: {
                                 let request_id = suggestion.request_id.clone();
-                                let mut state = use_generation_state();
+                                let state = use_generation_state();
                                 let suggestion_service = use_suggestion_service();
                                 move |_| {
                                     let req_id = request_id.clone();
                                     let svc = suggestion_service.clone();
-                                    let mut gen_state = state;
+                                    let gen_state = state;
                                     spawn(async move {
                                         match svc.cancel_suggestion(&req_id).await {
                                             Ok(_) => {
@@ -753,7 +743,7 @@ fn SuggestionQueueRow(
                                     });
                                 }
                             },
-                            style: "padding: 0.125rem 0.375rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.625rem;",
+                            class: "px-1.5 py-0.5 bg-red-500 text-white border-none rounded cursor-pointer text-[0.625rem]",
                             "Cancel"
                         }
                     },
@@ -763,7 +753,7 @@ fn SuggestionQueueRow(
                                 let current = *expanded_error.read();
                                 expanded_error.set(!current);
                             },
-                            style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "px-2 py-1 bg-red-500 text-white border-none rounded cursor-pointer text-xs",
                             if *expanded_error.read() { "Hide Error" } else { "Show Error" }
                         }
                         button {
@@ -772,7 +762,7 @@ fn SuggestionQueueRow(
                                 let field_type = suggestion.field_type.clone();
                                 let context = suggestion.context.clone();
                                 let suggestion_service = use_suggestion_service();
-                                let mut state = use_generation_state();
+                                let state = use_generation_state();
                                 move |_| {
                                     if let Some(ctx) = context.clone() {
                                         let req_id = request_id.clone();
@@ -803,7 +793,7 @@ fn SuggestionQueueRow(
                                     }
                                 }
                             },
-                            style: "padding: 0.25rem 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "px-2 py-1 bg-amber-500 text-white border-none rounded cursor-pointer text-xs",
                             "Retry"
                         }
                         button {
@@ -811,28 +801,28 @@ fn SuggestionQueueRow(
                                 let mut state = use_generation_state();
                                 state.remove_suggestion(&request_id_for_failed_clear);
                             },
-                            style: "padding: 0.25rem 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                            class: "px-2 py-1 bg-gray-500 text-white border-none rounded cursor-pointer text-xs",
                             "Clear"
                         }
                     },
                 }
             }
-            
+
             // Expanded error details for failed suggestions
             if let SuggestionStatus::Failed { error } = &suggestion.status {
                 if *expanded_error.read() {
                     div {
-                        style: "margin-top: 0.5rem; padding: 0.75rem; background: #1f2937; border-radius: 0.375rem; border-left: 3px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.2);",
+                        class: "mt-2 p-3 bg-gray-800 rounded-md border-l-4 border-red-500 shadow-md",
                         div {
-                            style: "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;",
-                            span { style: "color: #ef4444; font-size: 1rem;", "⚠️" }
+                            class: "flex items-center gap-2 mb-2",
+                            span { class: "text-red-500 text-base", "⚠️" }
                             div {
-                                style: "color: #ef4444; font-size: 0.75rem; font-weight: bold;",
+                                class: "text-red-500 text-xs font-bold",
                                 "Error Details"
                             }
                         }
                         div {
-                            style: "color: #e5e7eb; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-family: 'Courier New', monospace;",
+                            class: "text-gray-200 text-xs whitespace-pre-wrap break-words leading-relaxed font-mono",
                             "{error}"
                         }
                     }
@@ -857,37 +847,37 @@ fn SuggestionViewModal(suggestion: SuggestionTask, on_close: EventHandler<()>) -
         // Backdrop
         div {
             onclick: move |_| on_close.call(()),
-            style: "position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200;",
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-[200]",
 
             // Modal content
             div {
                 onclick: move |evt| evt.stop_propagation(),
-                style: "background: #111827; border-radius: 0.5rem; padding: 1rem 1.25rem; max-width: 480px; width: 100%; max-height: 70vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);",
+                class: "bg-gray-900 rounded-lg p-4 px-5 max-w-[480px] w-full max-h-[70vh] overflow-y-auto shadow-2xl",
 
                 h3 {
-                    style: "color: white; font-size: 0.95rem; margin-bottom: 0.5rem;",
+                    class: "text-white text-[0.95rem] mb-2",
                     "{title}"
                 }
 
                 if let Some(entity_id) = &suggestion.entity_id {
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.75rem;",
+                        class: "text-gray-400 text-xs mb-3",
                         "Entity: {entity_id}"
                     }
                 }
 
                 if suggestions.is_empty() {
                     div {
-                        style: "color: #9ca3af; font-size: 0.85rem;",
+                        class: "text-gray-400 text-[0.85rem]",
                         "No suggestion options available (still processing or failed)."
                     }
                 } else {
                     div {
-                        style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        class: "flex flex-col gap-2",
                         for (idx, text) in suggestions.iter().enumerate() {
                             div {
                                 key: "{idx}",
-                                style: "padding: 0.5rem 0.75rem; background: #1f2937; border-radius: 0.375rem; color: #e5e7eb; font-size: 0.875rem;",
+                                class: "px-3 py-2 bg-gray-800 rounded-md text-gray-200 text-sm",
                                 "{text}"
                             }
                         }
@@ -895,10 +885,10 @@ fn SuggestionViewModal(suggestion: SuggestionTask, on_close: EventHandler<()>) -
                 }
 
                 div {
-                    style: "display: flex; justify-content: flex-end; margin-top: 0.75rem;",
+                    class: "flex justify-end mt-3",
                     button {
                         onclick: move |_| on_close.call(()),
-                        style: "padding: 0.25rem 0.75rem; background: #4b5563; color: white; border: none; border-radius: 0.375rem; font-size: 0.8rem; cursor: pointer;",
+                        class: "px-3 py-1 bg-gray-600 text-white border-none rounded-md text-[0.8rem] cursor-pointer",
                         "Close"
                     }
                 }

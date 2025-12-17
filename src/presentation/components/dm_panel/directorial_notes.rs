@@ -24,37 +24,35 @@ pub struct DirectorialNotesProps {
 pub fn DirectorialNotes(props: DirectorialNotesProps) -> Element {
     rsx! {
         div {
-            class: "directorial-notes",
-            style: "display: flex; flex-direction: column; height: 100%;",
+            class: "directorial-notes flex flex-col h-full",
 
             // Header
             div {
-                style: "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;",
+                class: "flex items-center gap-2 mb-2",
 
                 h3 {
-                    style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin: 0;",
+                    class: "text-gray-400 text-sm uppercase m-0",
                     "Directorial Notes"
                 }
 
                 // Word count indicator
                 span {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-left: auto;",
+                    class: "text-gray-500 text-xs ml-auto",
                     "{props.notes.len()} characters"
                 }
             }
 
             // Textarea
             textarea {
-                class: "notes-textarea",
+                class: "notes-textarea flex-1 w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white font-mono text-sm leading-normal resize-none box-border transition-colors",
                 value: "{props.notes}",
                 placeholder: props.placeholder,
                 oninput: move |e| props.on_change.call(e.value()),
-                style: "flex: 1; width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 0.875rem; line-height: 1.5; resize: none; box-sizing: border-box; transition: border-color 0.2s;",
             }
 
             // Footer info
             div {
-                style: "color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem;",
+                class: "text-gray-500 text-xs mt-2",
                 "Last modified: just now"
             }
         }

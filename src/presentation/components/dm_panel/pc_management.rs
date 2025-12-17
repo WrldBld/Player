@@ -45,28 +45,28 @@ pub fn PCManagementPanel(props: PCManagementPanelProps) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
-            
+            class: "flex flex-col gap-4 p-4 bg-dark-surface rounded-lg",
+
             h3 {
-                style: "margin: 0; color: white; font-size: 1.125rem;",
+                class: "m-0 text-white text-lg",
                 "Player Characters"
             }
 
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                    class: "p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm",
                     "{err}"
                 }
             }
 
             if *loading.read() {
                 div {
-                    style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                    class: "p-8 text-center text-gray-400",
                     "Loading player characters..."
                 }
             } else if pcs.read().is_empty() {
                 div {
-                    style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                    class: "p-8 text-center text-gray-400",
                     "No player characters in this session"
                 }
             } else {
@@ -74,7 +74,7 @@ pub fn PCManagementPanel(props: PCManagementPanelProps) -> Element {
                     let pcs_list = pcs.read().clone();
                     rsx! {
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.75rem;",
+                            class: "flex flex-col gap-3",
                             {pcs_list.into_iter().map(|pc| {
                                 let pc_id = pc.id.clone();
                                 rsx! {
@@ -103,50 +103,50 @@ struct PCManagementCardProps {
 fn PCManagementCard(props: PCManagementCardProps) -> Element {
     rsx! {
         div {
-            style: "padding: 1rem; background: #0f0f23; border-radius: 0.5rem; border: 1px solid #374151;",
-            
+            class: "p-4 bg-dark-bg rounded-lg border border-gray-700",
+
             div {
-                style: "display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;",
+                class: "flex justify-between items-start mb-3",
                 div {
                     h4 {
-                        style: "margin: 0 0 0.25rem 0; color: white; font-size: 1rem;",
+                        class: "m-0 mb-1 text-white text-base",
                         "{props.pc.name}"
                     }
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem;",
+                        class: "text-gray-400 text-xs",
                         "User: {props.pc.user_id}"
                     }
                 }
                 button {
                     onclick: move |_| props.on_view_as.call(()),
-                    style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                    class: "px-4 py-2 bg-blue-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                     "View as"
                 }
             }
 
             div {
-                style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                class: "flex flex-col gap-2",
                 div {
-                    style: "display: flex; gap: 1rem;",
+                    class: "flex gap-4",
                     div {
-                        style: "flex: 1;",
+                        class: "flex-1",
                         div {
-                            style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                            class: "text-gray-400 text-xs mb-1",
                             "Current Location"
                         }
                         div {
-                            style: "color: white; font-size: 0.875rem;",
+                            class: "text-white text-sm",
                             "Location ID: {props.pc.current_location_id}"
                         }
                     }
                     div {
-                        style: "flex: 1;",
+                        class: "flex-1",
                         div {
-                            style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;",
+                            class: "text-gray-400 text-xs mb-1",
                             "Last Active"
                         }
                         div {
-                            style: "color: white; font-size: 0.875rem;",
+                            class: "text-white text-sm",
                             "{props.pc.last_active_at}"
                         }
                     }
@@ -205,44 +205,43 @@ pub fn PCLocationsWidget(props: PCLocationsWidgetProps) -> Element {
 
     rsx! {
         div {
-            class: "panel-section",
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 1rem;",
-            
+            class: "panel-section bg-dark-surface rounded-lg p-4",
+
             h3 {
-                style: "color: #9ca3af; margin-bottom: 0.75rem; font-size: 0.875rem; text-transform: uppercase;",
+                class: "text-gray-400 mb-3 text-sm uppercase",
                 "PC Locations"
             }
 
             if *loading.read() {
                 div {
-                    style: "color: #9ca3af; font-size: 0.875rem;",
+                    class: "text-gray-400 text-sm",
                     "Loading..."
                 }
             } else if pcs.read().is_empty() {
                 div {
-                    style: "color: #9ca3af; font-size: 0.875rem;",
+                    class: "text-gray-400 text-sm",
                     "No player characters"
                 }
             } else {
                 div {
-                    style: "display: flex; flex-direction: column; gap: 0.5rem;",
-                    
+                    class: "flex flex-col gap-2",
+
                     if is_split {
                         div {
-                            style: "padding: 0.5rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 0.5rem; color: #f59e0b; font-size: 0.875rem; font-weight: 500;",
+                            class: "p-2 bg-amber-500/10 border border-amber-500 rounded-lg text-amber-500 text-sm font-medium",
                             "⚠️ Party split across {location_counts.len()} locations"
                         }
                     }
 
                     for (location_id, count) in location_counts.iter() {
                         div {
-                            style: "display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #0f0f23; border-radius: 0.5rem;",
+                            class: "flex justify-between items-center p-2 bg-dark-bg rounded-lg",
                             div {
-                                style: "color: white; font-size: 0.875rem;",
+                                class: "text-white text-sm",
                                 "Location: {location_id}"
                             }
                             div {
-                                style: "color: #9ca3af; font-size: 0.875rem;",
+                                class: "text-gray-400 text-sm",
                                 if *count > 1 {
                                     "{count} PCs"
                                 } else {
@@ -254,7 +253,7 @@ pub fn PCLocationsWidget(props: PCLocationsWidgetProps) -> Element {
 
                     button {
                         onclick: move |_| props.on_manage.call(()),
-                        style: "margin-top: 0.5rem; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                        class: "mt-2 p-2 bg-blue-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                         "Manage PCs"
                     }
                 }

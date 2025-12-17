@@ -57,11 +57,16 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
         && !success_outcome.read().is_empty()
         && !failure_outcome.read().is_empty();
 
+    let is_expanded = *show_criticals.read();
+    let rotation_class = if is_expanded { "rotate-90" } else { "rotate-0" };
+    let create_btn_bg = if is_valid { "bg-purple-600" } else { "bg-gray-500" };
+    let create_btn_cursor = if is_valid { "cursor-pointer" } else { "cursor-not-allowed" };
+
     rsx! {
         // Modal overlay
         div {
             id: "adhoc-overlay",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 1rem;",
+            class: "fixed inset-0 bg-black/80 flex items-center justify-center z-[1000] overflow-y-auto p-4",
             onclick: move |_| {
                 props.on_close.call(());
             },
@@ -69,33 +74,33 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
             // Modal content
             div {
                 id: "adhoc-modal",
-                style: "background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%); padding: 2rem; border-radius: 1rem; max-width: 600px; width: 90%; border: 2px solid #a855f7; max-height: 90vh; overflow-y: auto;",
+                class: "bg-gradient-to-br from-dark-surface to-dark-bg p-8 rounded-2xl max-w-[600px] w-[90%] border-2 border-purple-600 max-h-[90vh] overflow-y-auto",
                 onclick: move |evt| evt.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;",
+                    class: "flex justify-between items-center mb-6",
 
                     h2 {
-                        style: "color: #a855f7; margin: 0; font-size: 1.5rem;",
+                        class: "text-purple-600 m-0 text-2xl",
                         "Create Ad-hoc Challenge"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.5rem; padding: 0;",
+                        class: "bg-transparent border-0 text-gray-400 cursor-pointer text-2xl p-0",
                         "x"
                     }
                 }
 
                 // Challenge details section
                 div {
-                    style: "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;",
+                    class: "grid grid-cols-2 gap-4 mb-6",
 
                     // Challenge name
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-xs uppercase mb-1",
                             "Challenge Name *"
                         }
                         input {
@@ -103,14 +108,14 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
                             value: "{challenge_name}",
                             placeholder: "e.g., Negotiate Price",
                             oninput: move |e| challenge_name.set(e.value()),
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; box-sizing: border-box;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm box-border",
                         }
                     }
 
                     // Skill name
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-xs uppercase mb-1",
                             "Skill Being Tested *"
                         }
                         input {
@@ -118,14 +123,14 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
                             value: "{skill_name}",
                             placeholder: "e.g., Persuasion",
                             oninput: move |e| skill_name.set(e.value()),
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; box-sizing: border-box;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm box-border",
                         }
                     }
 
                     // Difficulty
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-xs uppercase mb-1",
                             "Difficulty *"
                         }
                         input {
@@ -133,20 +138,20 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
                             value: "{difficulty}",
                             placeholder: "e.g., DC 15, Hard",
                             oninput: move |e| difficulty.set(e.value()),
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; box-sizing: border-box;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm box-border",
                         }
                     }
 
                     // Target PC
                     div {
                         label {
-                            style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                            class: "block text-gray-400 text-xs uppercase mb-1",
                             "Target PC *"
                         }
                         select {
                             value: "{selected_pc}",
                             onchange: move |e| selected_pc.set(e.value()),
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem; box-sizing: border-box;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white cursor-pointer text-sm box-border",
 
                             option {
                                 value: "",
@@ -168,109 +173,103 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
 
                 // Outcomes section header
                 div {
-                    style: "border-top: 1px solid #374151; padding-top: 1.5rem; margin-bottom: 1rem;",
+                    class: "border-t border-gray-700 pt-6 mb-4",
 
                     h3 {
-                        style: "color: #f59e0b; margin: 0 0 0.5rem 0; font-size: 1.125rem;",
+                        class: "text-amber-500 m-0 mb-2 text-lg",
                         "Outcomes"
                     }
                     p {
-                        style: "color: #6b7280; font-size: 0.75rem; margin: 0;",
+                        class: "text-gray-500 text-xs m-0",
                         "Define what happens when the player succeeds or fails the challenge."
                     }
                 }
 
                 // Success outcome
                 div {
-                    style: "margin-bottom: 1rem;",
+                    class: "mb-4",
 
                     label {
-                        style: "display: block; color: #22c55e; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                        class: "block text-green-500 text-xs uppercase mb-1",
                         "Success Outcome *"
                     }
                     textarea {
                         value: "{success_outcome}",
                         placeholder: "What happens when the player succeeds...",
                         oninput: move |e| success_outcome.set(e.value()),
-                        style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; min-height: 80px; resize: vertical; box-sizing: border-box;",
+                        class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm min-h-[80px] resize-y box-border",
                     }
                 }
 
                 // Failure outcome
                 div {
-                    style: "margin-bottom: 1rem;",
+                    class: "mb-4",
 
                     label {
-                        style: "display: block; color: #ef4444; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                        class: "block text-red-500 text-xs uppercase mb-1",
                         "Failure Outcome *"
                     }
                     textarea {
                         value: "{failure_outcome}",
                         placeholder: "What happens when the player fails...",
                         oninput: move |e| failure_outcome.set(e.value()),
-                        style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; min-height: 80px; resize: vertical; box-sizing: border-box;",
+                        class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm min-h-[80px] resize-y box-border",
                     }
                 }
 
                 // Toggle for critical outcomes
                 div {
-                    style: "margin-bottom: 1rem;",
+                    class: "mb-4",
 
-                    {
-                        let is_expanded = *show_criticals.read();
-                        let rotation = if is_expanded { "90deg" } else { "0deg" };
-                        rsx! {
-                            button {
-                                onclick: move |_| {
-                                    let current = *show_criticals.read();
-                                    show_criticals.set(!current);
-                                },
-                                style: "background: none; border: none; color: #a855f7; cursor: pointer; font-size: 0.875rem; padding: 0; display: flex; align-items: center; gap: 0.5rem;",
+                    button {
+                        onclick: move |_| {
+                            let current = *show_criticals.read();
+                            show_criticals.set(!current);
+                        },
+                        class: "bg-transparent border-0 text-purple-600 cursor-pointer text-sm p-0 flex items-center gap-2",
 
-                                span {
-                                    style: "transform: rotate({rotation}); transition: transform 0.2s;",
-                                    ">"
-                                }
-                                "Add Critical Outcomes (optional)"
-                            }
+                        span {
+                            class: "transition-transform duration-200 {rotation_class}",
+                            ">"
                         }
+                        "Add Critical Outcomes (optional)"
                     }
                 }
 
                 // Critical outcomes (collapsible)
                 if *show_criticals.read() {
                     div {
-                        style: "padding-left: 1rem; border-left: 2px solid #a855f7;",
+                        class: "pl-4 border-l-2 border-purple-600",
 
                         // Critical success
                         div {
-                            style: "margin-bottom: 1rem;",
+                            class: "mb-4",
 
                             label {
-                                style: "display: block; color: #fbbf24; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                                class: "block text-amber-400 text-xs uppercase mb-1",
                                 "Critical Success (optional)"
                             }
                             textarea {
                                 value: "{critical_success}",
                                 placeholder: "What happens on a critical success (e.g., nat 20)...",
                                 oninput: move |e| critical_success.set(e.value()),
-                                style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; min-height: 60px; resize: vertical; box-sizing: border-box;",
+                                class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm min-h-[60px] resize-y box-border",
                             }
                         }
 
                         // Critical failure
                         div {
-                            style: "margin-bottom: 1rem;",
+                            class: "mb-4",
 
                             label {
-                                style: "display: block; color: #dc2626; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                                class: "block text-red-600 text-xs uppercase mb-1",
                                 "Critical Failure (optional)"
                             }
                             textarea {
                                 value: "{critical_failure}",
                                 placeholder: "What happens on a critical failure (e.g., nat 1)...",
                                 oninput: move |e| critical_failure.set(e.value()),
-                                style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem; min-height: 60px; resize: vertical; box-sizing: border-box;",
+                                class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm min-h-[60px] resize-y box-border",
                             }
                         }
                     }
@@ -278,7 +277,7 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
 
                 // Action buttons
                 div {
-                    style: "display: flex; gap: 0.75rem; margin-top: 1.5rem;",
+                    class: "flex gap-3 mt-6",
 
                     button {
                         onclick: move |_| {
@@ -307,18 +306,14 @@ pub fn AdHocChallengeModal(props: AdHocChallengeModalProps) -> Element {
                             }
                         },
                         disabled: !is_valid,
-                        style: format!(
-                            "flex: 1; padding: 0.75rem; background: {}; color: white; border: none; border-radius: 0.5rem; cursor: {}; font-weight: 600;",
-                            if is_valid { "#a855f7" } else { "#6b7280" },
-                            if is_valid { "pointer" } else { "not-allowed" }
-                        ),
+                        class: "flex-1 p-3 {create_btn_bg} text-white border-0 rounded-lg {create_btn_cursor} font-semibold",
 
                         "Create Challenge"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "flex: 1; padding: 0.75rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;",
+                        class: "flex-1 p-3 bg-gray-700 text-white border-0 rounded-lg cursor-pointer font-semibold",
                         "Cancel"
                     }
                 }

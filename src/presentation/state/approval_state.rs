@@ -53,6 +53,39 @@ pub struct ConversationLogEntry {
     pub timestamp: u64,
 }
 
+/// Pending challenge outcome awaiting DM approval (P3.3/P3.4)
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingChallengeOutcome {
+    /// Unique resolution ID for tracking
+    pub resolution_id: String,
+    /// Challenge name for display
+    pub challenge_name: String,
+    /// ID of the character who rolled
+    pub character_id: String,
+    /// Name of the character who rolled
+    pub character_name: String,
+    /// The dice roll result
+    pub roll: i32,
+    /// Applied modifier
+    pub modifier: i32,
+    /// Total result (roll + modifier)
+    pub total: i32,
+    /// Outcome type (success, failure, critical_success, critical_failure)
+    pub outcome_type: String,
+    /// Generated outcome description
+    pub outcome_description: String,
+    /// Optional outcome triggers
+    pub outcome_triggers: Vec<crate::application::dto::ProposedTool>,
+    /// Roll breakdown string (e.g., "1d20(18) + 3 = 21")
+    pub roll_breakdown: Option<String>,
+    /// LLM-generated alternative suggestions
+    pub suggestions: Option<Vec<String>>,
+    /// Whether suggestions are currently being generated
+    pub is_generating_suggestions: bool,
+    /// Timestamp for ordering
+    pub timestamp: u64,
+}
+
 /// Approval state for DM approval workflow
 #[derive(Clone)]
 pub struct ApprovalState {
@@ -62,6 +95,8 @@ pub struct ApprovalState {
     pub decision_history: Signal<Vec<ApprovalHistoryEntry>>,
     /// Conversation log (for DM view)
     pub conversation_log: Signal<Vec<ConversationLogEntry>>,
+    /// Pending challenge outcomes awaiting DM approval (P3.3/P3.4)
+    pub pending_challenge_outcomes: Signal<Vec<PendingChallengeOutcome>>,
 }
 
 impl ApprovalState {
@@ -71,6 +106,7 @@ impl ApprovalState {
             pending_approvals: Signal::new(Vec::new()),
             decision_history: Signal::new(Vec::new()),
             conversation_log: Signal::new(Vec::new()),
+            pending_challenge_outcomes: Signal::new(Vec::new()),
         }
     }
 
@@ -160,6 +196,41 @@ impl ApprovalState {
         self.pending_approvals.set(Vec::new());
         self.decision_history.set(Vec::new());
         self.conversation_log.set(Vec::new());
+        self.pending_challenge_outcomes.set(Vec::new());
+    }
+
+    /// Add a pending challenge outcome for DM approval (P3.3/P3.4)
+    pub fn add_pending_challenge_outcome(&mut self, outcome: PendingChallengeOutcome) {
+        self.pending_challenge_outcomes.write().push(outcome);
+    }
+
+    /// Remove a pending challenge outcome by resolution_id (P3.3/P3.4)
+    pub fn remove_pending_challenge_outcome(&mut self, resolution_id: &str) {
+        self.pending_challenge_outcomes
+            .write()
+            .retain(|o| o.resolution_id != resolution_id);
+    }
+
+    /// Update suggestions for a pending challenge outcome (P3.3/P3.4)
+    pub fn update_challenge_suggestions(&mut self, resolution_id: &str, suggestions: Vec<String>) {
+        let mut outcomes = self.pending_challenge_outcomes.write();
+        if let Some(outcome) = outcomes.iter_mut().find(|o| o.resolution_id == resolution_id) {
+            outcome.suggestions = Some(suggestions);
+            outcome.is_generating_suggestions = false;
+        }
+    }
+
+    /// Mark a challenge outcome as generating suggestions (P3.3/P3.4)
+    pub fn set_challenge_generating_suggestions(&mut self, resolution_id: &str, generating: bool) {
+        let mut outcomes = self.pending_challenge_outcomes.write();
+        if let Some(outcome) = outcomes.iter_mut().find(|o| o.resolution_id == resolution_id) {
+            outcome.is_generating_suggestions = generating;
+        }
+    }
+
+    /// Get pending challenge outcomes for display (P3.3/P3.4)
+    pub fn get_pending_challenge_outcomes(&self) -> Vec<PendingChallengeOutcome> {
+        self.pending_challenge_outcomes.read().clone()
     }
 }
 

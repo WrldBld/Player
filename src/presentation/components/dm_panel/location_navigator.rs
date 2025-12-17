@@ -2,7 +2,6 @@
 
 use dioxus::prelude::*;
 
-use crate::application::services::LocationService;
 use crate::presentation::services::use_location_service;
 
 /// Props for LocationNavigator
@@ -48,33 +47,33 @@ pub fn LocationNavigator(props: LocationNavigatorProps) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
+            class: "flex flex-col gap-4 p-4 bg-dark-surface rounded-lg",
 
             h3 {
-                style: "margin: 0; color: white; font-size: 1.125rem;",
+                class: "m-0 text-white text-lg",
                 "Location Navigator"
             }
 
             if let Some(e) = err.as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                    class: "p-3 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg text-red-500 text-sm",
                     "{e}"
                 }
             }
 
             if *loading.read() {
                 div {
-                    style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                    class: "p-8 text-center text-gray-400",
                     "Loading locations..."
                 }
             } else if locs.is_empty() {
                 div {
-                    style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                    class: "p-8 text-center text-gray-400",
                     "No locations in this world"
                 }
             } else {
                 div {
-                    style: "display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto;",
+                    class: "flex flex-col gap-3 max-h-[400px] overflow-y-auto",
                     {locs.into_iter().map(|location| {
                         let loc_id = location.id.clone();
                         rsx! {
@@ -101,23 +100,23 @@ struct LocationCardProps {
 fn LocationCard(props: LocationCardProps) -> Element {
     rsx! {
         div {
-            style: "padding: 1rem; background: #0f0f23; border-radius: 0.5rem; border: 1px solid #374151; display: flex; justify-content: space-between; align-items: center;",
-            
+            class: "p-4 bg-dark-bg rounded-lg border border-gray-700 flex justify-between items-center",
+
             div {
                 h4 {
-                    style: "margin: 0 0 0.25rem 0; color: white; font-size: 1rem;",
+                    class: "m-0 mb-1 text-white text-base",
                     "{props.location.name}"
                 }
                 if let Some(loc_type) = props.location.location_type.as_ref() {
                     div {
-                        style: "color: #9ca3af; font-size: 0.75rem;",
+                        class: "text-gray-400 text-xs",
                         "{loc_type}"
                     }
                 }
             }
             button {
                 onclick: move |_| props.on_preview.call(()),
-                style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                class: "py-2 px-4 bg-blue-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                 "Preview"
             }
         }

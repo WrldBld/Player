@@ -110,24 +110,24 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
 
     rsx! {
         div {
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000]",
             onclick: move |_| {
                 props.on_close.call(());
             },
             div {
-                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;",
+                class: "bg-dark-surface rounded-lg w-[90%] max-w-[800px] max-h-[90vh] overflow-y-auto flex flex-col",
                 onclick: |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #374151;",
+                    class: "flex justify-between items-center p-6 border-b border-gray-700",
                     h2 {
-                        style: "margin: 0; color: white; font-size: 1.25rem;",
+                        class: "m-0 text-white text-xl",
                         "Edit Character"
                     }
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                        class: "px-2 py-1 bg-transparent text-gray-400 border-0 cursor-pointer text-xl",
                         "×"
                     }
                 }
@@ -135,19 +135,19 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
                 // Error message
                 if let Some(err) = error_message.read().as_ref() {
                     div {
-                        style: "padding: 0.75rem 1.5rem; background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.875rem;",
+                        class: "px-6 py-3 bg-red-500 bg-opacity-10 border-b border-red-500 border-opacity-30 text-red-500 text-sm",
                         "{err}"
                     }
                 }
 
                 // Content
                 div {
-                    style: "padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;",
-                    
+                    class: "p-6 flex flex-col gap-6",
+
                     // Name
                     div {
                         label {
-                            style: "display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500;",
+                            class: "block mb-2 text-gray-400 text-sm font-medium",
                             "Character Name *"
                         }
                         input {
@@ -155,14 +155,14 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
                             value: "{name.read()}",
                             oninput: move |e| name.set(e.value()),
                             placeholder: "Enter character name",
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 1rem;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-base",
                         }
                     }
 
                     // Description
                     div {
                         label {
-                            style: "display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500;",
+                            class: "block mb-2 text-gray-400 text-sm font-medium",
                             "Description"
                         }
                         textarea {
@@ -170,7 +170,7 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
                             oninput: move |e| description.set(e.value()),
                             placeholder: "Describe your character...",
                             rows: 4,
-                            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 1rem; resize: vertical;",
+                            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-base resize-y",
                         }
                     }
 
@@ -179,7 +179,7 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
                         if let Some(template) = sheet_template.read().as_ref() {
                             div {
                                 h3 {
-                                    style: "margin: 0 0 1rem 0; color: white; font-size: 1rem;",
+                                    class: "m-0 mb-4 text-white text-base",
                                     "Character Sheet"
                                 }
                                 crate::presentation::components::creator::sheet_field_input::CharacterSheetForm {
@@ -194,16 +194,16 @@ pub fn EditCharacterModal(props: EditCharacterModalProps) -> Element {
 
                 // Footer
                 div {
-                    style: "padding: 1rem 1.5rem; border-top: 1px solid #374151; display: flex; justify-content: flex-end; gap: 0.75rem;",
+                    class: "px-6 py-4 border-t border-gray-700 flex justify-end gap-3",
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        class: "px-4 py-2 bg-gray-700 text-white border-0 rounded-lg cursor-pointer",
                         "Cancel"
                     }
                     button {
                         onclick: save,
                         disabled: *is_saving.read(),
-                        style: "padding: 0.5rem 1.5rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                        class: "px-6 py-2 bg-green-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                         if *is_saving.read() {
                             "Saving..."
                         } else {

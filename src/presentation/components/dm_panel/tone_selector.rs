@@ -54,32 +54,29 @@ pub fn ToneSelector(props: ToneSelectorProps) -> Element {
 
     rsx! {
         div {
-            class: "tone-selector",
-            style: "display: flex; flex-direction: column;",
+            class: "tone-selector flex flex-col",
 
             // Label
             label {
-                style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 600;",
+                class: "text-gray-400 text-xs uppercase mb-2 font-semibold",
                 "Scene Tone"
             }
 
             // Dropdown with color indicator
             div {
-                style: "display: flex; align-items: center; gap: 0.75rem;",
+                class: "flex items-center gap-3",
 
                 // Color indicator
                 div {
-                    style: format!(
-                        "width: 12px; height: 12px; border-radius: 50%; background: {}; flex-shrink: 0;",
-                        tone_color
-                    ),
+                    class: "w-3 h-3 rounded-full shrink-0",
+                    style: format!("background: {};", tone_color),
                 }
 
                 // Select dropdown
                 select {
                     value: "{props.selected}",
                     onchange: move |e| props.on_change.call(e.value()),
-                    style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem; cursor: pointer; transition: border-color 0.2s;",
+                    class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm cursor-pointer transition-colors",
 
                     for tone in TONE_OPTIONS.iter() {
                         option {
@@ -92,7 +89,7 @@ pub fn ToneSelector(props: ToneSelectorProps) -> Element {
 
             // Tone description
             div {
-                style: "margin-top: 0.5rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem; color: #9ca3af; font-size: 0.75rem;",
+                class: "mt-2 p-2 bg-black bg-opacity-20 rounded-md text-gray-400 text-xs",
 
                 match props.selected.as_str() {
                     "Serious" => rsx! { "A grave and solemn atmosphere. NPCs are thoughtful and careful." },

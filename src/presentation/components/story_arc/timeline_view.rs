@@ -139,18 +139,17 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
 
     rsx! {
         div {
-            class: "timeline-view",
-            style: "height: 100%; display: flex; flex-direction: column; gap: 1rem; padding: 1rem;",
+            class: "timeline-view h-full flex flex-col gap-4 p-4",
 
             // Header with title and add marker button
             div {
-                style: "display: flex; justify-content: space-between; align-items: center;",
+                class: "flex justify-between items-center",
 
-                h2 { style: "color: white; margin: 0; font-size: 1.25rem;", "Timeline" }
+                h2 { class: "text-white m-0 text-xl", "Timeline" }
 
                 button {
                     onclick: move |_| show_add_marker.set(true),
-                    style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;",
+                    class: "px-4 py-2 bg-purple-500 text-white border-none rounded-lg cursor-pointer flex items-center gap-2",
                     span { "+" }
                     span { "Add DM Marker" }
                 }
@@ -186,32 +185,32 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
 
             // Event list
             div {
-                style: "flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;",
+                class: "flex-1 overflow-y-auto flex flex-col gap-3",
 
                 if *is_loading.read() {
                     div {
-                        style: "display: flex; justify-content: center; align-items: center; padding: 3rem; color: #9ca3af;",
+                        class: "flex justify-center items-center p-12 text-gray-400",
                         "Loading timeline..."
                     }
                 } else if let Some(err) = error.read().as_ref() {
                     div {
-                        style: "background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; padding: 1rem; color: #ef4444;",
+                        class: "bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-4 text-red-500",
                         "Error loading timeline: {err}"
                     }
                 } else if filtered_events.is_empty() {
                     div {
-                        style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; color: #6b7280;",
+                        class: "flex flex-col items-center justify-center p-12 text-gray-500",
 
-                        div { style: "font-size: 3rem; margin-bottom: 1rem;", "📜" }
+                        div { class: "text-5xl mb-4", "📜" }
 
                         if events.read().is_empty() {
                             p { "No events recorded yet" }
-                            p { style: "font-size: 0.875rem;", "Events will appear here as gameplay progresses" }
+                            p { class: "text-sm", "Events will appear here as gameplay progresses" }
                         } else {
                             p { "No events match your filters" }
                             button {
                                 onclick: move |_| filters.set(TimelineFilterState::default()),
-                                style: "margin-top: 0.5rem; padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                                class: "mt-2 px-4 py-2 bg-gray-700 text-white border-none rounded cursor-pointer",
                                 "Clear Filters"
                             }
                         }
@@ -223,7 +222,7 @@ pub fn TimelineView(props: TimelineViewProps) -> Element {
                         let suffix = if count == 1 { "" } else { "s" };
                         rsx! {
                             div {
-                                style: "color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                                class: "text-gray-500 text-sm mb-2",
                                 "{count} event{suffix}"
                             }
                         }
@@ -336,44 +335,42 @@ fn EventDetailModal(props: EventDetailModalProps) -> Element {
 
     rsx! {
         div {
-            class: "modal-overlay",
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;",
+                class: "modal-content bg-dark-surface rounded-xl p-6 max-w-[600px] w-[90%] max-h-[80vh] overflow-y-auto",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;",
+                    class: "flex justify-between items-start mb-4",
 
                     div {
-                        style: "display: flex; align-items: center; gap: 0.75rem;",
-                        span { style: "font-size: 1.5rem;", "{icon}" }
+                        class: "flex items-center gap-3",
+                        span { class: "text-2xl", "{icon}" }
                         div {
-                            h3 { style: "color: white; margin: 0; font-size: 1.125rem;", "{type_name}" }
-                            p { style: "color: #6b7280; margin: 0; font-size: 0.75rem;", "{event.timestamp}" }
+                            h3 { class: "text-white m-0 text-lg", "{type_name}" }
+                            p { class: "text-gray-500 m-0 text-xs", "{event.timestamp}" }
                         }
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer;",
+                        class: "bg-transparent border-none text-gray-400 text-2xl cursor-pointer",
                         "×"
                     }
                 }
 
                 // Summary
                 div {
-                    style: "background: #0f0f23; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;",
-                    p { style: "color: white; margin: 0;", "{event.summary}" }
+                    class: "bg-dark-bg rounded-lg p-4 mb-4",
+                    p { class: "text-white m-0", "{event.summary}" }
                 }
 
                 // Event-specific details
                 div {
-                    style: "display: flex; flex-direction: column; gap: 0.75rem;",
+                    class: "flex flex-col gap-3",
 
                     // Show event type specific details
                     match &event.event_type {
@@ -421,10 +418,10 @@ fn EventDetailModal(props: EventDetailModalProps) -> Element {
                     // Tags
                     if !event.tags.is_empty() {
                         div {
-                            style: "display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem;",
+                            class: "flex flex-wrap gap-1 mt-2",
                             for tag in event.tags.iter() {
                                 span {
-                                    style: "background: #374151; color: #9ca3af; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;",
+                                    class: "bg-gray-700 text-gray-400 px-2 py-1 rounded text-xs",
                                     "#{tag}"
                                 }
                             }
@@ -434,7 +431,7 @@ fn EventDetailModal(props: EventDetailModalProps) -> Element {
                     // Visibility status
                     if event.is_hidden {
                         div {
-                            style: "color: #f59e0b; font-size: 0.875rem; margin-top: 0.5rem;",
+                            class: "text-amber-500 text-sm mt-2",
                             "👁 Hidden from timeline"
                         }
                     }
@@ -454,9 +451,9 @@ struct DetailRowProps {
 fn DetailRow(props: DetailRowProps) -> Element {
     rsx! {
         div {
-            style: "display: flex; gap: 0.5rem;",
-            span { style: "color: #6b7280; min-width: 80px;", "{props.label}:" }
-            span { style: "color: white;", "{props.value}" }
+            class: "flex gap-2",
+            span { class: "text-gray-500 min-w-[80px]", "{props.label}:" }
+            span { class: "text-white", "{props.value}" }
         }
     }
 }

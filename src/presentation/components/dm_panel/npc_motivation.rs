@@ -63,21 +63,20 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
 
     rsx! {
         div {
-            class: "npc-motivation",
-            style: "padding: 0.75rem; background: #0f0f23; border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #8b5cf6;",
+            class: "npc-motivation p-3 bg-dark-bg rounded-lg mb-2 border-l-4 border-purple-500",
 
             // Character name header
             h4 {
-                style: "color: #8b5cf6; font-size: 0.875rem; margin: 0 0 0.75rem 0;",
+                class: "text-purple-500 text-sm m-0 mb-3",
                 "{char_name}"
             }
 
             // Mood selector
             div {
-                style: "margin-bottom: 0.75rem;",
+                class: "mb-3",
 
                 label {
-                    style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                    class: "block text-gray-400 text-xs uppercase mb-1",
                     "Mood"
                 }
 
@@ -88,7 +87,7 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
                         updated.mood = e.value();
                         props.on_update.call(updated);
                     },
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem; cursor: pointer;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded-md text-white text-sm cursor-pointer",
 
                     for mood in MOOD_OPTIONS.iter() {
                         option {
@@ -105,9 +104,9 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
 
             // Goal input
             div {
-                style: "margin-bottom: 0.75rem;",
+                class: "mb-3",
                 label {
-                    style: "display: block; color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem;",
+                    class: "block text-gray-400 text-xs uppercase mb-1",
                     "Immediate Goal"
                 }
 
@@ -120,19 +119,19 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
                         updated.goal = e.value();
                         props.on_update.call(updated);
                     },
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem; box-sizing: border-box; transition: border-color 0.2s;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded-md text-white text-sm box-border transition-colors",
                 }
             }
 
             // Generate asset buttons
             div {
-                style: "display: flex; gap: 0.5rem; margin-top: 0.75rem;",
+                class: "flex gap-2 mt-3",
                 button {
                     onclick: move |_| {
                         generate_asset_type.set("portrait".to_string());
                         show_generate_modal.set(true);
                     },
-                    style: "flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 500;",
+                    class: "flex-1 p-2 bg-purple-500 text-white border-0 rounded-md cursor-pointer text-xs font-medium",
                     "🎨 Generate Portrait"
                 }
                 button {
@@ -140,7 +139,7 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
                         generate_asset_type.set("sprite".to_string());
                         show_generate_modal.set(true);
                     },
-                    style: "flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; font-weight: 500;",
+                    class: "flex-1 p-2 bg-purple-500 text-white border-0 rounded-md cursor-pointer text-xs font-medium",
                     "🖼️ Generate Sprite"
                 }
             }

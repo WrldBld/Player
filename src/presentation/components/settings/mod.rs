@@ -3,6 +3,7 @@
 //! Components for the Settings view, providing workflow configuration,
 //! ComfyUI integration settings, skills management, and general application preferences.
 
+pub mod app_settings;
 pub mod skills_panel;
 pub mod workflow_slot_list;
 pub mod workflow_config_editor;
@@ -29,13 +30,11 @@ pub fn SettingsView(props: SettingsViewProps) -> Element {
 
     rsx! {
         div {
-            class: "settings-view",
-            style: "height: 100%; display: flex; flex-direction: column; background: #0f0f23;",
+            class: "settings-view h-full flex flex-col bg-dark-bg",
 
             // Tab bar using router Links
             div {
-                class: "settings-tabs",
-                style: "display: flex; gap: 0.25rem; padding: 0.75rem 1rem; background: #1a1a2e; border-bottom: 1px solid #374151;",
+                class: "settings-tabs flex gap-1 py-3 px-4 bg-dark-surface border-b border-gray-700",
 
                 SettingsTabLink {
                     label: "Asset Workflows",
@@ -49,16 +48,24 @@ pub fn SettingsView(props: SettingsViewProps) -> Element {
                     world_id: props.world_id.clone(),
                     active: active_tab == "skills",
                 }
+                SettingsTabLink {
+                    label: "App Settings",
+                    subtab: "app-settings",
+                    world_id: props.world_id.clone(),
+                    active: active_tab == "app-settings",
+                }
             }
 
             // Tab content
             div {
-                class: "settings-content",
-                style: "flex: 1; overflow: hidden;",
+                class: "settings-content flex-1 overflow-hidden",
 
                 match active_tab {
                     "skills" => rsx! {
                         SkillsManagementTab { world_id: props.world_id.clone() }
+                    },
+                    "app-settings" => rsx! {
+                        app_settings::AppSettingsPanel {}
                     },
                     _ => rsx! {
                         AssetWorkflowsTab {}
@@ -80,9 +87,11 @@ struct SettingsTabLinkProps {
 
 #[component]
 fn SettingsTabLink(props: SettingsTabLinkProps) -> Element {
-    let bg_color = if props.active { "#3b82f6" } else { "transparent" };
-    let text_color = if props.active { "white" } else { "#9ca3af" };
-    let font_weight = if props.active { "500" } else { "400" };
+    let class_str = if props.active {
+        "py-2 px-4 bg-blue-500 text-white border-0 rounded-md cursor-pointer text-sm font-medium transition-all no-underline"
+    } else {
+        "py-2 px-4 bg-transparent text-gray-400 border-0 rounded-md cursor-pointer text-sm font-normal transition-all no-underline"
+    };
 
     rsx! {
         Link {
@@ -90,10 +99,7 @@ fn SettingsTabLink(props: SettingsTabLinkProps) -> Element {
                 world_id: props.world_id.clone(),
                 subtab: props.subtab.to_string(),
             },
-            style: format!(
-                "padding: 0.5rem 1rem; background: {}; color: {}; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; font-weight: {}; transition: all 0.15s; text-decoration: none;",
-                bg_color, text_color, font_weight
-            ),
+            class: "{class_str}",
             "{props.label}"
         }
     }
@@ -111,13 +117,12 @@ fn AssetWorkflowsTab() -> Element {
 
     rsx! {
         div {
-            class: "asset-workflows-tab",
-            style: "height: 100%; display: grid; grid-template-columns: 320px 1fr; gap: 1rem; padding: 1rem;",
+            class: "asset-workflows-tab h-full grid gap-4 p-4",
+            style: "grid-template-columns: 320px 1fr;",
 
             // Left panel - Workflow slots list
             div {
-                class: "left-panel",
-                style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
+                class: "left-panel flex flex-col gap-4 overflow-hidden",
 
                 workflow_slot_list::WorkflowSlotList {
                     selected_slot: selected_slot.read().clone(),
@@ -131,8 +136,7 @@ fn AssetWorkflowsTab() -> Element {
 
             // Right panel - Configuration editor
             div {
-                class: "editor-panel",
-                style: "display: flex; flex-direction: column; gap: 1rem; overflow: hidden;",
+                class: "editor-panel flex flex-col gap-4 overflow-hidden",
 
                 if let Some(slot) = selected_slot.read().clone() {
                     workflow_config_editor::WorkflowConfigEditor {
@@ -252,24 +256,23 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
 
     rsx! {
         div {
-            class: "skills-management-tab",
-            style: "height: 100%; display: flex; flex-direction: column; padding: 1rem;",
+            class: "skills-management-tab h-full flex flex-col p-4",
 
             // Header with controls
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;",
+                class: "flex justify-between items-center mb-4",
 
                 h2 {
-                    style: "color: white; margin: 0; font-size: 1.25rem;",
+                    class: "text-white m-0 text-xl",
                     "Skills Management"
                 }
 
                 div {
-                    style: "display: flex; gap: 1rem; align-items: center;",
+                    class: "flex gap-4 items-center",
 
                     // Show hidden toggle
                     label {
-                        style: "display: flex; align-items: center; gap: 0.5rem; color: #9ca3af; font-size: 0.875rem; cursor: pointer;",
+                        class: "flex items-center gap-2 text-gray-400 text-sm cursor-pointer",
                         input {
                             r#type: "checkbox",
                             checked: *show_hidden.read(),
@@ -281,7 +284,7 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
                     // Add skill button
                     button {
                         onclick: move |_| show_add_form.set(true),
-                        style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem;",
+                        class: "py-2 px-4 bg-purple-500 text-white border-0 rounded-md cursor-pointer text-sm",
                         "+ Add Custom Skill"
                     }
                 }
@@ -290,37 +293,37 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
             // Error message
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.875rem; border-radius: 0.375rem; margin-bottom: 1rem;",
+                    class: "p-3 bg-red-500 bg-opacity-10 text-red-500 text-sm rounded-md mb-4",
                     "{err}"
                 }
             }
 
             // Content area
             div {
-                style: "flex: 1; overflow-y: auto; background: #1a1a2e; border-radius: 0.5rem; padding: 1rem;",
+                class: "flex-1 overflow-y-auto bg-dark-surface rounded-lg p-4",
 
                 if *is_loading.read() {
                     div {
-                        style: "text-align: center; color: #6b7280; padding: 2rem;",
+                        class: "text-center text-gray-500 py-8",
                         "Loading skills..."
                     }
                 } else if *show_add_form.read() {
                     // Add form would go here - simplified for now
                     div {
-                        style: "padding: 1rem; background: #0f0f23; border-radius: 0.5rem;",
-                        p { style: "color: #9ca3af;", "Add skill form (coming soon)" }
+                        class: "p-4 bg-dark-bg rounded-lg",
+                        p { class: "text-gray-400", "Add skill form (coming soon)" }
                         button {
                             onclick: move |_| show_add_form.set(false),
-                            style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                            class: "py-2 px-4 bg-gray-700 text-white border-0 rounded cursor-pointer",
                             "Cancel"
                         }
                     }
                 } else if skills.read().is_empty() {
                     div {
-                        style: "text-align: center; color: #6b7280; padding: 2rem;",
-                        div { style: "font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;", "📚" }
-                        p { style: "color: #9ca3af; margin-bottom: 0.5rem;", "No skills defined for this world." }
-                        p { style: "font-size: 0.875rem;", "Skills are loaded from the rule system preset." }
+                        class: "text-center text-gray-500 py-8",
+                        div { class: "text-5xl mb-4 opacity-50", "📚" }
+                        p { class: "text-gray-400 mb-2", "No skills defined for this world." }
+                        p { class: "text-sm", "Skills are loaded from the rule system preset." }
                     }
                 } else {
                     // Skills by category
@@ -331,15 +334,15 @@ fn SkillsManagementTab(props: SkillsManagementTabProps) -> Element {
                                 rsx! {
                                     div {
                                         key: "{category:?}",
-                                        style: "margin-bottom: 1.5rem;",
+                                        class: "mb-6",
 
                                         h3 {
-                                            style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+                                            class: "text-gray-400 text-xs uppercase m-0 mb-2",
                                             "{category.display_name()} ({cat_skills.len()})"
                                         }
 
                                         div {
-                                            style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                                            class: "flex flex-col gap-1",
                                             for skill in cat_skills.iter() {
                                                 SkillRowInline {
                                                     key: "{skill.id}",
@@ -368,46 +371,48 @@ struct SkillRowInlineProps {
 
 #[component]
 fn SkillRowInline(props: SkillRowInlineProps) -> Element {
-    let row_bg = if props.skill.is_hidden { "rgba(107, 114, 128, 0.2)" } else { "#0f0f23" };
-    let name_color = if props.skill.is_hidden { "#6b7280" } else { "white" };
+    let row_class = if props.skill.is_hidden {
+        "flex items-center gap-3 py-2 px-3 bg-gray-500 bg-opacity-20 rounded"
+    } else {
+        "flex items-center gap-3 py-2 px-3 bg-dark-bg rounded"
+    };
+    let name_color = if props.skill.is_hidden { "text-gray-500" } else { "text-white" };
 
     rsx! {
         div {
-            style: format!(
-                "display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: {}; border-radius: 0.25rem;",
-                row_bg
-            ),
+            class: "{row_class}",
 
             // Visibility indicator
             div {
-                style: format!(
-                    "width: 8px; height: 8px; border-radius: 50%; {}",
-                    if props.skill.is_hidden { "background: #6b7280;" } else { "background: #10b981;" }
-                ),
+                class: if props.skill.is_hidden {
+                    "w-2 h-2 rounded-full bg-gray-500"
+                } else {
+                    "w-2 h-2 rounded-full bg-green-500"
+                }
             }
 
             // Skill info
             div {
-                style: "flex: 1; min-width: 0;",
+                class: "flex-1 min-w-0",
 
                 div {
-                    style: "display: flex; align-items: center; gap: 0.5rem;",
+                    class: "flex items-center gap-2",
 
                     span {
-                        style: format!("color: {}; font-weight: 500;", name_color),
+                        class: "{name_color} font-medium",
                         "{props.skill.name}"
                     }
 
                     if let Some(attr) = &props.skill.base_attribute {
                         span {
-                            style: "color: #8b5cf6; font-size: 0.75rem; background: rgba(139, 92, 246, 0.1); padding: 0.125rem 0.375rem; border-radius: 0.25rem;",
+                            class: "text-purple-500 text-xs bg-purple-500 bg-opacity-10 py-0.5 px-1.5 rounded",
                             "{attr}"
                         }
                     }
 
                     if props.skill.is_custom {
                         span {
-                            style: "color: #f59e0b; font-size: 0.625rem; background: rgba(245, 158, 11, 0.1); padding: 0.125rem 0.375rem; border-radius: 0.25rem;",
+                            class: "text-amber-500 text-xs bg-amber-500 bg-opacity-10 py-0.5 px-1.5 rounded",
                             "Custom"
                         }
                     }
@@ -415,7 +420,7 @@ fn SkillRowInline(props: SkillRowInlineProps) -> Element {
 
                 if !props.skill.description.is_empty() {
                     p {
-                        style: "color: #6b7280; font-size: 0.75rem; margin: 0.25rem 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                        class: "text-gray-500 text-xs mt-1 mb-0 whitespace-nowrap overflow-hidden text-ellipsis",
                         "{props.skill.description}"
                     }
                 }
@@ -430,25 +435,24 @@ fn SkillRowInline(props: SkillRowInlineProps) -> Element {
 fn WorkflowEmptyStatePanel() -> Element {
     rsx! {
         div {
-            class: "empty-state",
-            style: "flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a2e; border-radius: 0.5rem; color: #6b7280;",
+            class: "empty-state flex-1 flex flex-col items-center justify-center bg-dark-surface rounded-lg text-gray-500",
 
             div {
-                style: "text-align: center; max-width: 300px;",
+                class: "text-center max-w-xs",
 
                 // Gear icon
                 div {
-                    style: "font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;",
+                    class: "text-5xl mb-4 opacity-50",
                     "⚙️"
                 }
 
                 h2 {
-                    style: "color: #9ca3af; margin-bottom: 0.5rem; font-size: 1.25rem;",
+                    class: "text-gray-400 mb-2 text-xl",
                     "Workflow Configuration"
                 }
 
                 p {
-                    style: "color: #6b7280; font-size: 0.875rem; line-height: 1.5;",
+                    class: "text-gray-500 text-sm leading-relaxed",
                     "Select a workflow slot from the left panel to view or edit its configuration. Click 'Configure' to upload a new ComfyUI workflow."
                 }
             }

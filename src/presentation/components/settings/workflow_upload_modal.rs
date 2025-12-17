@@ -167,41 +167,39 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
     rsx! {
         // Modal backdrop
         div {
-            class: "modal-backdrop",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-backdrop fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
             onclick: move |_| props.on_close.call(()),
 
             // Modal content
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; width: 90%; max-width: 700px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;",
+                class: "modal-content bg-dark-surface rounded-xl w-11/12 max-w-2xl max-h-screen-80 flex flex-col overflow-hidden",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #374151;",
+                    class: "flex items-center justify-between py-4 px-6 border-b border-gray-700",
 
                     div {
                         h2 {
-                            style: "color: white; font-size: 1.25rem; margin: 0;",
+                            class: "text-white text-xl m-0",
                             "Configure Workflow"
                         }
                         p {
-                            style: "color: #6b7280; font-size: 0.875rem; margin: 0.25rem 0 0 0;",
+                            class: "text-gray-500 text-sm mt-1 mb-0",
                             "Slot: {props.slot}"
                         }
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #6b7280; font-size: 1.5rem; cursor: pointer; padding: 0.25rem;",
+                        class: "bg-transparent border-0 text-gray-500 text-2xl cursor-pointer p-1",
                         "×"
                     }
                 }
 
                 // Progress indicator
                 div {
-                    style: "display: flex; gap: 0.5rem; padding: 1rem 1.5rem; background: rgba(0, 0, 0, 0.2);",
+                    class: "flex gap-2 py-4 px-6 bg-black bg-opacity-20",
 
                     StepIndicator {
                         number: 1,
@@ -225,12 +223,12 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
 
                 // Content
                 div {
-                    style: "flex: 1; overflow-y: auto; padding: 1.5rem;",
+                    class: "flex-1 overflow-y-auto p-6",
 
                     // Error display
                     if let Some(err) = error.read().as_ref() {
                         div {
-                            style: "padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; margin-bottom: 1rem;",
+                            class: "py-3 px-4 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg text-red-500 mb-4",
                             "{err}"
                         }
                     }
@@ -270,7 +268,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
 
                 // Footer
                 div {
-                    style: "display: flex; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid #374151;",
+                    class: "flex justify-between py-4 px-6 border-t border-gray-700",
 
                     // Back button
                     {
@@ -286,7 +284,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
                                             _ => {}
                                         }
                                     },
-                                    style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                                    class: "py-2 px-4 bg-gray-700 text-white border-0 rounded-lg cursor-pointer",
                                     "← Back"
                                 }
                             }
@@ -307,7 +305,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
                                     button {
                                         onclick: do_analyze,
                                         disabled: name_empty || json_empty || analyzing,
-                                        style: "padding: 0.5rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                                        class: "py-2 px-6 bg-blue-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                                         if analyzing { "Analyzing..." } else { "Analyze Workflow →" }
                                     }
                                 }
@@ -316,7 +314,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
                             UploadStep::Configure => rsx! {
                                 button {
                                     onclick: move |_| current_step.set(UploadStep::Review),
-                                    style: "padding: 0.5rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                                    class: "py-2 px-6 bg-blue-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                                     "Review →"
                                 }
                             },
@@ -327,7 +325,7 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
                                     button {
                                         onclick: do_save,
                                         disabled: saving,
-                                        style: "padding: 0.5rem 1.5rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                                        class: "py-2 px-6 bg-green-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                                         if saving { "Saving..." } else { "Save Configuration" }
                                     }
                                 }
@@ -343,39 +341,36 @@ pub fn WorkflowUploadModal(props: WorkflowUploadModalProps) -> Element {
 /// Step indicator component
 #[component]
 fn StepIndicator(number: u8, label: &'static str, is_active: bool, is_complete: bool) -> Element {
-    let bg_color = if is_active || is_complete {
-        "#3b82f6"
+    let bg_class = if is_active || is_complete {
+        "w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-semibold"
     } else {
-        "#374151"
+        "w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white font-semibold"
     };
-    let text_color = if is_active {
-        "white"
+    let text_class = if is_active {
+        "text-white text-sm"
     } else if is_complete {
-        "#9ca3af"
+        "text-gray-400 text-sm"
     } else {
-        "#6b7280"
+        "text-gray-500 text-sm"
     };
 
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.5rem;",
+            class: "flex items-center gap-2",
 
             div {
-                style: format!(
-                    "width: 24px; height: 24px; border-radius: 50%; background: {}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: 600;",
-                    bg_color
-                ),
+                class: "{bg_class}",
                 if is_complete { "✓" } else { "{number}" }
             }
 
             span {
-                style: format!("color: {}; font-size: 0.875rem;", text_color),
+                class: "{text_class}",
                 "{label}"
             }
 
             if number < 3 {
                 div {
-                    style: "width: 40px; height: 2px; background: #374151; margin: 0 0.5rem;",
+                    class: "w-10 h-0.5 bg-gray-700 mx-2",
                 }
             }
         }
@@ -395,12 +390,12 @@ struct UploadStepContentProps {
 fn UploadStepContent(props: UploadStepContentProps) -> Element {
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem;",
+            class: "flex flex-col gap-4",
 
             // Workflow name input
             div {
                 label {
-                    style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                    class: "block text-gray-400 text-sm mb-2",
                     "Workflow Name"
                 }
                 input {
@@ -408,25 +403,25 @@ fn UploadStepContent(props: UploadStepContentProps) -> Element {
                     value: "{props.workflow_name}",
                     oninput: move |e| props.on_name_change.call(e.value()),
                     placeholder: "e.g., SD1.5 Portrait Generator",
-                    style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 1rem; box-sizing: border-box;",
+                    class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-base box-border",
                 }
             }
 
             // JSON textarea
             div {
                 label {
-                    style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                    class: "block text-gray-400 text-sm mb-2",
                     "Workflow JSON (API Format)"
                 }
                 p {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                    class: "text-gray-500 text-xs mb-2",
                     "In ComfyUI, use 'Save (API Format)' from the menu to export the workflow in the correct format."
                 }
                 textarea {
                     value: "{props.workflow_json}",
                     oninput: move |e| props.on_json_change.call(e.value()),
                     placeholder: "Paste your ComfyUI workflow JSON here...",
-                    style: "width: 100%; height: 300px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-family: monospace; font-size: 0.875rem; resize: vertical; box-sizing: border-box;",
+                    class: "w-full h-75 p-3 bg-dark-bg border border-gray-700 rounded-lg text-white font-mono text-sm resize-y box-border",
                 }
             }
         }
@@ -447,19 +442,19 @@ struct ConfigureStepContentProps {
 fn ConfigureStepContent(props: ConfigureStepContentProps) -> Element {
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1.5rem;",
+            class: "flex flex-col gap-6",
 
             // Analysis summary
             div {
-                style: "display: flex; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border-radius: 0.5rem;",
+                class: "flex gap-4 p-4 bg-green-500 bg-opacity-10 rounded-lg",
 
                 div {
-                    style: "color: #22c55e; font-size: 1.5rem;",
+                    class: "text-green-500 text-2xl",
                     "✓"
                 }
                 div {
-                    h3 { style: "color: #22c55e; margin: 0 0 0.25rem 0; font-size: 1rem;", "Valid Workflow" }
-                    p { style: "color: #9ca3af; margin: 0; font-size: 0.875rem;",
+                    h3 { class: "text-green-500 m-0 mb-1 text-base", "Valid Workflow" }
+                    p { class: "text-gray-400 m-0 text-sm",
                         "{props.analysis.node_count} nodes, {props.analysis.input_count} configurable inputs"
                     }
                 }
@@ -467,8 +462,8 @@ fn ConfigureStepContent(props: ConfigureStepContentProps) -> Element {
 
             // Primary prompt mapping
             div {
-                h4 { style: "color: white; font-size: 0.875rem; margin-bottom: 0.5rem;", "Primary Prompt Mapping" }
-                p { style: "color: #6b7280; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                h4 { class: "text-white text-sm mb-2", "Primary Prompt Mapping" }
+                p { class: "text-gray-500 text-xs mb-2",
                     "Select the text input that will receive the main generation prompt."
                 }
                 TextInputSelector {
@@ -480,8 +475,8 @@ fn ConfigureStepContent(props: ConfigureStepContentProps) -> Element {
 
             // Negative prompt mapping
             div {
-                h4 { style: "color: white; font-size: 0.875rem; margin-bottom: 0.5rem;", "Negative Prompt Mapping (Optional)" }
-                p { style: "color: #6b7280; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                h4 { class: "text-white text-sm mb-2", "Negative Prompt Mapping (Optional)" }
+                p { class: "text-gray-500 text-xs mb-2",
                     "Select the text input for negative prompts, if applicable."
                 }
                 TextInputSelector {
@@ -520,7 +515,7 @@ fn TextInputSelector(props: TextInputSelectorProps) -> Element {
                     props.on_select.call(input);
                 }
             },
-            style: "width: 100%; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 0.875rem;",
+            class: "w-full p-3 bg-dark-bg border border-gray-700 rounded-lg text-white text-sm",
 
             option { value: "", "(None)" }
 
@@ -554,12 +549,12 @@ struct ReviewStepContentProps {
 fn ReviewStepContent(props: ReviewStepContentProps) -> Element {
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem;",
+            class: "flex flex-col gap-4",
 
-            h3 { style: "color: white; margin: 0; font-size: 1.125rem;", "Review Configuration" }
+            h3 { class: "text-white m-0 text-lg", "Review Configuration" }
 
             div {
-                style: "display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.5rem;",
+                class: "flex flex-col gap-3 p-4 bg-black bg-opacity-20 rounded-lg",
 
                 ReviewRow { label: "Workflow Name", value: props.workflow_name.clone() }
 
@@ -584,7 +579,7 @@ fn ReviewStepContent(props: ReviewStepContentProps) -> Element {
             }
 
             p {
-                style: "color: #6b7280; font-size: 0.875rem;",
+                class: "text-gray-500 text-sm",
                 "Click 'Save Configuration' to save this workflow. You can edit input defaults after saving."
             }
         }
@@ -595,10 +590,10 @@ fn ReviewStepContent(props: ReviewStepContentProps) -> Element {
 fn ReviewRow(label: &'static str, value: String) -> Element {
     rsx! {
         div {
-            style: "display: flex; justify-content: space-between;",
+            class: "flex justify-between",
 
-            span { style: "color: #9ca3af;", "{label}" }
-            span { style: "color: white;", "{value}" }
+            span { class: "text-gray-400", "{label}" }
+            span { class: "text-white", "{value}" }
         }
     }
 }

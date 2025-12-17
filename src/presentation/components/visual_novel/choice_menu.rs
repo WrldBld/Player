@@ -28,8 +28,7 @@ pub fn ChoiceMenu(props: ChoiceMenuProps) -> Element {
 
     rsx! {
         div {
-            class: "choice-menu",
-            style: "display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;",
+            class: "choice-menu flex flex-col gap-2 mt-4",
 
             // Standard choice buttons
             for choice in props.choices.iter().filter(|c| !c.is_custom_input) {
@@ -96,11 +95,10 @@ pub fn CustomInputField(props: CustomInputFieldProps) -> Element {
 
     rsx! {
         div {
-            class: "custom-input-container",
-            style: "display: flex; gap: 0.5rem; margin-top: 0.5rem;",
+            class: "custom-input-container flex gap-2 mt-2",
 
             input {
-                class: "input",
+                class: "input flex-1",
                 r#type: "text",
                 placeholder: "Type your response...",
                 value: "{value}",
@@ -113,7 +111,6 @@ pub fn CustomInputField(props: CustomInputFieldProps) -> Element {
                         }
                     }
                 },
-                style: "flex: 1;",
             }
 
             button {
@@ -141,8 +138,7 @@ pub struct ContinuePromptProps {
 pub fn ContinuePrompt(props: ContinuePromptProps) -> Element {
     rsx! {
         button {
-            class: "continue-prompt",
-            style: "color: #9ca3af; font-size: 0.875rem; background: none; border: none; cursor: pointer; padding: 0.5rem 0; text-align: left; animation: pulse 2s infinite;",
+            class: "continue-prompt text-gray-400 text-sm bg-transparent border-none cursor-pointer py-2 px-0 text-left animate-pulse",
             onclick: move |_| props.on_continue.call(()),
 
             "Click to continue..."

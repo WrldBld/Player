@@ -66,60 +66,59 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
 
     rsx! {
         div {
-            class: "asset-gallery",
-            style: "background: #0f0f23; border-radius: 0.5rem; padding: 0.75rem;",
+            class: "asset-gallery bg-dark-bg rounded-lg p-3",
 
             // Error display
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.25rem; color: #ef4444; font-size: 0.875rem; margin-bottom: 0.75rem;",
+                    class: "p-3 bg-red-500 bg-opacity-10 rounded text-red-500 text-sm mb-3",
                     "Error: {err}"
                 }
             }
 
             // Asset type tabs
             div {
-                class: "asset-tabs",
-                style: "display: flex; gap: 0.25rem; margin-bottom: 0.75rem;",
+                class: "asset-tabs flex gap-1 mb-3",
 
                 for (type_id, type_label) in ASSET_TYPES {
-                    button {
-                        onclick: {
-                            let type_id = type_id.to_string();
-                            move |_| selected_asset_type.set(type_id.clone())
-                        },
-                        style: format!(
-                            "padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 0.25rem; cursor: pointer; border: none; {}",
-                            if *selected_asset_type.read() == *type_id {
-                                "background: #3b82f6; color: white;"
-                            } else {
-                                "background: transparent; color: #9ca3af;"
+                    {
+                        let btn_class = if *selected_asset_type.read() == *type_id {
+                            "p-1 px-2 text-xs rounded cursor-pointer border-0 bg-blue-500 text-white"
+                        } else {
+                            "p-1 px-2 text-xs rounded cursor-pointer border-0 bg-transparent text-gray-400"
+                        };
+                        rsx! {
+                            button {
+                                onclick: {
+                                    let type_id = type_id.to_string();
+                                    move |_| selected_asset_type.set(type_id.clone())
+                                },
+                                class: "{btn_class}",
+                                "{type_label}"
                             }
-                        ),
-                        "{type_label}"
+                        }
                     }
                 }
             }
 
             // Asset grid
             div {
-                class: "asset-grid",
-                style: "display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 80px;",
+                class: "asset-grid flex flex-wrap gap-2 min-h-20",
 
                 if entity_id.is_empty() {
                     // New entity - show message about generating assets after creation
                     div {
-                        style: "width: 100%; text-align: center; color: #6b7280; font-size: 0.875rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 0.25rem; border: 1px dashed #8b5cf6;",
+                        class: "w-full text-center text-gray-500 text-sm p-4 bg-purple-500 bg-opacity-10 rounded border border-dashed border-purple-500",
                         "Save the {entity_type} first to generate assets"
                     }
                 } else if *is_loading.read() {
                     div {
-                        style: "width: 100%; text-align: center; color: #6b7280; font-size: 0.875rem; padding: 1rem;",
+                        class: "w-full text-center text-gray-500 text-sm p-4",
                         "Loading assets..."
                     }
                 } else if filtered_assets.is_empty() {
                     div {
-                        style: "width: 100%; text-align: center; color: #6b7280; font-size: 0.875rem; padding: 1rem;",
+                        class: "w-full text-center text-gray-500 text-sm p-4",
                         "No {selected_asset_type} assets yet"
                     }
                 } else {
@@ -157,7 +156,7 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                                             }
                                         });
                                     },
-                                    on_use_as_reference: None, // TODO: Implement "Use as Reference" action
+                                    on_use_as_reference: None, // TODO (Phase 18C.3): Implement "Use as Reference" for style transfer
                                 }
                             }
                         }
@@ -168,8 +167,8 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
                 if !entity_id.is_empty() {
                 button {
                     onclick: move |_| show_generate_modal.set(true),
-                    style: "width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); border: 2px dashed #8b5cf6; border-radius: 0.5rem; cursor: pointer; color: #8b5cf6; font-size: 0.75rem;",
-                    span { style: "font-size: 1.5rem;", "+" }
+                    class: "w-16 h-16 flex flex-col items-center justify-center bg-purple-500 bg-opacity-20 border-2 border-dashed border-purple-500 rounded-lg cursor-pointer text-purple-500 text-xs",
+                    span { class: "text-2xl", "+" }
                     span { "Generate" }
                     }
                 }
@@ -217,10 +216,10 @@ struct AssetThumbnailProps {
 fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
     let mut show_menu = use_signal(|| false);
 
-    let border = if props.is_active {
-        "2px solid #22c55e"
+    let border_class = if props.is_active {
+        "border-2 border-green-500"
     } else {
-        "2px solid transparent"
+        "border-2 border-transparent"
     };
 
     let id_for_activate = props.id.clone();
@@ -229,10 +228,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
 
     rsx! {
         div {
-            style: format!(
-                "width: 64px; height: 64px; background: #1a1a2e; border: {}; border-radius: 0.5rem; cursor: pointer; position: relative; overflow: hidden;",
-                border
-            ),
+            class: format!("w-16 h-16 bg-dark-surface {} rounded-lg cursor-pointer relative overflow-hidden", border_class),
             oncontextmenu: move |e| {
                 e.prevent_default();
                 show_menu.toggle();
@@ -248,12 +244,12 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
                         show_menu.set(false);
                     }
                 },
-                style: "width: 100%; height: 100%; background: linear-gradient(135deg, #374151 0%, #1f2937 100%); display: flex; align-items: center; justify-content: center;",
+                class: "w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800",
 
                 // Active indicator
                 if props.is_active {
                     div {
-                        style: "position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; background: #22c55e; border-radius: 50%;",
+                        class: "absolute top-0.5 right-0.5 w-2 h-2 bg-green-500 rounded-full",
                     }
                 }
             }
@@ -261,7 +257,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
             // Label
             if let Some(label) = &props.label {
                 div {
-                    style: "position: absolute; bottom: 0; left: 0; right: 0; padding: 2px; background: rgba(0,0,0,0.7); color: white; font-size: 0.625rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                    class: "absolute bottom-0 left-0 right-0 p-0.5 bg-black bg-opacity-70 text-white text-xs text-center overflow-hidden text-ellipsis whitespace-nowrap",
                     "{label}"
                 }
             }
@@ -269,7 +265,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
             // Context menu
             if *show_menu.read() {
                 div {
-                    style: "position: absolute; top: 100%; left: 0; right: 0; background: #1f2937; border: 1px solid #374151; border-radius: 0.25rem; z-index: 100; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);",
+                    class: "absolute top-full left-0 right-0 bg-gray-800 border border-gray-700 rounded z-100 shadow-lg",
 
                     if !props.is_active {
                         button {
@@ -281,7 +277,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
                                     show_menu.set(false);
                                 }
                             },
-                            style: "display: block; width: 100%; padding: 0.5rem; text-align: left; background: transparent; color: white; border: none; cursor: pointer; font-size: 0.75rem; border-bottom: 1px solid #374151;",
+                            class: "block w-full p-2 text-left bg-transparent text-white border-0 cursor-pointer text-xs border-b border-gray-700",
                             "Activate"
                         }
                     }
@@ -296,7 +292,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
                                     show_menu.set(false);
                                 }
                             },
-                            style: "display: block; width: 100%; padding: 0.5rem; text-align: left; background: transparent; color: #8b5cf6; border: none; cursor: pointer; font-size: 0.75rem; border-bottom: 1px solid #374151;",
+                            class: "block w-full p-2 text-left bg-transparent text-purple-500 border-0 cursor-pointer text-xs border-b border-gray-700",
                             "Use as Style Reference"
                         }
                     }
@@ -310,7 +306,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
                                 show_menu.set(false);
                             }
                         },
-                        style: "display: block; width: 100%; padding: 0.5rem; text-align: left; background: transparent; color: #ef4444; border: none; cursor: pointer; font-size: 0.75rem;",
+                        class: "block w-full p-2 text-left bg-transparent text-red-500 border-0 cursor-pointer text-xs",
                         "Delete"
                     }
                 }
@@ -355,37 +351,35 @@ fn GenerateAssetModal(
 
     rsx! {
         div {
-            class: "modal-overlay",
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-1000",
             onclick: move |_| on_close.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 500px;",
+                class: "modal-content bg-dark-surface rounded-xl p-6 w-11/12 max-w-lg",
                 onclick: move |e| e.stop_propagation(),
 
-                h3 { style: "color: white; margin: 0 0 1rem 0;", "Generate {asset_type}" }
+                h3 { class: "text-white m-0 mb-4", "Generate {asset_type}" }
 
                 // Workflow slot field (optional hint text)
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Workflow Slot (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Workflow Slot (optional)" }
                     input {
                         r#type: "text",
                         value: "{workflow_slot}",
                         oninput: move |e| workflow_slot.set(e.value()),
                         placeholder: "Leave empty for default workflow...",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                        class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                     }
                 }
 
                 // Style Reference field
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Style Reference (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Style Reference (optional)" }
                     if let Some(ref_id) = style_reference_id.read().as_ref() {
                         div {
-                            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem;",
+                            class: "flex items-center gap-2 p-2 bg-dark-bg border border-gray-700 rounded",
                             span {
-                                style: "flex: 1; color: white; font-size: 0.875rem;",
+                                class: "flex-1 text-white text-sm",
                                 if let Some(label) = style_reference_label.read().as_ref() {
                                     "{label}"
                                 } else {
@@ -397,16 +391,16 @@ fn GenerateAssetModal(
                                     style_reference_id.set(None);
                                     style_reference_label.set(None);
                                 },
-                                style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                                class: "py-1 px-2 bg-red-500 text-white border-0 rounded cursor-pointer text-xs",
                                 "Clear"
                             }
                         }
                     } else {
                         div {
-                            style: "display: flex; gap: 0.5rem;",
+                            class: "flex gap-2",
                             button {
                                 onclick: move |_| show_style_selector.set(true),
-                                style: "flex: 1; padding: 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "flex-1 p-2 bg-gray-700 text-white border-0 rounded cursor-pointer text-sm",
                                 "Select from Gallery..."
                             }
                         }
@@ -416,15 +410,14 @@ fn GenerateAssetModal(
                 // Style reference selector modal
                 if *show_style_selector.read() {
                     div {
-                        class: "modal-overlay",
-                        style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1001;",
+                        class: "modal-overlay fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-1001",
                         onclick: move |_| show_style_selector.set(false),
                         div {
-                            style: "background: #1a1a2e; border-radius: 0.75rem; padding: 1.5rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;",
+                            class: "bg-dark-surface rounded-xl p-6 w-11/12 max-w-2xl max-h-screen-80 overflow-y-auto",
                             onclick: move |e| e.stop_propagation(),
-                            h3 { style: "color: white; margin: 0 0 1rem 0;", "Select Style Reference" }
+                            h3 { class: "text-white m-0 mb-4", "Select Style Reference" }
                             div {
-                                style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem;",
+                                class: "grid gap-3 grid-cols-[repeat(auto-fill,minmax(120px,1fr))]",
                                 for asset in available_assets.read().iter() {
                                     button {
                                         onclick: {
@@ -436,16 +429,16 @@ fn GenerateAssetModal(
                                                 show_style_selector.set(false);
                                             }
                                         },
-                                        style: "display: flex; flex-direction: column; align-items: center; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer; transition: all 0.2s;",
+                                        class: "flex flex-col items-center p-2 bg-dark-bg border border-gray-700 rounded cursor-pointer transition-all",
                                         onmouseenter: move |_| {
                                             // Could add hover effect
                                         },
                                         div {
-                                            style: "width: 80px; height: 80px; background: #374151; border-radius: 0.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;",
-                                            span { style: "color: #9ca3af; font-size: 0.75rem;", "📷" }
+                                            class: "w-20 h-20 bg-gray-700 rounded mb-2 flex items-center justify-center",
+                                            span { class: "text-gray-400 text-xs", "📷" }
                                         }
                                         span {
-                                            style: "color: white; font-size: 0.75rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;",
+                                            class: "text-white text-xs text-center overflow-hidden text-ellipsis whitespace-nowrap w-full",
                                             "{asset.label.as_ref().unwrap_or(&asset.id)}"
                                         }
                                     }
@@ -453,7 +446,7 @@ fn GenerateAssetModal(
                             }
                             if available_assets.read().is_empty() {
                                 div {
-                                    style: "color: #6b7280; text-align: center; padding: 2rem;",
+                                    class: "text-gray-500 text-center p-8",
                                     "No assets available for style reference"
                                 }
                             }
@@ -462,31 +455,31 @@ fn GenerateAssetModal(
                 }
 
                 // Prompt field
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Prompt" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Prompt" }
                     textarea {
                         value: "{prompt}",
                         oninput: move |e| prompt.set(e.value()),
                         placeholder: "Describe the {asset_type} you want to generate...",
-                        style: "width: 100%; min-height: 80px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                        class: "w-full min-h-20 p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                     }
                 }
 
                 // Negative prompt field
-                div { style: "margin-bottom: 1rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Negative Prompt (optional)" }
+                div { class: "mb-4",
+                    label { class: "block text-gray-400 text-sm mb-1", "Negative Prompt (optional)" }
                     input {
                         r#type: "text",
                         value: "{negative_prompt}",
                         oninput: move |e| negative_prompt.set(e.value()),
                         placeholder: "Things to avoid...",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                        class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white box-border",
                     }
                 }
 
                 // Variation count
-                div { style: "margin-bottom: 1.5rem;",
-                    label { style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;", "Variations: {count}" }
+                div { class: "mb-6",
+                    label { class: "block text-gray-400 text-sm mb-1", "Variations: {count}" }
                     input {
                         r#type: "range",
                         min: "1",
@@ -497,16 +490,16 @@ fn GenerateAssetModal(
                                 count.set(v);
                             }
                         },
-                        style: "width: 100%;",
+                        class: "w-full",
                     }
                 }
 
                 // Action buttons
-                div { style: "display: flex; justify-content: flex-end; gap: 0.5rem;",
+                div { class: "flex justify-end gap-2",
                     button {
                         onclick: move |_| on_close.call(()),
                         disabled: *is_generating.read(),
-                        style: "padding: 0.5rem 1rem; background: transparent; color: #9ca3af; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer;",
+                        class: "py-2 px-4 bg-transparent text-gray-400 border border-gray-700 rounded cursor-pointer",
                         "Cancel"
                     }
                     button {
@@ -533,7 +526,7 @@ fn GenerateAssetModal(
                             }
                         },
                         disabled: *is_generating.read(),
-                        style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500;",
+                        class: "py-2 px-4 bg-purple-500 text-white border-0 rounded cursor-pointer font-medium",
                         if *is_generating.read() { "Generating..." } else { "Generate" }
                     }
                 }

@@ -15,16 +15,11 @@ use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, Di
 use crate::presentation::services::{use_character_service, use_world_service};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect};
 
-/// Props for PCView
-#[derive(Props, Clone, PartialEq)]
-pub struct PCViewProps {
-    /// Handler for back button
-    pub on_back: EventHandler<()>,
-}
-
 /// Player Character View - visual novel gameplay interface
+///
+/// Connection handling and back navigation are provided by WorldSessionLayout wrapper.
 #[component]
-pub fn PCView(props: PCViewProps) -> Element {
+pub fn PCView() -> Element {
     // Get global state from context
     let game_state = use_game_state();
     let mut dialogue_state = use_dialogue_state();
@@ -67,32 +62,24 @@ pub fn PCView(props: PCViewProps) -> Element {
 
     rsx! {
         div {
-            class: "pc-view",
-            style: "height: 100%; display: flex; flex-direction: column; position: relative;",
+            class: "pc-view h-full flex flex-col relative",
 
-            // Back button
-            button {
-                onclick: move |_| props.on_back.call(()),
-                style: "position: absolute; top: 1rem; left: 1rem; z-index: 100; padding: 0.5rem 1rem; background: rgba(0,0,0,0.5); color: white; border: 1px solid #374151; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
-                "< Back"
-            }
-
-            // Connection status and location indicator
+            // Location and status indicator (top right)
             div {
-                style: "position: absolute; top: 1rem; right: 1rem; z-index: 100; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;",
-                
+                class: "absolute top-4 right-4 z-[100] flex flex-col gap-2 items-end",
+
                 // Location name
                 if let Some(scene) = game_state.current_scene.read().as_ref() {
                     div {
-                        style: "padding: 0.5rem 1rem; background: rgba(0,0,0,0.7); color: white; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;",
+                        class: "px-4 py-2 bg-black/70 text-white rounded-lg text-sm font-medium",
                         "📍 {scene.location_name}"
                     }
                 }
-                
+
                 // Connection status
             if !is_connected {
                 div {
-                        style: "padding: 0.5rem 1rem; background: rgba(239,68,68,0.8); color: white; border-radius: 0.5rem; font-size: 0.75rem;",
+                        class: "px-4 py-2 bg-red-500/80 text-white rounded-lg text-xs",
                     "Disconnected"
                     }
                 }
@@ -121,8 +108,7 @@ pub fn PCView(props: PCViewProps) -> Element {
 
             // Dialogue box (fixed at bottom)
             div {
-                class: "dialogue-container",
-                style: "position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;",
+                class: "dialogue-container absolute bottom-0 left-0 right-0 z-10",
 
                 if has_dialogue {
                     DialogueBox {
@@ -235,16 +221,15 @@ pub fn PCView(props: PCViewProps) -> Element {
                 if *is_loading_sheet.read() {
                     // Loading state
                     div {
-                        class: "character-sheet-overlay",
-                        style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
+                        class: "character-sheet-overlay fixed inset-0 bg-black/85 z-[1000] flex items-center justify-center p-8",
                         onclick: move |_| show_character_sheet.set(false),
 
                         div {
-                            style: "background: #1a1a2e; border-radius: 1rem; padding: 2rem; max-width: 400px; text-align: center;",
+                            class: "bg-dark-surface rounded-xl p-8 max-w-md text-center",
                             onclick: move |e| e.stop_propagation(),
 
                             div {
-                                style: "color: #9ca3af; font-size: 1.25rem;",
+                                class: "text-gray-400 text-xl",
                                 "Loading character sheet..."
                             }
                         }
@@ -264,34 +249,33 @@ pub fn PCView(props: PCViewProps) -> Element {
                             .unwrap_or_default();
                         rsx! {
                             div {
-                                class: "character-sheet-overlay",
-                                style: "position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;",
+                                class: "character-sheet-overlay fixed inset-0 bg-black/85 z-[1000] flex items-center justify-center p-8",
                                 onclick: move |_| show_character_sheet.set(false),
 
                                 div {
-                                    style: "background: #1a1a2e; border-radius: 1rem; padding: 2rem; max-width: 400px; text-align: center;",
+                                    class: "bg-dark-surface rounded-xl p-8 max-w-md text-center",
                                     onclick: move |e| e.stop_propagation(),
 
                                     h2 {
-                                        style: "color: #f3f4f6; margin: 0 0 1rem 0;",
+                                        class: "text-gray-100 m-0 mb-4",
                                         "Character Sheet"
                                     }
 
                                     if characters.is_empty() {
                                         p {
-                                            style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
+                                            class: "text-gray-400 m-0 mb-6",
                                             "No characters available in this world."
                                         }
                                     } else {
                                         p {
-                                            style: "color: #9ca3af; margin: 0 0 1.5rem 0;",
+                                            class: "text-gray-400 m-0 mb-6",
                                             "No character sheet template available for this world. The DM may need to configure the rule system."
                                         }
                                     }
 
                                     button {
                                         onclick: move |_| show_character_sheet.set(false),
-                                        style: "padding: 0.5rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                                        class: "py-2 px-6 bg-gray-700 text-white border-0 rounded-lg cursor-pointer",
                                         "Close"
                                     }
                                 }

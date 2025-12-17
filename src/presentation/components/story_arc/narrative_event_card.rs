@@ -26,71 +26,70 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
     let event = &props.event;
 
     // Determine status color and label
-    let (status_label, status_color) = if event.is_triggered {
-        ("Triggered", "#22c55e")
+    let (status_label, status_color_class) = if event.is_triggered {
+        ("Triggered", "text-green-500")
     } else if event.is_active {
-        ("Active", "#3b82f6")
+        ("Active", "text-blue-500")
     } else {
-        ("Inactive", "#6b7280")
+        ("Inactive", "text-gray-500")
     };
 
     // Priority indicator
-    let priority_color = match event.priority {
-        p if p >= 8 => "#ef4444",
-        p if p >= 5 => "#f59e0b",
-        p if p >= 3 => "#3b82f6",
-        _ => "#6b7280",
+    let priority_color_class = match event.priority {
+        p if p >= 8 => "bg-red-500",
+        p if p >= 5 => "bg-amber-500",
+        p if p >= 3 => "bg-blue-500",
+        _ => "bg-gray-500",
     };
+
+    // Conditional classes for card
+    let card_border_class = if event.is_active { "border-gray-700" } else { "border-gray-800" };
+    let card_opacity_class = if event.is_active { "opacity-100" } else { "opacity-70" };
+
+    // Favorite button conditional classes
+    let favorite_color_class = if event.is_favorite { "text-amber-500" } else { "text-gray-500 opacity-50" };
+
+    // Active toggle conditional classes
+    let active_toggle_class = if event.is_active { "text-green-500" } else { "text-gray-500" };
 
     rsx! {
         div {
-            class: "narrative-event-card",
-            style: format!(
-                "background: #1a1a2e; border-radius: 0.5rem; padding: 1rem; cursor: pointer; transition: all 0.2s; border: 1px solid {}; opacity: {};",
-                if event.is_active { "#374151" } else { "#1f2937" },
-                if event.is_active { "1" } else { "0.7" }
-            ),
+            class: "narrative-event-card bg-dark-surface rounded-lg p-4 cursor-pointer transition-all border {card_border_class} {card_opacity_class}",
             onclick: move |_| props.on_click.call(()),
 
             // Header row
             div {
-                style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;",
+                class: "flex justify-between items-start mb-3",
 
                 // Title and priority
                 div {
-                    style: "flex: 1; min-width: 0;",
+                    class: "flex-1 min-w-0",
 
                     div {
-                        style: "display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;",
+                        class: "flex items-center gap-2 mb-1",
 
                         // Priority indicator
                         div {
-                            style: format!(
-                                "width: 8px; height: 8px; border-radius: 50%; background: {};",
-                                priority_color
-                            ),
+                            class: "w-2 h-2 rounded-full {priority_color_class}",
                             title: "Priority: {event.priority}",
                         }
 
                         h3 {
-                            style: "color: white; margin: 0; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                            class: "text-white m-0 text-base overflow-hidden text-ellipsis whitespace-nowrap",
                             "{event.name}"
                         }
                     }
 
                     // Status badge
                     span {
-                        style: format!(
-                            "display: inline-block; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.6875rem; background: {}20; color: {};",
-                            status_color, status_color
-                        ),
+                        class: "inline-block px-2 py-0.5 rounded text-[0.6875rem] bg-opacity-20 {status_color_class}",
                         "{status_label}"
                     }
                 }
 
                 // Actions
                 div {
-                    style: "display: flex; gap: 0.25rem;",
+                    class: "flex gap-1",
 
                     // Favorite button
                     button {
@@ -98,10 +97,7 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
                             e.stop_propagation();
                             props.on_toggle_favorite.call(());
                         },
-                        style: format!(
-                            "background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1rem; {}",
-                            if event.is_favorite { "color: #f59e0b;" } else { "color: #6b7280; opacity: 0.5;" }
-                        ),
+                        class: "bg-transparent border-none cursor-pointer p-1 text-base {favorite_color_class}",
                         title: if event.is_favorite { "Remove from favorites" } else { "Add to favorites" },
                         "⭐"
                     }
@@ -112,10 +108,7 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
                             e.stop_propagation();
                             props.on_toggle_active.call(());
                         },
-                        style: format!(
-                            "background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 0.875rem; {}",
-                            if event.is_active { "color: #22c55e;" } else { "color: #6b7280;" }
-                        ),
+                        class: "bg-transparent border-none cursor-pointer p-1 text-sm {active_toggle_class}",
                         title: if event.is_active { "Deactivate" } else { "Activate" },
                         if event.is_active { "●" } else { "○" }
                     }
@@ -125,14 +118,14 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
             // Description
             if !event.description.is_empty() {
                 p {
-                    style: "color: #9ca3af; font-size: 0.8125rem; margin: 0 0 0.75rem 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;",
+                    class: "text-gray-400 text-[0.8125rem] m-0 mb-3 overflow-hidden text-ellipsis line-clamp-2",
                     "{event.description}"
                 }
             }
 
             // Stats row
             div {
-                style: "display: flex; gap: 1rem; color: #6b7280; font-size: 0.75rem;",
+                class: "flex gap-4 text-gray-500 text-xs",
 
                 // Trigger count
                 span {
@@ -155,7 +148,7 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
                 // Chain indicator
                 if event.chain_id.is_some() {
                     span {
-                        style: "color: #8b5cf6;",
+                        class: "text-purple-500",
                         title: "Part of an event chain",
                         "🔗 Chain"
                     }
@@ -165,11 +158,11 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
             // Tags
             if !event.tags.is_empty() {
                 div {
-                    style: "display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.75rem;",
+                    class: "flex flex-wrap gap-1 mt-3",
 
                     for tag in event.tags.iter().take(4) {
                         span {
-                            style: "background: #374151; color: #9ca3af; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.6875rem;",
+                            class: "bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded text-[0.6875rem]",
                             "#{tag}"
                         }
                     }
@@ -178,7 +171,7 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
                             let extra = event.tags.len() - 4;
                             rsx! {
                                 span {
-                                    style: "color: #6b7280; font-size: 0.6875rem;",
+                                    class: "text-gray-500 text-[0.6875rem]",
                                     "+{extra}"
                                 }
                             }
@@ -191,7 +184,7 @@ pub fn NarrativeEventCard(props: NarrativeEventCardProps) -> Element {
             if event.is_triggered {
                 if let Some(ref triggered_at) = event.triggered_at {
                     div {
-                        style: "margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #374151; color: #22c55e; font-size: 0.75rem;",
+                        class: "mt-3 pt-2 border-t border-gray-700 text-green-500 text-xs",
                         "✓ Triggered: {triggered_at}"
                     }
                 }

@@ -3,7 +3,6 @@
 use dioxus::prelude::*;
 use crate::application::services::EventChainData;
 use crate::application::dto::NarrativeEventData;
-use crate::presentation::services::use_event_chain_service;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct EventChainVisualizerProps {
@@ -16,7 +15,7 @@ pub struct EventChainVisualizerProps {
 #[component]
 pub fn EventChainVisualizer(props: EventChainVisualizerProps) -> Element {
     let mut events: Signal<Vec<NarrativeEventData>> = use_signal(Vec::new);
-    let mut is_loading = use_signal(|| false);
+    let is_loading = use_signal(|| false);
     let mut zoom_level: Signal<f32> = use_signal(|| 1.0);
     let mut pan_x: Signal<f32> = use_signal(|| 0.0);
     let mut pan_y: Signal<f32> = use_signal(|| 0.0);
@@ -63,18 +62,17 @@ pub fn EventChainVisualizer(props: EventChainVisualizerProps) -> Element {
 
     rsx! {
         div {
-            class: "event-chain-visualizer",
-            style: "position: relative; width: 100%; height: 100%; overflow: hidden; background: #0f0f23; border-radius: 0.5rem;",
+            class: "event-chain-visualizer relative w-full h-full overflow-hidden bg-dark-bg rounded-lg",
 
             // Controls
             div {
-                style: "position: absolute; top: 1rem; right: 1rem; z-index: 10; display: flex; gap: 0.5rem;",
+                class: "absolute top-4 right-4 z-10 flex gap-2",
                 button {
                     onclick: move |_| {
                         let current = *zoom_level.read();
                         zoom_level.set((current * 1.2).min(2.0));
                     },
-                    style: "padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; cursor: pointer;",
+                    class: "p-2 bg-dark-surface border border-gray-700 rounded text-white cursor-pointer",
                     "+"
                 }
                 button {
@@ -82,7 +80,7 @@ pub fn EventChainVisualizer(props: EventChainVisualizerProps) -> Element {
                         let current = *zoom_level.read();
                         zoom_level.set((current / 1.2).max(0.5));
                     },
-                    style: "padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; cursor: pointer;",
+                    class: "p-2 bg-dark-surface border border-gray-700 rounded text-white cursor-pointer",
                     "-"
                 }
                 button {
@@ -91,7 +89,7 @@ pub fn EventChainVisualizer(props: EventChainVisualizerProps) -> Element {
                         pan_x.set(0.0);
                         pan_y.set(0.0);
                     },
-                    style: "padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; cursor: pointer;",
+                    class: "p-2 bg-dark-surface border border-gray-700 rounded text-white cursor-pointer",
                     "Reset"
                 }
             }
@@ -106,20 +104,20 @@ pub fn EventChainVisualizer(props: EventChainVisualizerProps) -> Element {
                 ),
                 if *is_loading.read() {
                     div {
-                        style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #6b7280;",
+                        class: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-500",
                         "Loading events..."
                     }
                 } else {
                     div {
-                        style: "display: flex; flex-direction: column; align-items: center; gap: 2rem; padding: 2rem; min-width: fit-content;",
+                        class: "flex flex-col items-center gap-8 p-8 min-w-fit",
                         for (index, event) in events_list.iter().enumerate() {
                             div {
                                 key: "{event.id}",
-                                style: "display: flex; flex-direction: column; align-items: center; gap: 1rem;",
+                                class: "flex flex-col items-center gap-4",
                                 // Connection line (except for first event)
                                 if index > 0 {
                                     div {
-                                        style: "width: 2px; height: 2rem; background: #374151;",
+                                        class: "w-0.5 h-8 bg-gray-700",
                                     }
                                 }
                                 // Event node
@@ -146,48 +144,44 @@ fn EventNode(
     is_current: bool,
     on_click: EventHandler<String>,
 ) -> Element {
-    let bg_color = if is_completed {
-        "#22c55e"
+    let bg_color_class = if is_completed {
+        "bg-green-500"
     } else if is_current {
-        "#3b82f6"
+        "bg-blue-500"
     } else {
-        "#374151"
+        "bg-gray-700"
     };
 
-    let border_color = if is_current {
-        "#8b5cf6"
+    let border_color_class = if is_current {
+        "border-purple-500"
     } else {
-        "#6b7280"
+        "border-gray-500"
     };
 
     rsx! {
         div {
             onclick: move |_| on_click.call(event.id.clone()),
-            style: format!(
-                "width: 200px; padding: 1rem; background: {}; border: 2px solid {}; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;",
-                bg_color,
-                border_color
-            ),
+            class: "w-[200px] p-4 {bg_color_class} border-2 {border_color_class} rounded-lg cursor-pointer transition-all",
             onmouseenter: move |_| {
                 // Could add hover effect
             },
             h4 {
-                style: "color: white; margin: 0 0 0.5rem 0; font-size: 0.875rem; font-weight: 500; text-align: center;",
+                class: "text-white m-0 mb-2 text-sm font-medium text-center",
                 "{event.name}"
             }
             if !event.description.is_empty() {
                 p {
-                    style: "color: rgba(255, 255, 255, 0.7); margin: 0; font-size: 0.75rem; text-align: center; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;",
+                    class: "text-white/70 m-0 text-xs text-center overflow-hidden text-ellipsis line-clamp-2",
                     "{event.description}"
                 }
             }
             div {
-                style: "display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.5rem;",
+                class: "flex justify-center gap-2 mt-2",
                 if is_completed {
-                    span { style: "color: white; font-size: 0.75rem;", "✅" }
+                    span { class: "text-white text-xs", "✅" }
                 }
                 if is_current {
-                    span { style: "color: white; font-size: 0.75rem;", "📍" }
+                    span { class: "text-white text-xs", "📍" }
                 }
             }
         }

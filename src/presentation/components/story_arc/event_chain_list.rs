@@ -60,12 +60,11 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
 
     rsx! {
         div {
-            class: "event-chain-list",
-            style: "display: flex; flex-direction: column; gap: 1rem; height: 100%;",
+            class: "event-chain-list flex flex-col gap-4 h-full",
 
             // Filter tabs
             div {
-                style: "display: flex; gap: 0.5rem; border-bottom: 1px solid #374151;",
+                class: "flex gap-2 border-b border-gray-700",
                 FilterTab {
                     label: "All",
                     is_active: filter == ChainFilter::All,
@@ -91,7 +90,7 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
 
             // Export/Import buttons (simplified - copy to clipboard for export)
             div {
-                style: "display: flex; gap: 0.5rem; margin-bottom: 0.5rem;",
+                class: "flex gap-2 mb-2",
                 button {
                     onclick: {
                         let chains_signal = chains;
@@ -112,7 +111,7 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
                             }
                         }
                     },
-                    style: "padding: 0.375rem 0.75rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                    class: "px-3 py-1.5 bg-gray-700 text-white border-none rounded cursor-pointer text-xs",
                     "📥 Export JSON"
                 }
             }
@@ -120,22 +119,22 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
             // Content
             if *is_loading.read() {
                 div {
-                    style: "color: #6b7280; font-size: 0.875rem; text-align: center; padding: 2rem;",
+                    class: "text-gray-500 text-sm text-center p-8",
                     "Loading chains..."
                 }
             } else if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "color: #ef4444; font-size: 0.875rem; padding: 1rem; background: #1f2937; border-radius: 0.375rem;",
+                    class: "text-red-500 text-sm p-4 bg-gray-800 rounded-md",
                     "Error: {err}"
                 }
             } else if chains.read().is_empty() {
                 div {
-                    style: "color: #6b7280; font-size: 0.875rem; text-align: center; padding: 2rem;",
+                    class: "text-gray-500 text-sm text-center p-8",
                     "No event chains found"
                 }
             } else {
                 div {
-                    style: "flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;",
+                    class: "flex-1 overflow-y-auto flex flex-col gap-3",
                     for chain in chains.read().iter() {
                         EventChainCard {
                             key: "{chain.id}",
@@ -148,7 +147,7 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
                             on_toggle_favorite: {
                                 let chain_id = chain.id.clone();
                                 let service = event_chain_service.clone();
-                                let mut chains_signal = chains;
+                                let chains_signal = chains;
                                 move |_| {
                                     let cid = chain_id.clone();
                                     let svc = service.clone();
@@ -167,7 +166,7 @@ pub fn EventChainList(props: EventChainListProps) -> Element {
                             on_toggle_active: {
                                 let chain_id = chain.id.clone();
                                 let service = event_chain_service.clone();
-                                let mut chains_signal = chains;
+                                let chains_signal = chains;
                                 move |is_active| {
                                     let cid = chain_id.clone();
                                     let svc = service.clone();
@@ -198,14 +197,13 @@ fn FilterTab(
     is_active: bool,
     onclick: EventHandler<()>,
 ) -> Element {
+    let border_class = if is_active { "border-purple-500" } else { "border-transparent" };
+    let text_class = if is_active { "text-white" } else { "text-gray-400" };
+
     rsx! {
         button {
             onclick: move |_| onclick.call(()),
-            style: format!(
-                "padding: 0.5rem 1rem; background: transparent; border: none; border-bottom: 2px solid {}; color: {}; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;",
-                if is_active { "#8b5cf6" } else { "transparent" },
-                if is_active { "white" } else { "#9ca3af" }
-            ),
+            class: "px-4 py-2 bg-transparent border-none border-b-2 {border_class} {text_class} text-sm cursor-pointer transition-all duration-200",
             "{label}"
         }
     }
@@ -220,91 +218,103 @@ fn EventChainCard(
     on_toggle_favorite: EventHandler<()>,
     on_toggle_active: EventHandler<bool>,
 ) -> Element {
-    let progress_color = if chain.is_complete {
-        "#22c55e"
+    let progress_color_class = if chain.is_complete {
+        "bg-green-500"
     } else if chain.is_active {
-        "#3b82f6"
+        "bg-blue-500"
     } else {
-        "#6b7280"
+        "bg-gray-500"
     };
+
+    let bg_class = if is_selected { "bg-dark-surface" } else { "bg-dark-bg" };
+    let border_class = if is_selected { "border-purple-500" } else { "border-gray-700" };
 
     rsx! {
         div {
             onclick: move |_| on_select.call(chain.id.clone()),
-            style: format!(
-                "padding: 1rem; background: {}; border: 2px solid {}; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;",
-                if is_selected { "#1a1a2e" } else { "#0f0f23" },
-                if is_selected { "#8b5cf6" } else { "#374151" }
-            ),
+            class: "p-4 {bg_class} border-2 {border_class} rounded-lg cursor-pointer transition-all duration-200",
 
             // Header
             div {
-                style: "display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;",
+                class: "flex justify-between items-start mb-3",
                 div {
-                    style: "flex: 1;",
+                    class: "flex-1",
                     h3 {
-                        style: "color: white; margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 500;",
+                        class: "text-white m-0 mb-1 text-base font-medium",
                         "{chain.name}"
                         if chain.is_favorite {
-                            span { style: "color: #f59e0b; margin-left: 0.5rem;", "⭐" }
+                            span { class: "text-amber-500 ml-2", "⭐" }
                         }
                     }
                     if !chain.description.is_empty() {
                         p {
-                            style: "color: #9ca3af; margin: 0; font-size: 0.875rem;",
+                            class: "text-gray-400 m-0 text-sm",
                             "{chain.description}"
                         }
                     }
                 }
                 div {
-                    style: "display: flex; gap: 0.5rem;",
-                    button {
-                        onclick: move |evt| {
-                            evt.stop_propagation();
-                            on_toggle_favorite.call(());
-                        },
-                        style: format!(
-                            "padding: 0.25rem 0.5rem; background: transparent; border: 1px solid #374151; border-radius: 0.25rem; color: {}; cursor: pointer; font-size: 0.75rem;",
-                            if chain.is_favorite { "#f59e0b" } else { "#6b7280" }
-                        ),
-                        "⭐"
+                    class: "flex gap-2",
+                    {
+                        let favorite_color = if chain.is_favorite { "text-amber-500" } else { "text-gray-500" };
+                        rsx! {
+                            button {
+                                onclick: move |evt| {
+                                    evt.stop_propagation();
+                                    on_toggle_favorite.call(());
+                                },
+                                class: "px-2 py-1 bg-transparent border border-gray-700 rounded {favorite_color} cursor-pointer text-xs",
+                                "⭐"
+                            }
+                        }
                     }
-                    button {
-                        onclick: move |evt| {
-                            evt.stop_propagation();
-                            on_toggle_active.call(!chain.is_active);
-                        },
-                        style: format!(
-                            "padding: 0.25rem 0.5rem; background: {}; border: none; border-radius: 0.25rem; color: white; cursor: pointer; font-size: 0.75rem;",
-                            if chain.is_active { "#22c55e" } else { "#6b7280" }
-                        ),
-                        if chain.is_active { "Active" } else { "Inactive" }
+                    {
+                        let active_bg = if chain.is_active { "bg-green-500" } else { "bg-gray-500" };
+                        let active_text = if chain.is_active { "Active" } else { "Inactive" };
+                        rsx! {
+                            button {
+                                onclick: move |evt| {
+                                    evt.stop_propagation();
+                                    on_toggle_active.call(!chain.is_active);
+                                },
+                                class: "px-2 py-1 {active_bg} border-none rounded text-white cursor-pointer text-xs",
+                                "{active_text}"
+                            }
+                        }
                     }
                 }
             }
 
             // Progress bar
             div {
-                style: "margin-bottom: 0.5rem;",
+                class: "mb-2",
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;",
+                    class: "flex justify-between items-center mb-1",
                     span {
-                        style: "color: #9ca3af; font-size: 0.75rem;",
+                        class: "text-gray-400 text-xs",
                         "{chain.completed_events.len()} / {chain.events.len()} events"
                     }
-                    span {
-                        style: format!("color: {}; font-size: 0.75rem; font-weight: 500;", progress_color),
-                        "{chain.progress_percent}%"
+                    {
+                        let progress_text_color = if chain.is_complete {
+                            "text-green-500"
+                        } else if chain.is_active {
+                            "text-blue-500"
+                        } else {
+                            "text-gray-500"
+                        };
+                        rsx! {
+                            span {
+                                class: "{progress_text_color} text-xs font-medium",
+                                "{chain.progress_percent}%"
+                            }
+                        }
                     }
                 }
                 div {
-                    style: "width: 100%; height: 8px; background: #374151; border-radius: 4px; overflow: hidden;",
+                    class: "w-full h-2 bg-gray-700 rounded overflow-hidden",
                     div {
-                        style: format!(
-                            "width: {}%; height: 100%; background: {}; transition: width 0.3s;",
-                            chain.progress_percent,
-                            progress_color
-                        ),
+                        class: "h-full {progress_color_class} transition-all duration-300",
+                        style: "width: {chain.progress_percent}%",
                     }
                 }
             }
@@ -312,10 +322,10 @@ fn EventChainCard(
             // Tags
             if !chain.tags.is_empty() {
                 div {
-                    style: "display: flex; flex-wrap: wrap; gap: 0.25rem;",
+                    class: "flex flex-wrap gap-1",
                     for tag in chain.tags.iter() {
                         span {
-                            style: "padding: 0.125rem 0.375rem; background: #374151; color: #9ca3af; border-radius: 0.25rem; font-size: 0.625rem;",
+                            class: "px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded text-[0.625rem]",
                             "{tag}"
                         }
                     }

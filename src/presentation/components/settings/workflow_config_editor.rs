@@ -175,50 +175,49 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 
     rsx! {
         div {
-            class: "workflow-config-editor",
-            style: "flex: 1; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "workflow-config-editor flex-1 flex flex-col bg-dark-surface rounded-lg overflow-hidden",
 
             if *is_loading.read() {
                 div {
-                    style: "flex: 1; display: flex; align-items: center; justify-content: center; color: #6b7280;",
+                    class: "flex-1 flex items-center justify-center text-gray-500",
                     "Loading configuration..."
                 }
             } else if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;",
+                    class: "flex-1 flex flex-col items-center justify-center py-8",
 
                     div {
-                        style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem; margin-bottom: 1rem;",
+                        class: "p-4 bg-red-500 bg-opacity-10 rounded-lg text-red-500 text-sm mb-4",
                         "Error: {err}"
                     }
 
                     button {
                         onclick: move |_| props.on_reconfigure.call(()),
-                        style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                        class: "py-2 px-4 bg-blue-500 text-white border-0 rounded-lg cursor-pointer",
                         "Configure Workflow"
                     }
                 }
             } else if let Some(cfg) = config.read().as_ref() {
                 // Header
                 div {
-                    style: "padding: 1rem; border-bottom: 1px solid #374151;",
+                    class: "p-4 border-b border-gray-700",
 
                     div {
-                        style: "display: flex; align-items: center; justify-content: space-between;",
+                        class: "flex items-center justify-between",
 
                         div {
                             h2 {
-                                style: "color: white; font-size: 1.125rem; margin: 0 0 0.25rem 0;",
+                                class: "text-white text-lg m-0 mb-1",
                                 "{cfg.slot_display_name}"
                             }
                             p {
-                                style: "color: #22c55e; font-size: 0.875rem; margin: 0;",
+                                class: "text-green-500 text-sm m-0",
                                 "✓ {cfg.name}"
                             }
                         }
 
                         div {
-                            style: "display: flex; gap: 0.5rem;",
+                            class: "flex gap-2",
 
                             button {
                                 onclick: move |_| {
@@ -227,19 +226,19 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
                                     test_error.set(None);
                                     show_test_modal.set(true);
                                 },
-                                style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "py-2 px-4 bg-purple-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                                 "Test Workflow"
                             }
 
                             button {
                                 onclick: move |_| props.on_reconfigure.call(()),
-                                style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "py-2 px-4 bg-gray-700 text-white border-0 rounded-lg cursor-pointer text-sm",
                                 "Reconfigure"
                             }
 
                             button {
                                 onclick: move |_| show_delete_confirmation.set(true),
-                                style: "padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "py-2 px-4 bg-red-600 text-white border-0 rounded-lg cursor-pointer text-sm",
                                 "Delete"
                             }
                         }
@@ -248,7 +247,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 
                 // Stats bar
                 div {
-                    style: "display: flex; gap: 1rem; padding: 0.75rem 1rem; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid #374151;",
+                    class: "flex gap-4 py-3 px-4 bg-black bg-opacity-20 border-b border-gray-700",
 
                     StatBadge { label: "Nodes", value: cfg.analysis.node_count.to_string() }
                     StatBadge { label: "Inputs", value: cfg.analysis.inputs.len().to_string() }
@@ -257,7 +256,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 
                 // Content sections
                 div {
-                    style: "flex: 1; overflow-y: auto; padding: 1rem;",
+                    class: "flex-1 overflow-y-auto p-4",
 
                     // Prompt Mappings section
                     CollapsibleSection {
@@ -272,11 +271,11 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
                         },
 
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            class: "flex flex-col gap-2",
 
                             if cfg.prompt_mappings.is_empty() {
                                 div {
-                                    style: "color: #6b7280; font-size: 0.875rem; padding: 0.5rem;",
+                                    class: "text-gray-500 text-sm p-2",
                                     "No prompt mappings configured"
                                 }
                             } else {
@@ -303,7 +302,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
                         },
 
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            class: "flex flex-col gap-2",
 
                             for input in cfg.analysis.inputs.iter() {
                                 InputDefaultRow {
@@ -340,7 +339,7 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
                         },
 
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem;",
+                            class: "flex flex-col gap-2 text-sm",
 
                             InfoRow { label: "ID", value: cfg.id.clone() }
                             InfoRow { label: "Created", value: cfg.created_at.clone() }
@@ -351,41 +350,41 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 
                 // Footer with save button
                 div {
-                    style: "padding: 1rem; border-top: 1px solid #374151; display: flex; justify-content: flex-end; gap: 0.5rem;",
+                    class: "p-4 border-t border-gray-700 flex justify-end gap-2",
 
                     button {
                         onclick: save_config,
                         disabled: *is_saving.read(),
-                        style: "padding: 0.5rem 1.5rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                        class: "py-2 px-6 bg-green-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                         if *is_saving.read() { "Saving..." } else { "Save Changes" }
                     }
                 }
             } else {
                 // Not configured
                 div {
-                    style: "flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;",
+                    class: "flex-1 flex flex-col items-center justify-center py-8",
 
                     div {
-                        style: "text-align: center; max-width: 300px;",
+                        class: "text-center max-w-xs",
 
                         div {
-                            style: "font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;",
+                            class: "text-3xl mb-4 opacity-50",
                             "📋"
                         }
 
                         h3 {
-                            style: "color: #9ca3af; margin-bottom: 0.5rem;",
+                            class: "text-gray-400 mb-2",
                             "Not Configured"
                         }
 
                         p {
-                            style: "color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem;",
+                            class: "text-gray-500 text-sm mb-4",
                             "This workflow slot hasn't been configured yet. Upload a ComfyUI workflow to get started."
                         }
 
                         button {
                             onclick: move |_| props.on_reconfigure.call(()),
-                            style: "padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                            class: "py-3 px-6 bg-blue-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                             "Configure Workflow"
                         }
                     }
@@ -429,10 +428,10 @@ pub fn WorkflowConfigEditor(props: WorkflowConfigEditorProps) -> Element {
 fn StatBadge(label: &'static str, value: String) -> Element {
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.5rem;",
+            class: "flex items-center gap-2",
 
-            span { style: "color: #6b7280; font-size: 0.75rem;", "{label}:" }
-            span { style: "color: white; font-size: 0.875rem; font-weight: 500;", "{value}" }
+            span { class: "text-gray-500 text-xs", "{label}:" }
+            span { class: "text-white text-sm font-medium", "{value}" }
         }
     }
 }
@@ -450,20 +449,19 @@ struct CollapsibleSectionProps {
 fn CollapsibleSection(props: CollapsibleSectionProps) -> Element {
     rsx! {
         div {
-            class: "collapsible-section",
-            style: "margin-bottom: 0.75rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.5rem; overflow: hidden;",
+            class: "collapsible-section mb-3 bg-black bg-opacity-20 rounded-lg overflow-hidden",
 
             button {
                 onclick: move |_| props.on_toggle.call(()),
-                style: "width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: none; border: none; cursor: pointer; color: white;",
+                class: "w-full flex items-center justify-between py-3 px-4 bg-transparent border-0 cursor-pointer text-white",
 
-                span { style: "font-weight: 500; font-size: 0.875rem;", "{props.title}" }
-                span { style: "color: #6b7280;", if props.is_expanded { "▼" } else { "▶" } }
+                span { class: "font-medium text-sm", "{props.title}" }
+                span { class: "text-gray-500", if props.is_expanded { "▼" } else { "▶" } }
             }
 
             if props.is_expanded {
                 div {
-                    style: "padding: 0 1rem 1rem 1rem;",
+                    class: "px-4 pb-4",
                     {props.children}
                 }
             }
@@ -496,18 +494,18 @@ fn PromptMappingRow(props: PromptMappingRowProps) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem;",
+            class: "flex items-center gap-3 p-2 bg-black bg-opacity-20 rounded-md",
 
             span {
-                style: format!("padding: 0.125rem 0.5rem; background: {}; color: white; font-size: 0.75rem; border-radius: 0.25rem; text-transform: uppercase;", type_color),
+                class: format!("py-0.5 px-2 {} text-white text-xs rounded uppercase", if type_color == "#22c55e" { "bg-green-500" } else { "bg-red-500" }),
                 "{props.mapping.mapping_type}"
             }
 
             div {
-                style: "flex: 1;",
+                class: "flex-1",
 
-                span { style: "color: white; font-size: 0.875rem;", "{node_label}" }
-                span { style: "color: #6b7280; font-size: 0.75rem; margin-left: 0.5rem;", "→ {props.mapping.input_name}" }
+                span { class: "text-white text-sm", "{node_label}" }
+                span { class: "text-gray-500 text-xs ml-2", "→ {props.mapping.input_name}" }
             }
         }
     }
@@ -539,28 +537,28 @@ fn InputDefaultRow(props: InputDefaultRowProps) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 0.375rem;",
+            class: "flex items-center gap-2 p-2 bg-black bg-opacity-20 rounded-md",
 
             // Lock indicator
             if props.locked {
-                span { style: "color: #f59e0b; font-size: 0.75rem;", "🔒" }
+                span { class: "text-amber-500 text-xs", "🔒" }
             }
 
             // Input info
             div {
-                style: "flex: 1; min-width: 0;",
+                class: "flex-1 min-w-0",
 
                 div {
-                    style: "display: flex; align-items: center; gap: 0.5rem;",
+                    class: "flex items-center gap-2",
 
                     span {
-                        style: "color: #9ca3af; font-size: 0.75rem; padding: 0.125rem 0.375rem; background: #374151; border-radius: 0.25rem;",
+                        class: "text-gray-400 text-xs py-0.5 px-1.5 bg-gray-700 rounded",
                         "{props.input.input_type}"
                     }
-                    span { style: "color: white; font-size: 0.875rem;", "{props.input.input_name}" }
+                    span { class: "text-white text-sm", "{props.input.input_name}" }
                 }
 
-                span { style: "color: #6b7280; font-size: 0.75rem;", "{node_label}" }
+                span { class: "text-gray-500 text-xs", "{node_label}" }
             }
 
             // Value input
@@ -575,7 +573,7 @@ fn InputDefaultRow(props: InputDefaultRowProps) -> Element {
                         default_value: parse_input_value(&e.value(), &input_for_change.input_type),
                     });
                 },
-                style: "width: 120px; padding: 0.375rem 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.375rem; color: white; font-size: 0.875rem;",
+                class: "w-30 py-1.5 px-2 bg-dark-bg border border-gray-700 rounded-md text-white text-sm",
             }
         }
     }
@@ -586,10 +584,10 @@ fn InputDefaultRow(props: InputDefaultRowProps) -> Element {
 fn InfoRow(label: &'static str, value: String) -> Element {
     rsx! {
         div {
-            style: "display: flex; justify-content: space-between; padding: 0.25rem 0;",
+            class: "flex justify-between py-1",
 
-            span { style: "color: #6b7280;", "{label}" }
-            span { style: "color: #9ca3af; font-family: monospace; font-size: 0.8rem;", "{value}" }
+            span { class: "text-gray-500", "{label}" }
+            span { class: "text-gray-400 font-mono text-xs", "{value}" }
         }
     }
 }
@@ -635,51 +633,49 @@ struct ConfirmDeleteModalProps {
 fn ConfirmDeleteModal(props: ConfirmDeleteModalProps) -> Element {
     rsx! {
         div {
-            class: "modal-backdrop",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-backdrop fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_cancel.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; width: 90%; max-width: 400px; padding: 1.5rem; overflow: hidden;",
+                class: "modal-content bg-dark-surface rounded-xl w-[90%] max-w-[400px] p-6 overflow-hidden",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;",
+                    class: "flex items-center gap-4 mb-4",
 
                     div {
-                        style: "color: #dc2626; font-size: 1.5rem;",
+                        class: "text-red-600 text-2xl",
                         "!"
                     }
 
                     h2 {
-                        style: "color: #dc2626; font-size: 1.125rem; margin: 0;",
+                        class: "text-red-600 text-lg m-0",
                         "Delete Workflow Configuration"
                     }
                 }
 
                 // Message
                 p {
-                    style: "color: #9ca3af; margin: 1rem 0;",
+                    class: "text-gray-400 my-4",
                     "Are you sure you want to delete the configuration for {props.slot_name}? This action cannot be undone."
                 }
 
                 // Buttons
                 div {
-                    style: "display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;",
+                    class: "flex gap-3 justify-end mt-6",
 
                     button {
                         onclick: move |_| props.on_cancel.call(()),
                         disabled: props.is_deleting,
-                        style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                        class: "px-4 py-2 bg-gray-700 text-white border-none rounded-lg cursor-pointer text-sm",
                         "Cancel"
                     }
 
                     button {
                         onclick: move |_| props.on_confirm.call(()),
                         disabled: props.is_deleting,
-                        style: "padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
+                        class: "px-4 py-2 bg-red-600 text-white border-none rounded-lg cursor-pointer text-sm font-medium",
                         if props.is_deleting { "Deleting..." } else { "Delete Configuration" }
                     }
                 }
@@ -707,53 +703,51 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
 
     rsx! {
         div {
-            class: "modal-backdrop",
-            style: "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "modal-backdrop fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000]",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                class: "modal-content",
-                style: "background: #1a1a2e; border-radius: 0.75rem; width: 90%; max-width: 700px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;",
+                class: "modal-content bg-dark-surface rounded-xl w-[90%] max-w-[700px] max-h-[80vh] flex flex-col overflow-hidden",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #374151;",
+                    class: "flex items-center justify-between px-6 py-4 border-b border-gray-700",
 
                     h2 {
-                        style: "color: white; font-size: 1.25rem; margin: 0;",
+                        class: "text-white text-xl m-0",
                         "Test Workflow"
                     }
 
                     button {
                         onclick: move |_| props.on_close.call(()),
-                        style: "background: none; border: none; color: #6b7280; font-size: 1.5rem; cursor: pointer; padding: 0.25rem;",
+                        class: "bg-transparent border-none text-gray-500 text-2xl cursor-pointer p-1",
                         "×"
                     }
                 }
 
                 // Content
                 div {
-                    style: "flex: 1; overflow-y: auto; padding: 1.5rem;",
+                    class: "flex-1 overflow-y-auto p-6",
 
                     if let Some(err) = &props.test_error {
                         div {
-                            style: "padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; margin-bottom: 1rem; font-size: 0.875rem;",
+                            class: "py-3 px-4 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg text-red-500 mb-4 text-sm",
                             "{err}"
                         }
                     }
 
                     if !has_result {
                         div {
-                            style: "display: flex; flex-direction: column; gap: 1rem;",
+                            class: "flex flex-col gap-4",
 
                             div {
                                 label {
-                                    style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                                    class: "block text-gray-400 text-sm mb-2",
                                     "Test Prompt"
                                 }
                                 p {
-                                    style: "color: #6b7280; font-size: 0.75rem; margin-bottom: 0.5rem;",
+                                    class: "text-gray-500 text-xs mb-2",
                                     "Enter a test prompt to generate an image and verify the workflow is working correctly."
                                 }
                                 textarea {
@@ -761,42 +755,42 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
                                     oninput: move |e| props.on_prompt_change.call(e.value()),
                                     placeholder: "Enter your test prompt here...",
                                     disabled: props.is_testing,
-                                    style: "width: 100%; height: 120px; padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-family: sans-serif; font-size: 0.875rem; resize: vertical; box-sizing: border-box;",
+                                    class: "w-full h-[120px] p-3 bg-dark-bg border border-gray-700 rounded-lg text-white font-sans text-sm resize-y box-border",
                                 }
                             }
                         }
                     } else if let Some(result) = &props.test_result {
                         div {
-                            style: "display: flex; flex-direction: column; gap: 1rem;",
+                            class: "flex flex-col gap-4",
 
                             // Success message
                             div {
-                                style: "display: flex; gap: 1rem; padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border-radius: 0.5rem; border: 1px solid #22c55e;",
+                                class: "flex gap-4 py-3 px-4 bg-green-500 bg-opacity-10 rounded-lg border border-green-500",
 
-                                div { style: "color: #22c55e; font-size: 1.5rem;", "✓" }
+                                div { class: "text-green-500 text-2xl", "✓" }
 
                                 div {
-                                    div { style: "color: #22c55e; font-size: 0.875rem; font-weight: 500;", "Generation Successful" }
-                                    div { style: "color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;", "Time: {result.duration_ms}ms" }
+                                    div { class: "text-green-500 text-sm font-medium", "Generation Successful" }
+                                    div { class: "text-gray-400 text-xs mt-1", "Time: {result.duration_ms}ms" }
                                 }
                             }
 
                             // Generated image
                             div {
-                                h3 { style: "color: white; font-size: 0.875rem; margin: 0 0 0.5rem 0;", "Generated Image" }
+                                h3 { class: "text-white text-sm m-0 mb-2", "Generated Image" }
 
                                 img {
                                     src: "{result.image_url}",
-                                    style: "width: 100%; border-radius: 0.5rem; border: 1px solid #374151; background: #0f0f23;",
+                                    class: "w-full rounded-lg border border-gray-700 bg-dark-bg",
                                 }
                             }
 
                             // Prompt display
                             div {
-                                h3 { style: "color: white; font-size: 0.875rem; margin: 0 0 0.5rem 0;", "Test Prompt" }
+                                h3 { class: "text-white text-sm m-0 mb-2", "Test Prompt" }
 
                                 div {
-                                    style: "padding: 0.75rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.5rem; color: #9ca3af; font-size: 0.875rem; word-break: break-word;",
+                                    class: "p-3 bg-dark-bg border border-gray-700 rounded-lg text-gray-400 text-sm break-words",
                                     "{props.test_prompt}"
                                 }
                             }
@@ -806,12 +800,12 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
 
                 // Footer
                 div {
-                    style: "display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid #374151;",
+                    class: "flex justify-end gap-3 px-6 py-4 border-t border-gray-700",
 
                     button {
                         onclick: move |_| props.on_close.call(()),
                         disabled: props.is_testing,
-                        style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                        class: "px-4 py-2 bg-gray-700 text-white border-none rounded-lg cursor-pointer text-sm",
                         "Close"
                     }
 
@@ -819,7 +813,7 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
                         button {
                             onclick: move |_| props.on_test.call(()),
                             disabled: props.is_testing || props.test_prompt.is_empty(),
-                            style: "padding: 0.5rem 1.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
+                            class: "px-6 py-2 bg-purple-500 text-white border-none rounded-lg cursor-pointer text-sm font-medium",
                             if props.is_testing { "Generating..." } else { "Generate" }
                         }
                     } else {
@@ -828,7 +822,7 @@ fn TestWorkflowModal(props: TestWorkflowModalProps) -> Element {
                                 // Reset to test again
                                 // This is handled by the parent component
                             },
-                            style: "padding: 0.5rem 1.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;",
+                            class: "px-6 py-2 bg-purple-500 text-white border-none rounded-lg cursor-pointer text-sm font-medium",
                             "Test Again"
                         }
                     }

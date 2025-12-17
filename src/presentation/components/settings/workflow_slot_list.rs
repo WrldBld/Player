@@ -50,44 +50,43 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
 
     rsx! {
         div {
-            class: "workflow-slot-list",
-            style: "flex: 1; display: flex; flex-direction: column; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "workflow-slot-list flex-1 flex flex-col bg-dark-surface rounded-lg overflow-hidden",
 
             // Header
             div {
-                style: "padding: 1rem; border-bottom: 1px solid #374151;",
+                class: "p-4 border-b border-gray-700",
 
                 h3 {
-                    style: "color: white; font-size: 1rem; margin: 0 0 0.25rem 0;",
+                    class: "text-white text-base m-0 mb-1",
                     "Workflow Slots"
                 }
                 p {
-                    style: "color: #6b7280; font-size: 0.75rem; margin: 0;",
+                    class: "text-gray-500 text-xs m-0",
                     "Configure ComfyUI workflows for asset generation"
                 }
             }
 
             // Content
             div {
-                style: "flex: 1; overflow-y: auto; padding: 0.5rem;",
+                class: "flex-1 overflow-y-auto p-2",
 
                 if *is_loading.read() {
                     div {
-                        style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
+                        class: "flex items-center justify-center py-8 text-gray-500",
                         "Loading workflows..."
                     }
                 } else if let Some(err) = error.read().as_ref() {
                     div {
-                        style: "padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                        class: "p-4 bg-red-500 bg-opacity-10 rounded-lg text-red-500 text-sm",
 
-                        p { style: "margin: 0 0 0.5rem 0; font-weight: 600;", "Failed to load workflow slots" }
-                        p { style: "margin: 0;", "{err}" }
+                        p { class: "m-0 mb-2 font-semibold", "Failed to load workflow slots" }
+                        p { class: "m-0", "{err}" }
 
                         // Help text
                         div {
-                            style: "margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; color: #9ca3af;",
-                            p { style: "margin: 0 0 0.25rem 0;", "Troubleshooting:" }
-                            ul { style: "margin: 0; padding-left: 1.25rem;",
+                            class: "mt-4 pt-4 border-t border-red-500 border-opacity-30 text-xs text-gray-400",
+                            p { class: "m-0 mb-1", "Troubleshooting:" }
+                            ul { class: "m-0 pl-5",
                                 li { "Is the Engine server running?" }
                                 li { "Check that the Engine API is accessible" }
                             }
@@ -95,11 +94,11 @@ pub fn WorkflowSlotList(props: WorkflowSlotListProps) -> Element {
                     }
                 } else if categories.read().is_empty() {
                     div {
-                        style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; color: #6b7280; text-align: center;",
+                        class: "flex flex-col items-center justify-center py-8 text-gray-500 text-center",
 
-                        div { style: "font-size: 2rem; margin-bottom: 0.5rem;", "⚠️" }
-                        p { style: "margin: 0 0 0.5rem 0; color: #9ca3af;", "No workflow slots available" }
-                        p { style: "margin: 0; font-size: 0.75rem;",
+                        div { class: "text-3xl mb-2", "⚠️" }
+                        p { class: "m-0 mb-2 text-gray-400", "No workflow slots available" }
+                        p { class: "m-0 text-xs",
                             "The Engine returned an empty list."
                         }
                     }
@@ -138,16 +137,15 @@ fn CategorySection(props: CategorySectionProps) -> Element {
 
     rsx! {
         div {
-            class: "category-section",
-            style: "margin-bottom: 1rem;",
+            class: "category-section mb-4",
 
             h4 {
-                style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.5rem 0.5rem;",
+                class: "text-gray-400 text-xs uppercase tracking-wide m-0 mb-2 ml-2",
                 "{props.title}"
             }
 
             div {
-                style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                class: "flex flex-col gap-1",
 
                 for slot in props.slots.iter() {
                     SlotCard {
@@ -173,15 +171,10 @@ struct SlotCardProps {
 
 #[component]
 fn SlotCard(props: SlotCardProps) -> Element {
-    let bg_color = if props.is_selected {
-        "rgba(59, 130, 246, 0.2)"
+    let card_class = if props.is_selected {
+        "flex items-center justify-between p-3 bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg cursor-pointer transition-all"
     } else {
-        "rgba(0, 0, 0, 0.2)"
-    };
-    let border = if props.is_selected {
-        "1px solid #3b82f6"
-    } else {
-        "1px solid transparent"
+        "flex items-center justify-between p-3 bg-black bg-opacity-20 border border-transparent rounded-lg cursor-pointer transition-all"
     };
 
     let slot_id = props.slot.slot.clone();
@@ -189,42 +182,35 @@ fn SlotCard(props: SlotCardProps) -> Element {
 
     rsx! {
         div {
-            class: "slot-card",
-            style: format!(
-                "display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: {}; border: {}; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;",
-                bg_color, border
-            ),
+            class: "{card_class}",
             onclick: move |_| props.on_select.call(slot_id.clone()),
 
             // Slot info
             div {
-                style: "flex: 1; min-width: 0;",
+                class: "flex-1 min-w-0",
 
                 div {
-                    style: "display: flex; align-items: center; gap: 0.5rem;",
+                    class: "flex items-center gap-2",
 
                     // Status indicator
                     div {
-                        style: format!(
-                            "width: 8px; height: 8px; border-radius: 50%; {}",
-                            if props.slot.configured {
-                                "background: #22c55e;"
-                            } else {
-                                "background: #6b7280;"
-                            }
-                        ),
+                        class: if props.slot.configured {
+                            "w-2 h-2 rounded-full bg-green-500"
+                        } else {
+                            "w-2 h-2 rounded-full bg-gray-500"
+                        }
                     }
 
                     // Name
                     span {
-                        style: "color: white; font-size: 0.875rem; font-weight: 500;",
+                        class: "text-white text-sm font-medium",
                         "{props.slot.display_name}"
                     }
                 }
 
                 // Dimensions
                 div {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; margin-left: 1rem;",
+                    class: "text-gray-500 text-xs mt-1 ml-4",
                     "{props.slot.default_width}×{props.slot.default_height}"
                 }
 
@@ -232,7 +218,7 @@ fn SlotCard(props: SlotCardProps) -> Element {
                 if props.slot.configured {
                     if let Some(ref config) = props.slot.config {
                         div {
-                            style: "color: #22c55e; font-size: 0.75rem; margin-top: 0.25rem; margin-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                            class: "text-green-500 text-xs mt-1 ml-4 whitespace-nowrap overflow-hidden text-ellipsis",
                             "✓ {config.name}"
                         }
                     }
@@ -245,7 +231,7 @@ fn SlotCard(props: SlotCardProps) -> Element {
                     e.stop_propagation();
                     props.on_configure.call(slot_id_for_configure.clone());
                 },
-                style: "padding: 0.375rem 0.75rem; background: #374151; color: white; border: none; border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer;",
+                class: "py-1.5 px-3 bg-gray-700 text-white border-0 rounded-md text-xs cursor-pointer",
                 if props.slot.configured { "Edit" } else { "Configure" }
             }
         }

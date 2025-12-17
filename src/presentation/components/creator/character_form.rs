@@ -120,22 +120,20 @@ pub fn CharacterForm(
 
     rsx! {
         div {
-            class: "character-form",
-            style: "display: flex; flex-direction: column; height: 100%; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "character-form flex flex-col h-full bg-dark-surface rounded-lg overflow-hidden",
 
             // Header
             div {
-                class: "form-header",
-                style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #374151;",
+                class: "form-header flex justify-between items-center p-4 border-b border-gray-700",
 
                 h2 {
-                    style: "color: white; margin: 0; font-size: 1.25rem;",
+                    class: "text-white m-0 text-xl",
                     if is_new { "New Character" } else { "Edit Character" }
                 }
 
                 button {
                     onclick: move |_| on_close.call(()),
-                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                    class: "px-2 py-1 bg-transparent text-gray-400 border-none cursor-pointer text-xl",
                     "×"
                 }
             }
@@ -143,25 +141,24 @@ pub fn CharacterForm(
             // Error/Success messages
             if let Some(msg) = error_message.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.875rem;",
+                    class: "px-4 py-3 bg-red-500/10 border-b border-red-500/30 text-red-500 text-sm",
                     "{msg}"
                 }
             }
             if let Some(msg) = success_message.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; font-size: 0.875rem;",
+                    class: "px-4 py-3 bg-green-500/10 border-b border-green-500/30 text-green-500 text-sm",
                     "{msg}"
                 }
             }
 
             // Form content (scrollable)
             div {
-                class: "form-content",
-                style: "flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;",
+                class: "form-content flex-1 overflow-y-auto p-4 flex flex-col gap-4",
 
                 if *is_loading.read() {
                     div {
-                        style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
+                        class: "flex items-center justify-center p-8 text-gray-500",
                         "Loading character data..."
                     }
                 } else {
@@ -171,13 +168,13 @@ pub fn CharacterForm(
                     label: "Name",
                     required: true,
                     children: rsx! {
-                        div { style: "display: flex; gap: 0.5rem;",
+                        div { class: "flex gap-2",
                             input {
                                 r#type: "text",
                                 value: "{name}",
                                 oninput: move |e| name.set(e.value()),
                                 placeholder: "Enter character name...",
-                                style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded text-white",
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterName,
@@ -199,7 +196,7 @@ pub fn CharacterForm(
                         select {
                             value: "{archetype}",
                             onchange: move |e| archetype.set(e.value()),
-                            style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                            class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white",
 
                             for arch in ARCHETYPES {
                                 option { value: "{arch}", "{arch}" }
@@ -213,14 +210,14 @@ pub fn CharacterForm(
                     label: "Description",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        div { class: "flex flex-col gap-2",
                             textarea {
                                 value: "{description}",
                                 oninput: move |e| description.set(e.value()),
                                 placeholder: "Physical appearance, mannerisms, voice...",
-                                style: "width: 100%; min-height: 80px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                                class: "w-full min-h-[80px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                             }
-                            div { style: "display: flex; justify-content: flex-end;",
+                            div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::CharacterDescription,
                                     context: SuggestionContext {
@@ -240,13 +237,13 @@ pub fn CharacterForm(
                     label: "Wants",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; gap: 0.5rem;",
+                        div { class: "flex gap-2",
                             input {
                                 r#type: "text",
                                 value: "{wants}",
                                 oninput: move |e| wants.set(e.value()),
                                 placeholder: "What does this character desire?",
-                                style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded text-white",
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterWants,
@@ -267,13 +264,13 @@ pub fn CharacterForm(
                     label: "Fears",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; gap: 0.5rem;",
+                        div { class: "flex gap-2",
                             input {
                                 r#type: "text",
                                 value: "{fears}",
                                 oninput: move |e| fears.set(e.value()),
                                 placeholder: "What does this character fear?",
-                                style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded text-white",
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterFears,
@@ -294,14 +291,14 @@ pub fn CharacterForm(
                     label: "Backstory",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        div { class: "flex flex-col gap-2",
                             textarea {
                                 value: "{backstory}",
                                 oninput: move |e| backstory.set(e.value()),
                                 placeholder: "Background, history, key events...",
-                                style: "width: 100%; min-height: 100px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                                class: "w-full min-h-[100px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                             }
-                            div { style: "display: flex; justify-content: flex-end;",
+                            div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::CharacterBackstory,
                                     context: SuggestionContext {
@@ -321,24 +318,23 @@ pub fn CharacterForm(
                     // Character Sheet section (if template available)
                     if let Some(template) = sheet_template.read().as_ref() {
                         div {
-                            class: "sheet-section",
-                            style: "margin-top: 1.5rem; border-top: 1px solid #374151; padding-top: 1rem;",
+                            class: "sheet-section mt-6 border-t border-gray-700 pt-4",
 
                             // Section header with collapse toggle
                             div {
-                                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; cursor: pointer;",
+                                class: "flex justify-between items-center mb-4 cursor-pointer",
                                 onclick: move |_| {
                                     let current = *show_sheet_section.read();
                                     show_sheet_section.set(!current);
                                 },
 
                                 h3 {
-                                    style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin: 0;",
+                                    class: "text-gray-400 text-sm uppercase m-0",
                                     "Character Sheet ({template.name})"
                                 }
 
                                 span {
-                                    style: "color: #6b7280; font-size: 0.875rem;",
+                                    class: "text-gray-500 text-sm",
                                     if *show_sheet_section.read() { "[-]" } else { "[+]" }
                                 }
                             }
@@ -357,10 +353,9 @@ pub fn CharacterForm(
 
                     // Asset Gallery section
                     div {
-                        class: "assets-section",
-                        style: "margin-top: 1rem;",
+                        class: "assets-section mt-4",
 
-                        h3 { style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.75rem;", "Assets" }
+                        h3 { class: "text-gray-400 text-sm uppercase mb-3", "Assets" }
 
                         AssetGallery {
                             entity_type: "character".to_string(),
@@ -372,20 +367,19 @@ pub fn CharacterForm(
 
             // Footer with action buttons
             div {
-                class: "form-footer",
-                style: "display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem; border-top: 1px solid #374151;",
+                class: "form-footer flex justify-end gap-2 p-4 border-t border-gray-700",
 
                 button {
                     onclick: move |_| on_close.call(()),
-                    style: "padding: 0.5rem 1rem; background: transparent; color: #9ca3af; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer;",
+                    class: "px-4 py-2 bg-transparent text-gray-400 border border-gray-700 rounded cursor-pointer",
                     disabled: *is_saving.read(),
                     "Cancel"
                 }
 
                 button {
-                    style: format!(
-                        "padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500; opacity: {};",
-                        if *is_saving.read() { "0.6" } else { "1" }
+                    class: format!(
+                        "px-4 py-2 bg-green-500 text-white border-none rounded cursor-pointer font-medium {}",
+                        if *is_saving.read() { "opacity-60" } else { "opacity-100" }
                     ),
                     disabled: *is_saving.read(),
                     onclick: {

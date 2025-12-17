@@ -8,41 +8,39 @@ pub fn MainMenu(on_connect: EventHandler<String>) -> Element {
 
     rsx! {
         div {
-            class: "main-menu",
-            style: "display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);",
+            class: "main-menu flex flex-col items-center justify-center h-full bg-gradient-to-br from-dark-surface to-dark-gradient-end",
 
             div {
-                class: "menu-card",
-                style: "background: #0f0f23; padding: 3rem; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); max-width: 400px; width: 90%;",
+                class: "menu-card bg-dark-bg p-12 rounded-xl shadow-2xl max-w-md w-[90%]",
 
                 h1 {
-                    style: "color: white; text-align: center; margin-bottom: 0.5rem; font-size: 2.5rem;",
+                    class: "text-white text-center mb-2 text-4xl",
                     "WrldBldr"
                 }
                 p {
-                    style: "color: #9ca3af; text-align: center; margin-bottom: 2rem;",
+                    class: "text-gray-400 text-center mb-8",
                     "TTRPG Game Client"
                 }
 
                 div {
-                    style: "margin-bottom: 1.5rem;",
+                    class: "mb-6",
 
                     label {
-                        style: "display: block; color: #9ca3af; margin-bottom: 0.5rem; font-size: 0.875rem;",
+                        class: "block text-gray-400 mb-2 text-sm",
                         "Server Address"
                     }
                     input {
                         r#type: "text",
                         value: "{server_url}",
                         oninput: move |e| server_url.set(e.value()),
-                        style: "width: 100%; padding: 0.75rem; border: 1px solid #374151; border-radius: 0.5rem; background: #1f2937; color: white; font-size: 1rem; box-sizing: border-box;",
+                        class: "w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white text-base box-border",
                         placeholder: "ws://localhost:3000/ws"
                     }
                 }
 
                 button {
                     onclick: move |_| on_connect.call(server_url.read().clone()),
-                    style: "width: 100%; padding: 0.875rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;",
+                    class: "w-full py-3.5 bg-blue-500 text-white border-0 rounded-lg text-base font-semibold cursor-pointer transition-colors duration-200 hover:bg-blue-600",
                     "Connect to Server"
                 }
             }

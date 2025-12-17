@@ -5,12 +5,12 @@
 //! dependencies and keeps the WebSocket transport parsing separate from UI state.
 
 use crate::application::ports::outbound::Platform;
-use crate::application::dto::ServerMessage;
-use crate::application::dto::SessionWorldSnapshot;
+use crate::application::dto::{ProposedTool, ServerMessage, SessionWorldSnapshot};
 use dioxus::prelude::{ReadableExt, WritableExt};
 use crate::presentation::state::{
     DialogueState, GameState, GenerationState, PendingApproval, SessionState,
     session_state::{ChallengePromptData, ChallengeResultData},
+    approval_state::PendingChallengeOutcome,
 };
 
 /// Handle an incoming `ServerMessage` and update presentation state.
@@ -326,7 +326,7 @@ pub fn handle_server_message(
                 "Party is split across {} locations",
                 location_count
             );
-            // TODO: Update UI to show split party warning with location information
+            // TODO (Phase 23 UX Polish): Update UI to show split party warning with location information
             // For now, this is logged to console for DM awareness
             for loc in locations {
                 tracing::debug!(
@@ -424,6 +424,83 @@ pub fn handle_server_message(
                     timestamp: platform.now_unix_secs(),
                 },
             );
+        }
+
+        // P3.3/P3.4: Player's roll is awaiting DM approval
+        ServerMessage::ChallengeRollSubmitted {
+            challenge_id: _,
+            challenge_name: _,
+            roll,
+            modifier,
+            total,
+            outcome_type,
+            status: _,
+        } => {
+            tracing::info!(
+                "Roll submitted: {} + {} = {} ({}), awaiting approval",
+                roll,
+                modifier,
+                total,
+                outcome_type
+            );
+            session_state.set_awaiting_approval(roll, modifier, total, outcome_type);
+        }
+
+        // P3.3/P3.4: Challenge outcome pending DM approval (DM only)
+        ServerMessage::ChallengeOutcomePending {
+            resolution_id,
+            challenge_id: _,
+            challenge_name,
+            character_id,
+            character_name,
+            roll,
+            modifier,
+            total,
+            outcome_type,
+            outcome_description,
+            outcome_triggers,
+            roll_breakdown,
+        } => {
+            tracing::info!(
+                "Challenge outcome pending: {} for {} ({} + {} = {})",
+                challenge_name,
+                character_name,
+                roll,
+                modifier,
+                total
+            );
+
+            let timestamp = platform.now_unix_secs();
+            let pending = PendingChallengeOutcome {
+                resolution_id,
+                challenge_name,
+                character_id,
+                character_name,
+                roll,
+                modifier,
+                total,
+                outcome_type,
+                outcome_description,
+                outcome_triggers,
+                roll_breakdown,
+                suggestions: None,
+                is_generating_suggestions: false,
+                timestamp,
+            };
+            session_state.add_pending_challenge_outcome(pending);
+        }
+
+        // P3.3/P3.4: LLM suggestions ready for challenge outcome (DM only)
+        ServerMessage::OutcomeSuggestionReady {
+            resolution_id,
+            suggestions,
+        } => {
+            tracing::info!(
+                "Outcome suggestions ready for {}: {} suggestions",
+                resolution_id,
+                suggestions.len()
+            );
+            session_state.update_challenge_suggestions(&resolution_id, suggestions);
         }
     }
 }

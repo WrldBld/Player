@@ -8,16 +8,11 @@ use dioxus::prelude::*;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, EmptyDialogueBox};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_typewriter_effect};
 
-/// Props for SpectatorView
-#[derive(Props, Clone, PartialEq)]
-pub struct SpectatorViewProps {
-    /// Handler for back button
-    pub on_back: EventHandler<()>,
-}
-
 /// Spectator View - read-only view of the game
+///
+/// Connection handling and back navigation are provided by WorldSessionLayout wrapper.
 #[component]
-pub fn SpectatorView(props: SpectatorViewProps) -> Element {
+pub fn SpectatorView() -> Element {
     // Get global state from context
     let game_state = use_game_state();
     let mut dialogue_state = use_dialogue_state();
@@ -68,19 +63,11 @@ pub fn SpectatorView(props: SpectatorViewProps) -> Element {
 
     rsx! {
         div {
-            class: "spectator-view",
-            style: "height: 100%; display: flex; flex-direction: column; position: relative; background: linear-gradient(to bottom, #1a1a2e, #2d1b3d);",
+            class: "spectator-view h-full flex flex-col relative bg-gradient-to-b from-dark-surface to-dark-purple-end",
 
-            // Back button
-            button {
-                onclick: move |_| props.on_back.call(()),
-                style: "position: absolute; top: 1rem; left: 1rem; z-index: 100; padding: 0.5rem 1rem; background: rgba(0,0,0,0.5); color: white; border: 1px solid #374151; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
-                "← Back"
-            }
-
-            // Spectator badge
+            // Spectator badge (top right)
             div {
-                style: "position: absolute; top: 1rem; right: 1rem; z-index: 100; padding: 0.5rem 1rem; background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid #8b5cf6; border-radius: 0.5rem; font-size: 0.875rem;",
+                class: "absolute top-4 right-4 z-[100] px-4 py-2 bg-purple-500/20 text-purple-300 border border-purple-500 rounded-lg text-sm",
                 "Spectating"
             }
 
@@ -97,8 +84,7 @@ pub fn SpectatorView(props: SpectatorViewProps) -> Element {
 
             // Dialogue box (fixed at bottom) - 2.3.2 Read-only dialogue display
             div {
-                class: "dialogue-container",
-                style: "position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;",
+                class: "dialogue-container absolute bottom-0 left-0 right-0 z-10",
 
                 if has_dialogue {
                     SpectatorDialogueBox {
@@ -147,48 +133,42 @@ fn SpectatorDialogueBox(props: SpectatorDialogueBoxProps) -> Element {
 
     rsx! {
         div {
-            class: "spectator-dialogue-box",
-            style: "background: rgba(0, 0, 0, 0.85); border-top: 2px solid #8b5cf6; padding: 1rem; max-height: 200px;",
+            class: "spectator-dialogue-box bg-black/85 border-t-2 border-purple-500 p-4 max-h-[200px]",
 
             // Speaker name plate
             if has_speaker {
                 div {
-                    class: "spectator-character-name",
-                    style: "color: #a78bfa; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;",
+                    class: "spectator-character-name text-purple-300 font-semibold text-sm mb-2 uppercase tracking-wider",
                     "{props.speaker_name}"
                 }
             }
 
             // Dialogue text with typewriter cursor
             div {
-                class: "spectator-dialogue-text-container",
-                style: "min-height: 60px; overflow: hidden;",
+                class: "spectator-dialogue-text-container min-h-[60px] overflow-hidden",
 
                 if props.is_llm_processing {
                     p {
-                        class: "spectator-dialogue-text",
-                        style: "color: #9ca3af; font-style: italic; font-size: 0.95rem; line-height: 1.5; margin: 0;",
+                        class: "spectator-dialogue-text text-gray-400 italic text-[0.95rem] leading-6 m-0",
 
                         "NPC is thinking"
 
                         // Animated ellipsis
                         span {
-                            style: "animation: ellipsis 1.5s steps(4, end) infinite;",
+                            class: "animate-[ellipsis_1.5s_steps(4,end)_infinite]",
                             "..."
                         }
                     }
                 } else {
                     p {
-                        class: "spectator-dialogue-text",
-                        style: "color: #e5e7eb; font-size: 0.95rem; line-height: 1.5; margin: 0;",
+                        class: "spectator-dialogue-text text-gray-200 text-[0.95rem] leading-6 m-0",
 
                         "{props.dialogue_text}"
 
                         // Blinking cursor during typing
                         if props.is_typing {
                             span {
-                                class: "typewriter-cursor",
-                                style: "animation: blink 0.7s step-end infinite; margin-left: 2px;",
+                                class: "typewriter-cursor ml-0.5 animate-[blink_0.7s_step-end_infinite]",
                                 "▌"
                             }
                         }
@@ -198,7 +178,7 @@ fn SpectatorDialogueBox(props: SpectatorDialogueBoxProps) -> Element {
 
             // Spectator indicator (instead of choices)
             div {
-                style: "margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #374151; color: #8b5cf6; font-size: 0.75rem; text-align: center; font-style: italic;",
+                class: "mt-3 pt-3 border-t border-gray-700 text-purple-500 text-xs text-center italic",
                 "Spectating - No choices available"
             }
         }
@@ -227,21 +207,20 @@ pub struct ConversationLogProps {
 fn ConversationLog(props: ConversationLogProps) -> Element {
     rsx! {
         div {
-            class: "conversation-log",
-            style: "position: absolute; bottom: 220px; left: 0; right: 0; height: 180px; background: rgba(0, 0, 0, 0.7); border-top: 1px solid #374151; border-bottom: 1px solid #374151; overflow-y: auto; padding: 1rem; font-size: 0.85rem; line-height: 1.4;",
+            class: "conversation-log absolute bottom-[220px] left-0 right-0 h-[180px] bg-black/70 border-t border-b border-gray-700 overflow-y-auto p-4 text-[0.85rem] leading-snug",
 
             for (idx, entry) in props.entries.iter().enumerate() {
                 div {
                     key: "{idx}",
-                    style: "margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1f2937;",
+                    class: "mb-2 pb-2 border-b border-gray-800",
 
                     div {
-                        style: "color: #a78bfa; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;",
+                        class: "text-purple-300 font-semibold text-xs uppercase tracking-wider",
                         "{entry.speaker}"
                     }
 
                     div {
-                        style: "color: #d1d5db; margin-top: 0.25rem; word-wrap: break-word;",
+                        class: "text-gray-300 mt-1 break-words",
                         "{entry.text}"
                     }
                 }

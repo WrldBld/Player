@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::application::services::{
     AssetService, CharacterService, ChallengeService, EventChainService, GenerationService, LocationService, NarrativeEventService,
-    PlayerCharacterService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
+    PlayerCharacterService, SettingsService, SkillService, StoryEventService, SuggestionService, WorkflowService, WorldService,
 };
 use crate::application::ports::outbound::ApiPort;
 // Import ConcreteServices from the composition root (main.rs)
@@ -42,6 +42,7 @@ pub struct Services<A: ApiPort> {
     pub suggestion: Arc<SuggestionService<A>>,
     pub event_chain: Arc<EventChainService<A>>,
     pub generation: Arc<GenerationService<A>>,
+    pub settings: Arc<SettingsService<A>>,
 }
 
 impl<A: ApiPort + Clone> Services<A> {
@@ -60,7 +61,8 @@ impl<A: ApiPort + Clone> Services<A> {
             asset: Arc::new(AssetService::new(api.clone())),
             suggestion: Arc::new(SuggestionService::new(api.clone())),
             event_chain: Arc::new(EventChainService::new(api.clone())),
-            generation: Arc::new(GenerationService::new(api)),
+            generation: Arc::new(GenerationService::new(api.clone())),
+            settings: Arc::new(SettingsService::new(api)),
         }
     }
 }
@@ -80,6 +82,7 @@ type ConcreteAssetService = Arc<AssetService<crate::infrastructure::http_client:
 type ConcreteSuggestionService = Arc<SuggestionService<crate::infrastructure::http_client::ApiAdapter>>;
 type ConcreteEventChainService = Arc<EventChainService<crate::infrastructure::http_client::ApiAdapter>>;
 type ConcreteGenerationService = Arc<GenerationService<crate::infrastructure::http_client::ApiAdapter>>;
+type ConcreteSettingsService = Arc<SettingsService<crate::infrastructure::http_client::ApiAdapter>>;
 
 /// Hook to access the WorldService from context
 pub fn use_world_service() -> ConcreteWorldService {
@@ -157,6 +160,12 @@ pub fn use_event_chain_service() -> ConcreteEventChainService {
 pub fn use_generation_service() -> ConcreteGenerationService {
     let services = use_context::<ConcreteServices>();
     services.generation.clone()
+}
+
+/// Hook to access the SettingsService from context
+pub fn use_settings_service() -> ConcreteSettingsService {
+    let services = use_context::<ConcreteServices>();
+    services.settings.clone()
 }
 
 use crate::presentation::state::{BatchStatus, GenerationBatch, GenerationState, SuggestionStatus, SuggestionTask};

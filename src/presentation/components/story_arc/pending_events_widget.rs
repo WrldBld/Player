@@ -47,21 +47,20 @@ pub fn PendingEventsWidget(props: PendingEventsWidgetProps) -> Element {
 
     rsx! {
         div {
-            class: "pending-events-widget",
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 1rem;",
+            class: "pending-events-widget bg-dark-surface rounded-lg p-4",
 
             // Header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;",
+                class: "flex justify-between items-center mb-3",
 
                 h3 {
-                    style: "color: #9ca3af; margin: 0; font-size: 0.875rem; text-transform: uppercase;",
+                    class: "text-gray-400 m-0 text-sm uppercase",
                     "⭐ Pending Events"
                 }
 
                 button {
                     onclick: move |_| props.on_view_story_arc.call(()),
-                    style: "background: none; border: none; color: #60a5fa; cursor: pointer; font-size: 0.75rem;",
+                    class: "bg-transparent border-none text-blue-400 cursor-pointer text-xs",
                     "View All →"
                 }
             }
@@ -69,17 +68,17 @@ pub fn PendingEventsWidget(props: PendingEventsWidgetProps) -> Element {
             // Content
             if *is_loading.read() {
                 div {
-                    style: "color: #6b7280; font-size: 0.875rem; text-align: center; padding: 1rem;",
+                    class: "text-gray-500 text-sm text-center p-4",
                     "Loading..."
                 }
             } else if display_events.is_empty() {
                 div {
-                    style: "color: #6b7280; font-size: 0.875rem; text-align: center; padding: 1rem;",
+                    class: "text-gray-500 text-sm text-center p-4",
                     "No pending events"
                 }
             } else {
                 div {
-                    style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                    class: "flex flex-col gap-2",
 
                     for event in display_events.iter() {
                         PendingEventItem {
@@ -96,7 +95,7 @@ pub fn PendingEventsWidget(props: PendingEventsWidgetProps) -> Element {
                             let extra = total_active - max;
                             rsx! {
                                 div {
-                                    style: "color: #6b7280; font-size: 0.75rem; text-align: center; margin-top: 0.5rem;",
+                                    class: "text-gray-500 text-xs text-center mt-2",
                                     "+{extra} more"
                                 }
                             }
@@ -125,41 +124,38 @@ impl PartialEq for PendingEventItemProps {
 fn PendingEventItem(props: PendingEventItemProps) -> Element {
     let event = &props.event;
 
-    let priority_color = match event.priority {
-        p if p >= 8 => "#ef4444",
-        p if p >= 5 => "#f59e0b",
-        p if p >= 3 => "#3b82f6",
-        _ => "#6b7280",
+    let priority_color_class = match event.priority {
+        p if p >= 8 => "bg-red-500",
+        p if p >= 5 => "bg-amber-500",
+        p if p >= 3 => "bg-blue-500",
+        _ => "bg-gray-500",
     };
 
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #0f0f23; border-radius: 0.375rem;",
+            class: "flex items-center gap-2 p-2 bg-dark-bg rounded-md",
 
             // Priority indicator
             div {
-                style: format!(
-                    "width: 6px; height: 6px; border-radius: 50%; background: {}; flex-shrink: 0;",
-                    priority_color
-                ),
+                class: "w-1.5 h-1.5 rounded-full {priority_color_class} flex-shrink-0",
             }
 
             // Event info
             div {
-                style: "flex: 1; min-width: 0;",
+                class: "flex-1 min-w-0",
 
                 p {
-                    style: "color: white; margin: 0; font-size: 0.8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                    class: "text-white m-0 text-[0.8125rem] overflow-hidden text-ellipsis whitespace-nowrap",
                     "{event.name}"
                 }
 
                 div {
-                    style: "display: flex; gap: 0.5rem; color: #6b7280; font-size: 0.6875rem;",
+                    class: "flex gap-2 text-gray-500 text-[0.6875rem]",
 
                     span { "⚡ {event.trigger_condition_count} triggers" }
 
                     if event.is_favorite {
-                        span { style: "color: #f59e0b;", "⭐" }
+                        span { class: "text-amber-500", "⭐" }
                     }
                 }
             }

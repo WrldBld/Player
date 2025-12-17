@@ -1,7 +1,7 @@
 //! Event Chain Editor - Edit chain info and manage events
 
 use dioxus::prelude::*;
-use crate::application::services::{EventChainData, CreateEventChainRequest, UpdateEventChainRequest, AddEventRequest};
+use crate::application::services::{EventChainData, CreateEventChainRequest, UpdateEventChainRequest};
 use crate::presentation::services::use_event_chain_service;
 
 #[derive(Props, Clone, PartialEq)]
@@ -24,8 +24,8 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
     let mut color = use_signal(|| props.chain.as_ref().and_then(|c| c.color.clone()));
     let mut is_active = use_signal(|| props.chain.as_ref().map(|c| c.is_active).unwrap_or(true));
     let mut new_tag = use_signal(String::new);
-    let mut is_saving = use_signal(|| false);
-    let mut error: Signal<Option<String>> = use_signal(|| None);
+    let is_saving = use_signal(|| false);
+    let error: Signal<Option<String>> = use_signal(|| None);
 
     let save_handler = {
         let world_id = props.world_id.clone();
@@ -86,19 +86,18 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
 
     rsx! {
         div {
-            class: "event-chain-editor",
-            style: "background: #1a1a2e; border-radius: 0.5rem; padding: 1.5rem; max-width: 600px;",
+            class: "event-chain-editor bg-dark-surface rounded-lg p-6 max-w-[600px]",
 
             h2 {
-                style: "color: white; margin: 0 0 1.5rem 0; font-size: 1.25rem;",
+                class: "text-white m-0 mb-6 text-xl",
                 if is_editing { "Edit Event Chain" } else { "Create Event Chain" }
             }
 
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: #1f2937; border-left: 3px solid #ef4444; border-radius: 0.25rem; margin-bottom: 1rem;",
+                    class: "p-3 bg-gray-800 border-l-[3px] border-red-500 rounded mb-4",
                     div {
-                        style: "color: #ef4444; font-size: 0.875rem;",
+                        class: "text-red-500 text-sm",
                         "Error: {err}"
                     }
                 }
@@ -106,12 +105,12 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
 
             // Form fields
             div {
-                style: "display: flex; flex-direction: column; gap: 1rem;",
+                class: "flex flex-col gap-4",
 
                 // Name
                 div {
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm mb-2",
                         "Chain Name"
                     }
                     input {
@@ -119,14 +118,14 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                         value: "{name.read()}",
                         oninput: move |evt| name.set(evt.value()),
                         placeholder: "Enter chain name",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.875rem;",
+                        class: "w-full px-2 py-2 bg-dark-bg border border-gray-700 rounded text-white text-sm",
                     }
                 }
 
                 // Description
                 div {
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm mb-2",
                         "Description"
                     }
                     textarea {
@@ -134,14 +133,14 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                         oninput: move |evt| description.set(evt.value()),
                         placeholder: "Enter chain description",
                         rows: 3,
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.875rem; resize: vertical;",
+                        class: "w-full px-2 py-2 bg-dark-bg border border-gray-700 rounded text-white text-sm resize-y",
                     }
                 }
 
                 // Color
                 div {
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm mb-2",
                         "Color (hex)"
                     }
                     input {
@@ -149,21 +148,21 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                         value: "{color.read().as_ref().map(|c| c.as_str()).unwrap_or(\"\")}",
                         oninput: move |evt| color.set(if evt.value().is_empty() { None } else { Some(evt.value()) }),
                         placeholder: "#8b5cf6",
-                        style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.875rem;",
+                        class: "w-full px-2 py-2 bg-dark-bg border border-gray-700 rounded text-white text-sm",
                     }
                 }
 
                 // Tags
                 div {
                     label {
-                        style: "display: block; color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;",
+                        class: "block text-gray-400 text-sm mb-2",
                         "Tags"
                     }
                     div {
-                        style: "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;",
+                        class: "flex flex-wrap gap-2 mb-2",
                         for tag in tags.read().iter() {
                             span {
-                                style: "display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; background: #374151; color: white; border-radius: 0.25rem; font-size: 0.75rem;",
+                                class: "inline-flex items-center gap-1 px-2 py-1 bg-gray-700 text-white rounded text-xs",
                                 "{tag}"
                                 button {
                                     onclick: {
@@ -173,14 +172,14 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                                             tags_list.retain(|t| t != &tag_to_remove);
                                         }
                                     },
-                                    style: "background: none; border: none; color: white; cursor: pointer; padding: 0; margin-left: 0.25rem;",
+                                    class: "bg-transparent border-none text-white cursor-pointer p-0 ml-1",
                                     "×"
                                 }
                             }
                         }
                     }
                     div {
-                        style: "display: flex; gap: 0.5rem;",
+                        class: "flex gap-2",
                         input {
                             r#type: "text",
                             value: "{new_tag.read()}",
@@ -196,7 +195,7 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                                 }
                             },
                             placeholder: "Add tag (press Enter)",
-                            style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; font-size: 0.875rem;",
+                            class: "flex-1 px-2 py-2 bg-dark-bg border border-gray-700 rounded text-white text-sm",
                         }
                         button {
                             onclick: move |_| {
@@ -206,7 +205,7 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
                                     new_tag.set(String::new());
                                 }
                             },
-                            style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                            class: "px-4 py-2 bg-purple-500 text-white border-none rounded cursor-pointer text-sm",
                             "Add"
                         }
                     }
@@ -214,14 +213,14 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
 
                 // Active toggle
                 div {
-                    style: "display: flex; align-items: center; gap: 0.5rem;",
+                    class: "flex items-center gap-2",
                     input {
                         r#type: "checkbox",
                         checked: *is_active.read(),
                         onchange: move |evt| is_active.set(evt.checked()),
                     }
                     label {
-                        style: "color: #9ca3af; font-size: 0.875rem; cursor: pointer;",
+                        class: "text-gray-400 text-sm cursor-pointer",
                         "Active"
                     }
                 }
@@ -229,22 +228,26 @@ pub fn EventChainEditor(props: EventChainEditorProps) -> Element {
 
             // Actions
             div {
-                style: "display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;",
+                class: "flex justify-end gap-3 mt-6",
                 button {
                     onclick: move |_| props.on_cancel.call(()),
                     disabled: *is_saving.read(),
-                    style: "padding: 0.5rem 1.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                    class: "px-6 py-2 bg-gray-700 text-white border-none rounded cursor-pointer text-sm",
                     "Cancel"
                 }
-                button {
-                    onclick: move |_| save_handler(),
-                    disabled: *is_saving.read() || name.read().trim().is_empty(),
-                    style: format!(
-                        "padding: 0.5rem 1.5rem; background: {}; color: white; border: none; border-radius: 0.25rem; cursor: {}; font-size: 0.875rem;",
-                        if *is_saving.read() || name.read().trim().is_empty() { "#6b7280" } else { "#8b5cf6" },
-                        if *is_saving.read() || name.read().trim().is_empty() { "not-allowed" } else { "pointer" }
-                    ),
-                    if *is_saving.read() { "Saving..." } else { "Save" }
+                {
+                    let is_disabled = *is_saving.read() || name.read().trim().is_empty();
+                    let save_bg = if is_disabled { "bg-gray-500" } else { "bg-purple-500" };
+                    let save_cursor = if is_disabled { "cursor-not-allowed" } else { "cursor-pointer" };
+                    let save_text = if *is_saving.read() { "Saving..." } else { "Save" };
+                    rsx! {
+                        button {
+                            onclick: move |_| save_handler(),
+                            disabled: is_disabled,
+                            class: "px-6 py-2 {save_bg} text-white border-none rounded {save_cursor} text-sm",
+                            "{save_text}"
+                        }
+                    }
                 }
             }
         }

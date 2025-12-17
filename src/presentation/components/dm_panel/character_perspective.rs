@@ -2,7 +2,6 @@
 
 use dioxus::prelude::*;
 
-use crate::application::services::{CharacterService, PlayerCharacterService};
 use crate::presentation::services::{use_character_service, use_player_character_service};
 
 /// Props for CharacterPerspectiveViewer
@@ -62,23 +61,23 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
+            class: "flex flex-col gap-4 p-4 bg-dark-surface rounded-lg",
 
             h3 {
-                style: "margin: 0; color: white; font-size: 1.125rem;",
+                class: "m-0 text-white text-lg",
                 "Character Perspective"
             }
 
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; font-size: 0.875rem;",
+                    class: "p-3 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg text-red-500 text-sm",
                     "{err}"
                 }
             }
 
             if *loading.read() {
                 div {
-                    style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                    class: "p-8 text-center text-gray-400",
                     "Loading characters..."
                 }
             } else {
@@ -86,11 +85,11 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
                 if !pcs_list.is_empty() {
                     div {
                         h4 {
-                            style: "margin: 0 0 0.75rem 0; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase;",
+                            class: "m-0 mb-3 text-gray-400 text-sm uppercase",
                             "Player Characters"
                         }
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            class: "flex flex-col gap-2",
                             {pcs_list.iter().map(|pc| {
                                 let pc_id = pc.id.clone();
                                 rsx! {
@@ -110,11 +109,11 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
                 if !npcs_list.is_empty() {
                     div {
                         h4 {
-                            style: "margin: 1rem 0 0.75rem 0; color: #9ca3af; font-size: 0.875rem; text-transform: uppercase;",
+                            class: "m-0 mt-4 mb-3 text-gray-400 text-sm uppercase",
                             "NPCs"
                         }
                         div {
-                            style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                            class: "flex flex-col gap-2",
                             {npcs_list.iter().map(|npc| {
                                 let npc_id = npc.id.clone();
                                 rsx! {
@@ -132,7 +131,7 @@ pub fn CharacterPerspectiveViewer(props: CharacterPerspectiveViewerProps) -> Ele
 
                 if pcs_list.is_empty() && npcs_list.is_empty() {
                     div {
-                        style: "padding: 2rem; text-align: center; color: #9ca3af;",
+                        class: "p-8 text-center text-gray-400",
                         "No characters available"
                     }
                 }
@@ -154,21 +153,21 @@ struct CharacterCardProps {
 fn CharacterCard(props: CharacterCardProps) -> Element {
     rsx! {
         div {
-            style: "padding: 0.75rem; background: #0f0f23; border-radius: 0.5rem; border: 1px solid #374151; display: flex; justify-content: space-between; align-items: center;",
-            
+            class: "p-3 bg-dark-bg rounded-lg border border-gray-700 flex justify-between items-center",
+
             div {
                 div {
-                    style: "color: white; font-size: 0.875rem; font-weight: 500;",
+                    class: "text-white text-sm font-medium",
                     "{props.name}"
                 }
                 div {
-                    style: "color: #9ca3af; font-size: 0.75rem;",
+                    class: "text-gray-400 text-xs",
                     "Location: {props.location_id}"
                 }
             }
             button {
                 onclick: move |_| props.on_view_as.call(()),
-                style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                class: "py-2 px-4 bg-blue-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                 "View as"
             }
         }

@@ -1,9 +1,8 @@
 //! Character Panel - Display and manage player character information
 
 use dioxus::prelude::*;
-use std::collections::HashMap;
 
-use crate::application::dto::{FieldValue, SheetTemplate};
+use crate::application::dto::SheetTemplate;
 use crate::application::services::PlayerCharacterData;
 use crate::presentation::services::use_world_service;
 
@@ -47,18 +46,18 @@ pub fn CharacterPanel(props: CharacterPanelProps) -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: #1a1a2e; border-radius: 0.5rem;",
-            
+            class: "flex flex-col gap-4 p-4 bg-dark-surface rounded-lg",
+
             // Header
             div {
-                style: "display: flex; justify-content: space-between; align-items: center;",
+                class: "flex justify-between items-center",
                 h3 {
-                    style: "margin: 0; color: white; font-size: 1.125rem;",
+                    class: "m-0 text-white text-lg",
                     "{props.pc.name}"
                 }
                 button {
                     onclick: move |_| props.on_edit.call(()),
-                    style: "padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;",
+                    class: "px-4 py-2 bg-blue-500 text-white border-0 rounded-lg cursor-pointer text-sm",
                     "Edit"
                 }
             }
@@ -66,20 +65,20 @@ pub fn CharacterPanel(props: CharacterPanelProps) -> Element {
             // Description
             if let Some(desc) = props.pc.description.as_ref() {
                 p {
-                    style: "margin: 0; color: #9ca3af; font-size: 0.875rem; line-height: 1.5;",
+                    class: "m-0 text-gray-400 text-sm leading-normal",
                     "{desc}"
                 }
             }
 
             // Location
             div {
-                style: "padding: 0.75rem; background: #0f0f23; border-radius: 0.5rem;",
+                class: "p-3 bg-dark-bg rounded-lg",
                 div {
-                    style: "color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem; text-transform: uppercase;",
+                    class: "text-gray-400 text-xs mb-1 uppercase",
                     "Current Location"
                 }
                 div {
-                    style: "color: white; font-size: 0.875rem;",
+                    class: "text-white text-sm",
                     "Location ID: {props.pc.current_location_id}"
                 }
             }
@@ -89,9 +88,9 @@ pub fn CharacterPanel(props: CharacterPanelProps) -> Element {
                 if let Some(template) = sheet_template.read().as_ref() {
                     if let Some(sheet_data) = props.pc.sheet_data.as_ref() {
                         div {
-                            style: "margin-top: 1rem;",
+                            class: "mt-4",
                             h4 {
-                                style: "margin: 0 0 0.5rem 0; color: white; font-size: 1rem;",
+                                class: "m-0 mb-2 text-white text-base",
                                 "Character Sheet"
                             }
                             crate::presentation::components::character_sheet_viewer::CharacterSheetViewer {

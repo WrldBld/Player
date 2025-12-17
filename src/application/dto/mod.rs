@@ -9,6 +9,7 @@
 pub mod session_dto;
 pub mod websocket_messages;
 pub mod world_snapshot;
+pub mod settings;
 
 // Re-export session DTOs
 pub use session_dto::AppConnectionStatus;
@@ -35,5 +36,8 @@ pub use world_snapshot::{
     // Session snapshot types (simplified format from Engine)
     SessionWorldSnapshot,
 };
+
+// Re-export settings DTOs
+pub use settings::AppSettings;
 
 // NOTE: Infrastructure asset loader now depends inward on these DTOs.

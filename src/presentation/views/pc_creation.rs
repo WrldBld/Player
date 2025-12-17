@@ -5,15 +5,12 @@ use std::collections::HashMap;
 
 use crate::application::dto::{FieldValue, SheetTemplate};
 use crate::application::ports::outbound::Platform;
-use crate::application::services::{
-    LocationService, PlayerCharacterService, WorldService,
-    CreatePlayerCharacterRequest,
-};
+use crate::application::services::CreatePlayerCharacterRequest;
 use crate::application::services::player_character_service::CharacterSheetDataApi;
 use crate::presentation::services::{
     use_location_service, use_player_character_service, use_world_service,
 };
-use crate::presentation::state::{use_session_state, ConnectionStatus};
+use crate::presentation::state::use_session_state;
 
 /// Wizard step enum
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
@@ -234,24 +231,24 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
 
     rsx! {
         div {
-            style: "height: 100vh; display: flex; flex-direction: column; background: #0f0f23; color: white;",
-            
+            class: "h-screen flex flex-col bg-dark-bg text-white",
+
             // Header
             div {
-                style: "padding: 1.5rem; border-bottom: 1px solid #374151;",
+                class: "p-6 border-b border-gray-700",
                 h1 {
-                    style: "margin: 0; font-size: 1.5rem; color: white;",
+                    class: "m-0 text-2xl text-white",
                     "Create Your Character"
                 }
                 p {
-                    style: "margin: 0.5rem 0 0 0; color: #9ca3af; font-size: 0.875rem;",
+                    class: "mt-2 mb-0 text-gray-400 text-sm",
                     "Set up your character to join the adventure"
                 }
             }
 
             // Progress indicator
             div {
-                style: "display: flex; gap: 0.5rem; padding: 1rem 1.5rem; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid #374151;",
+                class: "flex gap-2 px-6 py-4 bg-black/20 border-b border-gray-700",
                 StepIndicator {
                     number: 1,
                     label: "Basics",
@@ -280,12 +277,12 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
 
             // Content area
             div {
-                style: "flex: 1; overflow-y: auto; padding: 2rem;",
-                
+                class: "flex-1 overflow-y-auto p-8",
+
                 // Error message
                 if let Some(err) = error_message.read().as_ref() {
                     div {
-                        style: "padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 0.5rem; color: #ef4444; margin-bottom: 1rem;",
+                        class: "py-3 px-4 bg-red-500/10 border border-red-500 rounded-lg text-red-500 mb-4",
                         "{err}"
                     }
                 }
@@ -331,10 +328,10 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
 
             // Footer with navigation
             div {
-                style: "padding: 1rem 1.5rem; border-top: 1px solid #374151; display: flex; justify-content: space-between;",
+                class: "py-4 px-6 border-t border-gray-700 flex justify-between",
                 button {
                     onclick: go_back,
-                    style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.5rem; cursor: pointer;",
+                    class: "py-2 px-4 bg-gray-700 text-white border-0 rounded-lg cursor-pointer",
                     if *current_step.read() == CreationStep::Basics {
                         "Cancel"
                     } else {
@@ -342,12 +339,12 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                     }
                 }
                 div {
-                    style: "display: flex; gap: 0.5rem;",
+                    class: "flex gap-2",
                     if *current_step.read() == CreationStep::Review {
                         button {
                             onclick: create_character,
                             disabled: *is_creating.read(),
-                            style: "padding: 0.5rem 1.5rem; background: #22c55e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                            class: "py-2 px-6 bg-green-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                             if *is_creating.read() {
                                 "Creating..."
                             } else {
@@ -357,7 +354,7 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
                     } else {
                         button {
                             onclick: go_next,
-                            style: "padding: 0.5rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;",
+                            class: "py-2 px-6 bg-blue-500 text-white border-0 rounded-lg cursor-pointer font-medium",
                             "Next"
                         }
                     }
@@ -370,36 +367,35 @@ pub fn PCCreationView(props: PCCreationProps) -> Element {
 /// Step indicator component
 #[component]
 fn StepIndicator(number: u8, label: &'static str, is_active: bool, is_complete: bool) -> Element {
-    let bg_color = if is_active || is_complete {
-        "#3b82f6"
+    // Extract conditional classes before rsx! block
+    let bg_classes = if is_active || is_complete {
+        "w-8 h-8 rounded-full flex items-center justify-center text-sm text-white font-semibold bg-blue-500"
     } else {
-        "#374151"
+        "w-8 h-8 rounded-full flex items-center justify-center text-sm text-white font-semibold bg-gray-700"
     };
-    let text_color = if is_active {
-        "white"
+
+    let text_classes = if is_active {
+        "text-sm font-medium text-white"
     } else if is_complete {
-        "#9ca3af"
+        "text-sm font-medium text-gray-400"
     } else {
-        "#6b7280"
+        "text-sm font-medium text-gray-500"
     };
 
     rsx! {
         div {
-            style: "display: flex; align-items: center; gap: 0.5rem;",
+            class: "flex items-center gap-2",
             div {
-                style: format!(
-                    "width: 32px; height: 32px; border-radius: 50%; background: {}; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; color: white; font-weight: 600;",
-                    bg_color
-                ),
+                class: "{bg_classes}",
                 if is_complete { "✓" } else { "{number}" }
             }
             span {
-                style: format!("color: {}; font-size: 0.875rem; font-weight: 500;", text_color),
+                class: "{text_classes}",
                 "{label}"
             }
             if number < 4 {
                 div {
-                    style: "width: 60px; height: 2px; background: #374151; margin: 0 0.5rem;",
+                    class: "w-[60px] h-0.5 bg-gray-700 mx-2",
                 }
             }
         }
@@ -419,16 +415,16 @@ struct BasicsStepProps {
 fn BasicsStep(props: BasicsStepProps) -> Element {
     rsx! {
         div {
-            style: "max-width: 600px; margin: 0 auto;",
+            class: "max-w-[600px] mx-auto",
             h2 {
-                style: "margin-bottom: 1.5rem; font-size: 1.25rem; color: white;",
+                class: "mb-6 text-xl text-white",
                 "Character Basics"
             }
             div {
-                style: "display: flex; flex-direction: column; gap: 1.5rem;",
+                class: "flex flex-col gap-6",
                 div {
                     label {
-                        style: "display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500;",
+                        class: "block mb-2 text-gray-400 text-sm font-medium",
                         "Character Name *"
                     }
                     input {
@@ -436,12 +432,12 @@ fn BasicsStep(props: BasicsStepProps) -> Element {
                         value: "{props.name}",
                         oninput: move |e| props.on_name_change.call(e.value()),
                         placeholder: "Enter your character's name",
-                        style: "width: 100%; padding: 0.75rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 1rem;",
+                        class: "w-full p-3 bg-dark-surface border border-gray-700 rounded-lg text-white text-base",
                     }
                 }
                 div {
                     label {
-                        style: "display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500;",
+                        class: "block mb-2 text-gray-400 text-sm font-medium",
                         "Description (Optional)"
                     }
                     textarea {
@@ -449,7 +445,7 @@ fn BasicsStep(props: BasicsStepProps) -> Element {
                         oninput: move |e| props.on_description_change.call(e.value()),
                         placeholder: "Describe your character...",
                         rows: 4,
-                        style: "width: 100%; padding: 0.75rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.5rem; color: white; font-size: 1rem; resize: vertical;",
+                        class: "w-full p-3 bg-dark-surface border border-gray-700 rounded-lg text-white text-base resize-y",
                     }
                 }
             }
@@ -470,14 +466,14 @@ struct CharacterSheetStepProps {
 fn CharacterSheetStep(props: CharacterSheetStepProps) -> Element {
     rsx! {
         div {
-            style: "max-width: 800px; margin: 0 auto;",
+            class: "max-w-[800px] mx-auto",
             h2 {
-                style: "margin-bottom: 1.5rem; font-size: 1.25rem; color: white;",
+                class: "mb-6 text-xl text-white",
                 "Character Sheet"
             }
             if props.loading {
                 div {
-                    style: "text-align: center; padding: 2rem; color: #9ca3af;",
+                    class: "text-center p-8 text-gray-400",
                     "Loading character sheet template..."
                 }
             } else if let Some(template) = props.template.as_ref() {
@@ -488,7 +484,7 @@ fn CharacterSheetStep(props: CharacterSheetStepProps) -> Element {
                 }
             } else {
                 div {
-                    style: "padding: 1.5rem; background: #1a1a2e; border-radius: 0.5rem; border: 1px solid #374151; text-align: center; color: #9ca3af;",
+                    class: "p-6 bg-dark-surface rounded-lg border border-gray-700 text-center text-gray-400",
                     "No character sheet template available for this world. You can skip this step."
                 }
             }
@@ -512,24 +508,24 @@ fn StartingLocationStep(props: StartingLocationStepProps) -> Element {
 
     rsx! {
         div {
-            style: "max-width: 800px; margin: 0 auto;",
+            class: "max-w-[800px] mx-auto",
             h2 {
-                style: "margin-bottom: 1.5rem; font-size: 1.25rem; color: white;",
+                class: "mb-6 text-xl text-white",
                 "Choose Starting Location"
             }
             if props.loading {
                 div {
-                    style: "text-align: center; padding: 2rem; color: #9ca3af;",
+                    class: "text-center p-8 text-gray-400",
                     "Loading locations..."
                 }
             } else if locations.is_empty() {
                 div {
-                    style: "padding: 1.5rem; background: #1a1a2e; border-radius: 0.5rem; border: 1px solid #374151; text-align: center; color: #9ca3af;",
+                    class: "p-6 bg-dark-surface rounded-lg border border-gray-700 text-center text-gray-400",
                     "No locations available. Please contact your DM."
                 }
             } else {
                 div {
-                    style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;",
+                    class: "grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4",
                     {locations.into_iter().map(|location| {
                         let loc_id = location.id.clone();
                         let sel = selected.as_ref().map(|s| s == &loc_id).unwrap_or(false);
@@ -557,37 +553,30 @@ struct LocationCardProps {
 
 #[component]
 fn LocationCard(props: LocationCardProps) -> Element {
-    let border_color = if props.is_selected {
-        "#3b82f6"
+    // Extract conditional classes before rsx! block
+    let card_classes = if props.is_selected {
+        "p-6 border-2 rounded-lg cursor-pointer transition-all duration-200 bg-blue-500/10 border-blue-500"
     } else {
-        "#374151"
-    };
-    let bg_color = if props.is_selected {
-        "rgba(59, 130, 246, 0.1)"
-    } else {
-        "#1a1a2e"
+        "p-6 border-2 rounded-lg cursor-pointer transition-all duration-200 bg-dark-surface border-gray-700"
     };
 
     rsx! {
         div {
             onclick: move |_| props.on_select.call(()),
-            style: format!(
-                "padding: 1.5rem; background: {}; border: 2px solid {}; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;",
-                bg_color, border_color
-            ),
+            class: "{card_classes}",
             h3 {
-                style: "margin: 0 0 0.5rem 0; color: white; font-size: 1rem;",
+                class: "m-0 mb-2 text-white text-base",
                 "{props.location.name}"
             }
             if let Some(loc_type) = props.location.location_type.as_ref() {
                 p {
-                    style: "margin: 0; color: #9ca3af; font-size: 0.875rem; line-height: 1.5;",
+                    class: "m-0 text-gray-400 text-sm leading-6",
                     "{loc_type}"
                 }
             }
             if props.is_selected {
                 div {
-                    style: "margin-top: 0.75rem; color: #3b82f6; font-size: 0.875rem; font-weight: 500;",
+                    class: "mt-3 text-blue-500 text-sm font-medium",
                     "✓ Selected"
                 }
             }
@@ -608,52 +597,52 @@ struct ReviewStepProps {
 fn ReviewStep(props: ReviewStepProps) -> Element {
     rsx! {
         div {
-            style: "max-width: 600px; margin: 0 auto;",
+            class: "max-w-[600px] mx-auto",
             h2 {
-                style: "margin-bottom: 1.5rem; font-size: 1.25rem; color: white;",
+                class: "mb-6 text-xl text-white",
                 "Review Your Character"
             }
             div {
-                style: "display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem; background: #1a1a2e; border-radius: 0.5rem; border: 1px solid #374151;",
+                class: "flex flex-col gap-6 p-6 bg-dark-surface rounded-lg border border-gray-700",
                 div {
                     div {
-                        style: "color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                        class: "text-gray-400 text-sm mb-1",
                         "Name"
                     }
                     div {
-                        style: "color: white; font-size: 1rem; font-weight: 500;",
+                        class: "text-white text-base font-medium",
                         "{props.name}"
                     }
                 }
                 if !props.description.is_empty() {
                     div {
                         div {
-                            style: "color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                            class: "text-gray-400 text-sm mb-1",
                             "Description"
                         }
                         div {
-                            style: "color: white; font-size: 0.875rem; line-height: 1.5;",
+                            class: "text-white text-sm leading-6",
                             "{props.description}"
                         }
                     }
                 }
                 div {
                     div {
-                        style: "color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                        class: "text-gray-400 text-sm mb-1",
                         "Starting Location"
                     }
                     div {
-                        style: "color: white; font-size: 1rem; font-weight: 500;",
+                        class: "text-white text-base font-medium",
                         "{props.location}"
                     }
                 }
                 div {
                     div {
-                        style: "color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.25rem;",
+                        class: "text-gray-400 text-sm mb-1",
                         "Character Sheet"
                     }
                     div {
-                        style: "color: white; font-size: 0.875rem;",
+                        class: "text-white text-sm",
                         if props.has_sheet {
                             "✓ Configured"
                         } else {
@@ -663,7 +652,7 @@ fn ReviewStep(props: ReviewStepProps) -> Element {
                 }
             }
             div {
-                style: "margin-top: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 0.5rem; color: #9ca3af; font-size: 0.875rem;",
+                class: "mt-6 p-4 bg-blue-500/10 border border-blue-500 rounded-lg text-gray-400 text-sm",
                 "Ready to create your character! Click 'Create Character' to begin your adventure."
             }
         }

@@ -55,8 +55,7 @@ pub fn DialogueBox(props: DialogueBoxProps) -> Element {
 
             // Dialogue text with typewriter cursor or loading indicator
             div {
-                class: "dialogue-text-container",
-                style: "min-height: 60px;",
+                class: "dialogue-text-container min-h-[60px]",
                 onclick: move |_| {
                     if props.is_typing && !props.is_llm_processing {
                         props.on_advance.call(());
@@ -65,14 +64,13 @@ pub fn DialogueBox(props: DialogueBoxProps) -> Element {
 
                 if props.is_llm_processing {
                     p {
-                        class: "vn-dialogue-text",
-                        style: "color: #9ca3af; font-style: italic;",
+                        class: "vn-dialogue-text text-gray-400 italic",
 
                         "NPC is thinking"
 
                         // Animated ellipsis
                         span {
-                            style: "animation: ellipsis 1.5s steps(4, end) infinite;",
+                            class: "animate-ellipsis",
                             "..."
                         }
                     }
@@ -85,8 +83,7 @@ pub fn DialogueBox(props: DialogueBoxProps) -> Element {
                         // Blinking cursor during typing
                         if props.is_typing {
                             span {
-                                class: "typewriter-cursor",
-                                style: "animation: blink 0.7s step-end infinite; margin-left: 2px;",
+                                class: "typewriter-cursor animate-blink ml-0.5",
                                 "▌"
                             }
                         }
@@ -128,20 +125,17 @@ pub struct NarrationBoxProps {
 pub fn NarrationBox(props: NarrationBoxProps) -> Element {
     rsx! {
         div {
-            class: "vn-dialogue-box narration",
-            style: "text-align: center;",
+            class: "vn-dialogue-box narration text-center",
             onclick: move |_| props.on_advance.call(()),
 
             p {
-                class: "vn-dialogue-text",
-                style: "font-style: italic; color: #d1d5db;",
+                class: "vn-dialogue-text italic text-gray-300",
 
                 "{props.text}"
 
                 if props.is_typing {
                     span {
-                        class: "typewriter-cursor",
-                        style: "animation: blink 0.7s step-end infinite; margin-left: 2px;",
+                        class: "typewriter-cursor animate-blink ml-0.5",
                         "▌"
                     }
                 }
@@ -149,7 +143,7 @@ pub fn NarrationBox(props: NarrationBoxProps) -> Element {
 
             if !props.is_typing {
                 div {
-                    style: "color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem;",
+                    class: "text-gray-500 text-xs mt-2",
                     "Click to continue"
                 }
             }
@@ -162,12 +156,10 @@ pub fn NarrationBox(props: NarrationBoxProps) -> Element {
 pub fn EmptyDialogueBox() -> Element {
     rsx! {
         div {
-            class: "vn-dialogue-box",
-            style: "opacity: 0.5;",
+            class: "vn-dialogue-box opacity-50",
 
             p {
-                class: "vn-dialogue-text",
-                style: "color: #6b7280; font-style: italic;",
+                class: "vn-dialogue-text text-gray-500 italic",
                 "..."
             }
         }

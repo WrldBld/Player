@@ -8,6 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Dark UI theme colors
+        'dark': {
+          'bg': '#0f0f23',
+          'surface': '#1a1a2e',
+          'border': '#374151',
+          'hover': '#252540',
+          'gradient-end': '#16213e',
+          'purple-end': '#2d1b3d',
+        },
         // TTRPG themed colors
         'parchment': {
           50: '#fdfcf9',

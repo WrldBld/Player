@@ -108,22 +108,20 @@ pub fn LocationForm(
 
     rsx! {
         div {
-            class: "location-form",
-            style: "display: flex; flex-direction: column; height: 100%; background: #1a1a2e; border-radius: 0.5rem; overflow: hidden;",
+            class: "location-form flex flex-col h-full bg-dark-surface rounded-lg overflow-hidden",
 
             // Header
             div {
-                class: "form-header",
-                style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #374151;",
+                class: "form-header flex justify-between items-center p-4 border-b border-gray-700",
 
                 h2 {
-                    style: "color: white; margin: 0; font-size: 1.25rem;",
+                    class: "text-white m-0 text-xl",
                     if is_new { "New Location" } else { "Edit Location" }
                 }
 
                 button {
                     onclick: move |_| on_close.call(()),
-                    style: "padding: 0.25rem 0.5rem; background: transparent; color: #9ca3af; border: none; cursor: pointer; font-size: 1.25rem;",
+                    class: "px-2 py-1 bg-transparent text-gray-400 border-none cursor-pointer text-xl",
                     "×"
                 }
             }
@@ -131,25 +129,24 @@ pub fn LocationForm(
             // Error/Success messages
             if let Some(msg) = error_message.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.875rem;",
+                    class: "px-4 py-3 bg-red-500/10 border-b border-red-500/30 text-red-500 text-sm",
                     "{msg}"
                 }
             }
             if let Some(msg) = success_message.read().as_ref() {
                 div {
-                    style: "padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; font-size: 0.875rem;",
+                    class: "px-4 py-3 bg-green-500/10 border-b border-green-500/30 text-green-500 text-sm",
                     "{msg}"
                 }
             }
 
             // Form content (scrollable)
             div {
-                class: "form-content",
-                style: "flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;",
+                class: "form-content flex-1 overflow-y-auto p-4 flex flex-col gap-4",
 
                 if *is_loading.read() {
                     div {
-                        style: "display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280;",
+                        class: "flex items-center justify-center p-8 text-gray-500",
                         "Loading location data..."
                     }
                 } else {
@@ -159,13 +156,13 @@ pub fn LocationForm(
                     label: "Name",
                     required: true,
                     children: rsx! {
-                        div { style: "display: flex; gap: 0.5rem;",
+                        div { class: "flex gap-2",
                             input {
                                 r#type: "text",
                                 value: "{name}",
                                 oninput: move |e| name.set(e.value()),
                                 placeholder: "Enter location name...",
-                                style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded text-white",
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::LocationName,
@@ -187,7 +184,7 @@ pub fn LocationForm(
                         select {
                             value: "{location_type}",
                             onchange: move |e| location_type.set(e.value()),
-                            style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                            class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white",
 
                             for lt in LOCATION_TYPES {
                                 option { value: "{lt}", "{lt}" }
@@ -201,14 +198,14 @@ pub fn LocationForm(
                     label: "Description",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        div { class: "flex flex-col gap-2",
                             textarea {
                                 value: "{description}",
                                 oninput: move |e| description.set(e.value()),
                                 placeholder: "What does this place look like? What stands out?",
-                                style: "width: 100%; min-height: 80px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                                class: "w-full min-h-[80px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                             }
-                            div { style: "display: flex; justify-content: flex-end;",
+                            div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationDescription,
                                     context: SuggestionContext {
@@ -228,13 +225,13 @@ pub fn LocationForm(
                     label: "Atmosphere",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; gap: 0.5rem;",
+                        div { class: "flex gap-2",
                             input {
                                 r#type: "text",
                                 value: "{atmosphere}",
                                 oninput: move |e| atmosphere.set(e.value()),
                                 placeholder: "The mood and feeling of this place...",
-                                style: "flex: 1; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "flex-1 p-2 bg-dark-bg border border-gray-700 rounded text-white",
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::LocationAtmosphere,
@@ -255,14 +252,14 @@ pub fn LocationForm(
                     label: "Notable Features",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        div { class: "flex flex-col gap-2",
                             textarea {
                                 value: "{notable_features}",
                                 oninput: move |e| notable_features.set(e.value()),
                                 placeholder: "Points of interest, interactable objects...",
-                                style: "width: 100%; min-height: 60px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                                class: "w-full min-h-[60px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                             }
-                            div { style: "display: flex; justify-content: flex-end;",
+                            div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationFeatures,
                                     context: SuggestionContext {
@@ -283,14 +280,14 @@ pub fn LocationForm(
                     label: "Hidden Secrets",
                     required: false,
                     children: rsx! {
-                        div { style: "display: flex; flex-direction: column; gap: 0.5rem;",
+                        div { class: "flex flex-col gap-2",
                             textarea {
                                 value: "{hidden_secrets}",
                                 oninput: move |e| hidden_secrets.set(e.value()),
                                 placeholder: "Things players might discover with investigation...",
-                                style: "width: 100%; min-height: 60px; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                                class: "w-full min-h-[60px] p-2 bg-dark-bg border border-gray-700 rounded text-white resize-y box-border",
                             }
-                            div { style: "display: flex; justify-content: flex-end;",
+                            div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationSecrets,
                                     context: SuggestionContext {
@@ -317,7 +314,7 @@ pub fn LocationForm(
                                     let val = e.value();
                                     parent_location_id.set(if val.is_empty() { None } else { Some(val) });
                                 },
-                                style: "width: 100%; padding: 0.5rem; background: #0f0f23; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                                class: "w-full p-2 bg-dark-bg border border-gray-700 rounded text-white",
 
                                 option { value: "", "None" }
                                 for parent in parent_locations.read().iter() {
@@ -335,10 +332,9 @@ pub fn LocationForm(
 
                     // Asset Gallery section
                     div {
-                        class: "assets-section",
-                        style: "margin-top: 1rem;",
+                        class: "assets-section mt-4",
 
-                        h3 { style: "color: #9ca3af; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.75rem;", "Assets" }
+                        h3 { class: "text-gray-400 text-sm uppercase mb-3", "Assets" }
 
                         AssetGallery {
                             entity_type: "location".to_string(),
@@ -350,20 +346,19 @@ pub fn LocationForm(
 
             // Footer with action buttons
             div {
-                class: "form-footer",
-                style: "display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem; border-top: 1px solid #374151;",
+                class: "form-footer flex justify-end gap-2 p-4 border-t border-gray-700",
 
                 button {
                     onclick: move |_| on_close.call(()),
-                    style: "padding: 0.5rem 1rem; background: transparent; color: #9ca3af; border: 1px solid #374151; border-radius: 0.25rem; cursor: pointer;",
+                    class: "px-4 py-2 bg-transparent text-gray-400 border border-gray-700 rounded cursor-pointer",
                     disabled: *is_saving.read(),
                     "Cancel"
                 }
 
                 button {
-                    style: format!(
-                        "padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500; opacity: {};",
-                        if *is_saving.read() { "0.6" } else { "1" }
+                    class: format!(
+                        "px-4 py-2 bg-green-500 text-white border-none rounded cursor-pointer font-medium {}",
+                        if *is_saving.read() { "opacity-60" } else { "opacity-100" }
                     ),
                     disabled: *is_saving.read(),
                     onclick: {

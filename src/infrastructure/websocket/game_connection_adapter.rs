@@ -10,7 +10,7 @@ use std::sync::{
 };
 
 use crate::application::ports::outbound::{
-    ApprovalDecision as PortApprovalDecision, ConnectionState as PortConnectionState,
+    ApprovalDecision as PortApprovalDecision, ChallengeOutcomeDecisionData, ConnectionState as PortConnectionState,
     DirectorialContext as PortDirectorialContext, GameConnectionPort, NpcMotivation as PortNpcMotivation,
     ParticipantRole as PortParticipantRole,
 };
@@ -263,6 +263,27 @@ impl GameConnectionPort for EngineGameConnection {
             tokio::spawn(async move {
                 if let Err(e) = client.send(msg).await {
                     tracing::error!("Failed to send approval decision: {}", e);
+                }
+            });
+            Ok(())
+        }
+    }
+
+    fn send_challenge_outcome_decision(&self, resolution_id: &str, decision: ChallengeOutcomeDecisionData) -> Result<()> {
+        let msg = ClientMessage::ChallengeOutcomeDecision {
+            resolution_id: resolution_id.to_string(),
+            decision,
+        };
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.client.send(msg)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.send(msg).await {
+                    tracing::error!("Failed to send challenge outcome decision: {}", e);
                 }
             });
             Ok(())

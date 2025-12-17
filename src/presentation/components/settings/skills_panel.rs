@@ -109,22 +109,22 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
 
     rsx! {
         div {
-            style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+            class: "fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50",
             onclick: move |_| props.on_close.call(()),
 
             div {
-                style: "background: #1a1a2e; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;",
+                class: "bg-dark-surface rounded-lg w-11/12 max-w-3xl max-h-screen-90 overflow-hidden flex flex-col",
                 onclick: move |e| e.stop_propagation(),
 
                 // Header
                 div {
-                    style: "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #374151;",
+                    class: "flex justify-between items-center py-4 px-6 border-b border-gray-700",
 
-                    h2 { style: "color: white; margin: 0; font-size: 1.25rem;", "Skills Management" }
+                    h2 { class: "text-white m-0 text-xl", "Skills Management" }
 
-                    div { style: "display: flex; gap: 0.5rem; align-items: center;",
+                    div { class: "flex gap-2 items-center",
                         // Show hidden toggle
-                        label { style: "display: flex; align-items: center; gap: 0.5rem; color: #9ca3af; font-size: 0.75rem; cursor: pointer;",
+                        label { class: "flex items-center gap-2 text-gray-400 text-xs cursor-pointer",
                             input {
                                 r#type: "checkbox",
                                 checked: *show_hidden.read(),
@@ -135,7 +135,7 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
 
                         button {
                             onclick: move |_| props.on_close.call(()),
-                            style: "padding: 0.5rem; background: transparent; border: none; color: #9ca3af; cursor: pointer; font-size: 1.25rem;",
+                            class: "p-2 bg-transparent border-0 text-gray-400 cursor-pointer text-xl",
                             "X"
                         }
                     }
@@ -144,18 +144,18 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
                 // Error message
                 if let Some(err) = error.read().as_ref() {
                     div {
-                        style: "padding: 0.75rem 1.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.875rem;",
+                        class: "py-3 px-6 bg-red-500 bg-opacity-10 text-red-500 text-sm",
                         "{err}"
                     }
                 }
 
                 // Content
                 div {
-                    style: "flex: 1; overflow-y: auto; padding: 1rem 1.5rem;",
+                    class: "flex-1 overflow-y-auto py-4 px-6",
 
                     if *is_loading.read() {
                         div {
-                            style: "text-align: center; color: #6b7280; padding: 2rem;",
+                            class: "text-center text-gray-500 py-8",
                             "Loading skills..."
                         }
                     } else if *show_add_form.read() {
@@ -182,10 +182,10 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
                         }
                     } else {
                         // Add skill button
-                        div { style: "margin-bottom: 1rem;",
+                        div { class: "mb-4",
                             button {
                                 onclick: move |_| show_add_form.set(true),
-                                style: "padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;",
+                                class: "py-2 px-4 bg-purple-500 text-white border-0 rounded cursor-pointer text-sm",
                                 "+ Add Custom Skill"
                             }
                         }
@@ -196,12 +196,12 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
                                 let cat_skills = skills_by_category.get(category).cloned().unwrap_or_default();
                                 if !cat_skills.is_empty() {
                                     rsx! {
-                                        div { style: "margin-bottom: 1.5rem;",
-                                            h3 { style: "color: #9ca3af; font-size: 0.75rem; text-transform: uppercase; margin: 0 0 0.5rem 0;",
+                                        div { class: "mb-6",
+                                            h3 { class: "text-gray-400 text-xs uppercase m-0 mb-2",
                                                 "{category.display_name()} ({cat_skills.len()})"
                                             }
 
-                                            div { style: "display: flex; flex-direction: column; gap: 0.25rem;",
+                                            div { class: "flex flex-col gap-1",
                                                 for skill in cat_skills.iter() {
                                                     SkillRow {
                                                         key: "{skill.id}",
@@ -223,9 +223,9 @@ pub fn SkillsPanel(props: SkillsPanelProps) -> Element {
 
                         if skills.read().is_empty() {
                             div {
-                                style: "text-align: center; color: #6b7280; padding: 2rem;",
+                                class: "text-center text-gray-500 py-8",
                                 p { "No skills defined for this world." }
-                                p { style: "font-size: 0.875rem;", "Skills are loaded from the rule system preset." }
+                                p { class: "text-sm", "Skills are loaded from the rule system preset." }
                             }
                         }
                     }
@@ -256,13 +256,18 @@ fn SkillRow(
     // Get skill service
     let skill_service = use_skill_service();
 
-    // Pre-compute styles based on hidden state
-    let row_bg = if skill.is_hidden { "rgba(107, 114, 128, 0.2)" } else { "#0f0f23" };
-    let icon_color = if skill.is_hidden { "#6b7280" } else { "#10b981" };
-    let name_color = if skill.is_hidden { "#6b7280" } else { "white" };
-    let row_style = format!("display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: {}; border-radius: 0.25rem;", row_bg);
-    let icon_style = format!("padding: 0.25rem; background: transparent; border: none; color: {}; cursor: pointer; font-size: 0.875rem;", icon_color);
-    let name_style = format!("color: {}; font-weight: 500;", name_color);
+    // Pre-compute classes based on hidden state
+    let row_class = if skill.is_hidden {
+        "flex items-center gap-3 py-2 px-3 bg-gray-500 bg-opacity-20 rounded"
+    } else {
+        "flex items-center gap-3 py-2 px-3 bg-dark-bg rounded"
+    };
+    let icon_class = if skill.is_hidden {
+        "p-1 bg-transparent border-0 text-gray-500 cursor-pointer text-sm"
+    } else {
+        "p-1 bg-transparent border-0 text-green-500 cursor-pointer text-sm"
+    };
+    let name_class = if skill.is_hidden { "text-gray-500 font-medium" } else { "text-white font-medium" };
 
     let handle_toggle = {
         let service = skill_service.clone();
@@ -308,49 +313,49 @@ fn SkillRow(
 
     rsx! {
         div {
-            style: "{row_style}",
+            class: "{row_class}",
 
             // Visibility toggle
             button {
                 onclick: handle_toggle,
-                style: "{icon_style}",
+                class: "{icon_class}",
                 title: if is_hidden { "Show skill" } else { "Hide skill" },
                 if is_hidden { "👁" } else { "👁" }
             }
 
             // Skill info
-            div { style: "flex: 1; min-width: 0;",
-                div { style: "display: flex; align-items: center; gap: 0.5rem;",
-                    span { style: "{name_style}", "{skill.name}" }
+            div { class: "flex-1 min-w-0",
+                div { class: "flex items-center gap-2",
+                    span { class: "{name_class}", "{skill.name}" }
                     if let Some(attr) = &skill.base_attribute {
-                        span { style: "color: #8b5cf6; font-size: 0.75rem; background: rgba(139, 92, 246, 0.1); padding: 0.125rem 0.375rem; border-radius: 0.25rem;",
+                        span { class: "text-purple-500 text-xs bg-purple-500 bg-opacity-10 py-0.5 px-1.5 rounded",
                             "{attr}"
                         }
                     }
                     if is_custom {
-                        span { style: "color: #f59e0b; font-size: 0.625rem; background: rgba(245, 158, 11, 0.1); padding: 0.125rem 0.375rem; border-radius: 0.25rem;",
+                        span { class: "text-amber-500 text-xs bg-amber-500 bg-opacity-10 py-0.5 px-1.5 rounded",
                             "Custom"
                         }
                     }
                 }
                 if !skill.description.is_empty() {
-                    p { style: "color: #6b7280; font-size: 0.75rem; margin: 0.25rem 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                    p { class: "text-gray-500 text-xs mt-1 mb-0 whitespace-nowrap overflow-hidden text-ellipsis",
                         "{skill.description}"
                     }
                 }
             }
 
             // Actions
-            div { style: "display: flex; gap: 0.25rem;",
+            div { class: "flex gap-1",
                 if is_custom {
                     button {
                         onclick: move |_| on_edit.call(skill_id_for_edit.clone()),
-                        style: "padding: 0.25rem 0.5rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                        class: "py-1 px-2 bg-gray-700 text-white border-0 rounded cursor-pointer text-xs",
                         "Edit"
                     }
                     button {
                         onclick: handle_delete,
-                        style: "padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem;",
+                        class: "py-1 px-2 bg-red-500 text-white border-0 rounded cursor-pointer text-xs",
                         "X"
                     }
                 }
@@ -414,45 +419,45 @@ fn AddSkillForm(
 
     rsx! {
         div {
-            style: "padding: 1rem; background: #0f0f23; border-radius: 0.5rem;",
+            class: "p-4 bg-dark-bg rounded-lg",
 
-            h3 { style: "color: white; margin: 0 0 1rem 0; font-size: 1rem;", "Add Custom Skill" }
+            h3 { class: "text-white m-0 mb-4 text-base", "Add Custom Skill" }
 
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.875rem; margin-bottom: 1rem; border-radius: 0.25rem;",
+                    class: "p-2 bg-red-500 bg-opacity-10 text-red-500 text-sm mb-4 rounded",
                     "{err}"
                 }
             }
 
             // Name
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Name *" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Name *" }
                 input {
                     r#type: "text",
                     value: "{name}",
                     oninput: move |e| name.set(e.value()),
                     disabled: *is_creating.read(),
                     placeholder: "Skill name",
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Description
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Description" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Description" }
                 textarea {
                     value: "{description}",
                     oninput: move |e| description.set(e.value()),
                     disabled: *is_creating.read(),
                     placeholder: "What this skill is used for...",
-                    style: "width: 100%; min-height: 60px; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                    class: "w-full min-h-15 p-2 bg-dark-surface border border-gray-700 rounded text-white resize-y box-border",
                 }
             }
 
             // Category
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Category" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Category" }
                 select {
                     value: "{category.read().display_name()}",
                     onchange: move |e| {
@@ -473,7 +478,7 @@ fn AddSkillForm(
                         category.set(cat);
                     },
                     disabled: *is_creating.read(),
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                     for cat in SkillCategory::all() {
                         option { value: "{cat.display_name()}", "{cat.display_name()}" }
                     }
@@ -481,30 +486,30 @@ fn AddSkillForm(
             }
 
             // Base Attribute
-            div { style: "margin-bottom: 1rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Base Attribute (optional)" }
+            div { class: "mb-4",
+                label { class: "block text-gray-400 text-xs mb-1", "Base Attribute (optional)" }
                 input {
                     r#type: "text",
                     value: "{base_attribute}",
                     oninput: move |e| base_attribute.set(e.value()),
                     disabled: *is_creating.read(),
                     placeholder: "e.g., STR, DEX, INT",
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Buttons
-            div { style: "display: flex; gap: 0.5rem;",
+            div { class: "flex gap-2",
                 button {
                     onclick: handle_create,
                     disabled: *is_creating.read(),
-                    style: "flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                    class: "flex-1 p-2 bg-purple-500 text-white border-0 rounded cursor-pointer",
                     if *is_creating.read() { "Creating..." } else { "Create Skill" }
                 }
                 button {
                     onclick: move |_| on_cancel.call(()),
                     disabled: *is_creating.read(),
-                    style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                    class: "py-2 px-4 bg-gray-700 text-white border-0 rounded cursor-pointer",
                     "Cancel"
                 }
             }
@@ -572,43 +577,43 @@ fn EditSkillForm(
 
     rsx! {
         div {
-            style: "padding: 1rem; background: #0f0f23; border-radius: 0.5rem;",
+            class: "p-4 bg-dark-bg rounded-lg",
 
-            h3 { style: "color: white; margin: 0 0 1rem 0; font-size: 1rem;", "Edit Skill" }
+            h3 { class: "text-white m-0 mb-4 text-base", "Edit Skill" }
 
             if let Some(err) = error.read().as_ref() {
                 div {
-                    style: "padding: 0.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.875rem; margin-bottom: 1rem; border-radius: 0.25rem;",
+                    class: "p-2 bg-red-500 bg-opacity-10 text-red-500 text-sm mb-4 rounded",
                     "{err}"
                 }
             }
 
             // Name
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Name *" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Name *" }
                 input {
                     r#type: "text",
                     value: "{name}",
                     oninput: move |e| name.set(e.value()),
                     disabled: *is_saving.read(),
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Description
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Description" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Description" }
                 textarea {
                     value: "{description}",
                     oninput: move |e| description.set(e.value()),
                     disabled: *is_saving.read(),
-                    style: "width: 100%; min-height: 60px; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; resize: vertical; box-sizing: border-box;",
+                    class: "w-full min-h-15 p-2 bg-dark-surface border border-gray-700 rounded text-white resize-y box-border",
                 }
             }
 
             // Category
-            div { style: "margin-bottom: 0.75rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Category" }
+            div { class: "mb-3",
+                label { class: "block text-gray-400 text-xs mb-1", "Category" }
                 select {
                     value: "{category.read().display_name()}",
                     onchange: move |e| {
@@ -629,7 +634,7 @@ fn EditSkillForm(
                         category.set(cat);
                     },
                     disabled: *is_saving.read(),
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white",
                     for cat in SkillCategory::all() {
                         option { value: "{cat.display_name()}", "{cat.display_name()}" }
                     }
@@ -637,30 +642,30 @@ fn EditSkillForm(
             }
 
             // Base Attribute
-            div { style: "margin-bottom: 1rem;",
-                label { style: "display: block; color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem;", "Base Attribute (optional)" }
+            div { class: "mb-4",
+                label { class: "block text-gray-400 text-xs mb-1", "Base Attribute (optional)" }
                 input {
                     r#type: "text",
                     value: "{base_attribute}",
                     oninput: move |e| base_attribute.set(e.value()),
                     disabled: *is_saving.read(),
                     placeholder: "e.g., STR, DEX, INT",
-                    style: "width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #374151; border-radius: 0.25rem; color: white; box-sizing: border-box;",
+                    class: "w-full p-2 bg-dark-surface border border-gray-700 rounded text-white box-border",
                 }
             }
 
             // Buttons
-            div { style: "display: flex; gap: 0.5rem;",
+            div { class: "flex gap-2",
                 button {
                     onclick: handle_save,
                     disabled: *is_saving.read(),
-                    style: "flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                    class: "flex-1 p-2 bg-purple-500 text-white border-0 rounded cursor-pointer",
                     if *is_saving.read() { "Saving..." } else { "Save Changes" }
                 }
                 button {
                     onclick: move |_| on_cancel.call(()),
                     disabled: *is_saving.read(),
-                    style: "padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;",
+                    class: "py-2 px-4 bg-gray-700 text-white border-0 rounded cursor-pointer",
                     "Cancel"
                 }
             }
