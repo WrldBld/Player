@@ -80,6 +80,8 @@ pub struct PendingChallengeOutcome {
     pub roll_breakdown: Option<String>,
     /// LLM-generated alternative suggestions
     pub suggestions: Option<Vec<String>>,
+    /// LLM-generated outcome branches for selection (Phase 22C)
+    pub branches: Option<Vec<crate::application::dto::OutcomeBranchData>>,
     /// Whether suggestions are currently being generated
     pub is_generating_suggestions: bool,
     /// Timestamp for ordering
@@ -216,6 +218,20 @@ impl ApprovalState {
         let mut outcomes = self.pending_challenge_outcomes.write();
         if let Some(outcome) = outcomes.iter_mut().find(|o| o.resolution_id == resolution_id) {
             outcome.suggestions = Some(suggestions);
+            outcome.is_generating_suggestions = false;
+        }
+    }
+
+    /// Update branches for a pending challenge outcome (Phase 22C)
+    pub fn update_challenge_branches(
+        &mut self,
+        resolution_id: &str,
+        _outcome_type: String,
+        branches: Vec<crate::application::dto::OutcomeBranchData>,
+    ) {
+        let mut outcomes = self.pending_challenge_outcomes.write();
+        if let Some(outcome) = outcomes.iter_mut().find(|o| o.resolution_id == resolution_id) {
+            outcome.branches = Some(branches);
             outcome.is_generating_suggestions = false;
         }
     }

@@ -11,6 +11,8 @@ use crate::presentation::services::use_asset_service;
 /// Props for DirectorGenerateModal
 #[derive(Props, Clone, PartialEq)]
 pub struct DirectorGenerateModalProps {
+    /// World ID for the generation request
+    pub world_id: String,
     /// Entity type (e.g., "character")
     pub entity_type: String,
     /// Entity ID
@@ -216,6 +218,7 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                     }
                     button {
                         onclick: {
+                            let world_id = props.world_id.clone();
                             let entity_type = props.entity_type.clone();
                             let entity_id = props.entity_id.clone();
                             let asset_type = props.asset_type.clone();
@@ -223,6 +226,7 @@ pub fn DirectorGenerateModal(props: DirectorGenerateModalProps) -> Element {
                             move |_| {
                                 is_generating.set(true);
                                 let req = GenerateRequest {
+                                    world_id: world_id.clone(),
                                     entity_type: entity_type.clone(),
                                     entity_id: entity_id.clone(),
                                     asset_type: asset_type.clone(),

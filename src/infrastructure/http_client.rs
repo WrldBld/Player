@@ -266,8 +266,14 @@ impl HttpClient {
             let body_str = serde_json::to_string(body)
                 .map_err(|e| ApiError::SerializeError(e.to_string()))?;
 
-            let response = Request::put(&url)
-                .header("Content-Type", "application/json")
+            let mut request = Request::put(&url).header("Content-Type", "application/json");
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .body(body_str)
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?
                 .send()
@@ -320,8 +326,14 @@ impl HttpClient {
             let body_str = serde_json::to_string(body)
                 .map_err(|e| ApiError::SerializeError(e.to_string()))?;
 
-            let response = Request::put(&url)
-                .header("Content-Type", "application/json")
+            let mut request = Request::put(&url).header("Content-Type", "application/json");
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .body(body_str)
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?
                 .send()
@@ -365,7 +377,14 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            let response = Request::put(&url)
+            let mut request = Request::put(&url);
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -406,7 +425,14 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            let response = Request::put(&url)
+            let mut request = Request::put(&url);
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -458,8 +484,14 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            let response = Request::patch(&url)
-                .header("Content-Type", "application/json")
+            let mut request = Request::patch(&url).header("Content-Type", "application/json");
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .body(&json_body)
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?
                 .send()
@@ -513,7 +545,14 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            let response = Request::delete(&url)
+            let mut request = Request::delete(&url);
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;
@@ -554,7 +593,14 @@ impl HttpClient {
         {
             use gloo_net::http::Request;
 
-            let response = Request::get(&url)
+            let mut request = Request::get(&url);
+            if let Some(user_id) =
+                crate::infrastructure::storage::load(crate::infrastructure::storage::STORAGE_KEY_USER_ID)
+            {
+                request = request.header("X-User-Id", &user_id);
+            }
+
+            let response = request
                 .send()
                 .await
                 .map_err(|e| ApiError::RequestFailed(e.to_string()))?;

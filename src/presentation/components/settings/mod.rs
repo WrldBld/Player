@@ -4,10 +4,14 @@
 //! ComfyUI integration settings, skills management, and general application preferences.
 
 pub mod app_settings;
+pub mod game_settings;
 pub mod skills_panel;
 pub mod workflow_slot_list;
 pub mod workflow_config_editor;
 pub mod workflow_upload_modal;
+
+// Re-export the game settings panel for easy access
+pub use game_settings::GameSettingsPanel;
 
 use dioxus::prelude::*;
 use crate::routes::Route;
@@ -49,6 +53,12 @@ pub fn SettingsView(props: SettingsViewProps) -> Element {
                     active: active_tab == "skills",
                 }
                 SettingsTabLink {
+                    label: "World Settings",
+                    subtab: "world-settings",
+                    world_id: props.world_id.clone(),
+                    active: active_tab == "world-settings",
+                }
+                SettingsTabLink {
                     label: "App Settings",
                     subtab: "app-settings",
                     world_id: props.world_id.clone(),
@@ -63,6 +73,12 @@ pub fn SettingsView(props: SettingsViewProps) -> Element {
                 match active_tab {
                     "skills" => rsx! {
                         SkillsManagementTab { world_id: props.world_id.clone() }
+                    },
+                    "world-settings" => rsx! {
+                        div {
+                            class: "p-4",
+                            game_settings::GameSettingsPanel { world_id: props.world_id.clone() }
+                        }
                     },
                     "app-settings" => rsx! {
                         app_settings::AppSettingsPanel {}

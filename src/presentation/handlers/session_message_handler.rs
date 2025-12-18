@@ -25,7 +25,7 @@ pub fn handle_server_message(
     match message {
         ServerMessage::SessionJoined {
             session_id,
-            role: _,
+            role,
             participants: _,
             world_snapshot,
         } => {
@@ -41,6 +41,52 @@ pub fn handle_server_message(
 
             match serde_json::from_value::<SessionWorldSnapshot>(world_snapshot) {
                 Ok(snapshot) => {
+                    // Try to build an initial scene from the world snapshot
+                    // This provides a default view until a proper SceneUpdate is received
+                    if let Some(first_scene) = snapshot.scenes.first() {
+                        let location_name = snapshot.locations.iter()
+                            .find(|l| l.id == first_scene.location_id)
+                            .map(|l| l.name.clone())
+                            .unwrap_or_else(|| "Unknown".to_string());
+                        
+                        let backdrop_asset = first_scene.backdrop_override.clone()
+                            .or_else(|| snapshot.locations.iter()
+                                .find(|l| l.id == first_scene.location_id)
+                                .and_then(|l| l.backdrop_asset.clone()));
+
+                        // Build scene data
+                        let initial_scene = crate::application::dto::SceneData {
+                            id: first_scene.id.clone(),
+                            name: first_scene.name.clone(),
+                            location_id: first_scene.location_id.clone(),
+                            location_name,
+                            backdrop_asset,
+                            time_context: first_scene.time_context.clone(),
+                            directorial_notes: first_scene.directorial_notes.clone(),
+                        };
+
+                        // Get characters featured in the scene
+                        let scene_characters: Vec<crate::application::dto::CharacterData> = first_scene.featured_characters.iter()
+                            .filter_map(|char_id| {
+                                snapshot.characters.iter().find(|c| &c.id == char_id).map(|c| {
+                                    crate::application::dto::CharacterData {
+                                        id: c.id.clone(),
+                                        name: c.name.clone(),
+                                        sprite_asset: c.sprite_asset.clone(),
+                                        portrait_asset: c.portrait_asset.clone(),
+                                        position: crate::application::dto::CharacterPosition::Center,
+                                        is_speaking: false,
+                                        emotion: String::new(),
+                                    }
+                                })
+                            })
+                            .collect();
+
+                        // Apply the initial scene
+                        game_state.apply_scene_update(initial_scene, scene_characters, Vec::new());
+                        tracing::info!("Applied initial scene from world snapshot: {}", first_scene.name);
+                    }
+
                     game_state.load_world(snapshot);
                     session_state.add_log_entry(
                         "System".to_string(),
@@ -287,18 +333,23 @@ pub fn handle_server_message(
 
             let timestamp = platform.now_unix_secs();
             let result = ChallengeResultData {
-                challenge_name,
-                character_name,
+                challenge_name: challenge_name.clone(),
+                character_name: character_name.clone(),
                 roll,
                 modifier,
                 total,
-                outcome,
-                outcome_description,
+                outcome: outcome.clone(),
+                outcome_description: outcome_description.clone(),
                 timestamp,
-                roll_breakdown,
-                individual_rolls,
+                roll_breakdown: roll_breakdown.clone(),
+                individual_rolls: individual_rolls.clone(),
             };
-            session_state.add_challenge_result(result);
+            
+            // Add to history
+            session_state.add_challenge_result(result.clone());
+            
+            // Trigger popup display (Phase D)
+            session_state.set_result_ready(result);
         }
 
         ServerMessage::NarrativeEventTriggered {
@@ -484,6 +535,7 @@ pub fn handle_server_message(
                 outcome_triggers,
                 roll_breakdown,
                 suggestions: None,
+                branches: None,
                 is_generating_suggestions: false,
                 timestamp,
             };
@@ -501,6 +553,155 @@ pub fn handle_server_message(
                 suggestions.len()
             );
             session_state.update_challenge_suggestions(&resolution_id, suggestions);
+        }
+
+        // Phase 22C: Outcome branches ready for DM selection
+        ServerMessage::OutcomeBranchesReady {
+            resolution_id,
+            outcome_type,
+            branches,
+        } => {
+            tracing::info!(
+                "Outcome branches ready for {} ({}): {} branches",
+                resolution_id,
+                outcome_type,
+                branches.len()
+            );
+            session_state.update_challenge_branches(&resolution_id, outcome_type, branches);
+        }
+
+        // =========================================================================
+        // Phase 23E: DM Event System
+        // =========================================================================
+
+        ServerMessage::ApproachEvent {
+            npc_id,
+            npc_name,
+            npc_sprite: _,
+            description,
+        } => {
+            tracing::info!("NPC approach event: {} ({})", npc_name, npc_id);
+            session_state.add_log_entry(
+                npc_name.clone(),
+                format!("[APPROACH] {}", description),
+                false,
+                platform,
+            );
+            // TODO (Phase 23 Player UI): Show approach event in visual novel view
+        }
+
+        ServerMessage::LocationEvent {
+            region_id,
+            description,
+        } => {
+            tracing::info!("Location event in region {}: {}", region_id, description);
+            session_state.add_log_entry(
+                "Narrator".to_string(),
+                format!("[EVENT] {}", description),
+                true,
+                platform,
+            );
+            // TODO (Phase 23 Player UI): Show location event in visual novel view
+        }
+
+        ServerMessage::NpcLocationShared {
+            npc_id,
+            npc_name,
+            region_name,
+            notes,
+        } => {
+            tracing::info!("NPC location shared: {} at {}", npc_name, region_name);
+            let msg = if let Some(note) = notes {
+                format!("You heard that {} is at {}. {}", npc_name, region_name, note)
+            } else {
+                format!("You heard that {} is at {}.", npc_name, region_name)
+            };
+            session_state.add_log_entry("System".to_string(), msg, true, platform);
+            // TODO (Phase 23 Player UI): Update observation/map state
+        }
+
+        // =========================================================================
+        // Phase 23C: Navigation & Scene Updates
+        // =========================================================================
+
+        ServerMessage::PcSelected {
+            pc_id,
+            pc_name,
+            location_id,
+            region_id,
+        } => {
+            tracing::info!(
+                "PC selected: {} ({}) at location {} region {:?}",
+                pc_name,
+                pc_id,
+                location_id,
+                region_id
+            );
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Now playing as {}", pc_name),
+                true,
+                platform,
+            );
+            // TODO (Phase 23 Player UI): Update selected PC state
+        }
+
+        ServerMessage::SceneChanged {
+            pc_id,
+            region,
+            npcs_present,
+            navigation,
+        } => {
+            tracing::info!(
+                "Scene changed for PC {}: {} in {} ({} NPCs, {} exits)",
+                pc_id,
+                region.name,
+                region.location_name,
+                npcs_present.len(),
+                navigation.exits.len()
+            );
+            // TODO (Phase 23 Player UI): Update visual novel scene with new region data
+            // For now, log the scene change
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Entered {} ({})", region.name, region.location_name),
+                true,
+                platform,
+            );
+        }
+
+        ServerMessage::MovementBlocked { pc_id, reason } => {
+            tracing::info!("Movement blocked for PC {}: {}", pc_id, reason);
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Cannot proceed: {}", reason),
+                true,
+                platform,
+            );
+        }
+
+        // =========================================================================
+        // Phase 23F: Game Time Control
+        // =========================================================================
+
+        ServerMessage::GameTimeUpdated {
+            display: time_display,
+            time_of_day,
+            is_paused,
+        } => {
+            tracing::info!(
+                "Game time updated: {} ({}, paused: {})",
+                time_display,
+                time_of_day,
+                is_paused
+            );
+            // TODO (Phase 23 UI): Update game time display in UI
+            session_state.add_log_entry(
+                "System".to_string(),
+                format!("Time is now: {}", time_display),
+                true,
+                platform,
+            );
         }
     }
 }

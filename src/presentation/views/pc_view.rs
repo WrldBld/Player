@@ -13,7 +13,7 @@ use crate::presentation::components::character_sheet_viewer::CharacterSheetViewe
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
 use crate::presentation::services::{use_character_service, use_world_service};
-use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect};
+use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect, RollSubmissionStatus};
 
 /// Player Character View - visual novel gameplay interface
 ///
@@ -56,6 +56,9 @@ pub fn PCView() -> Element {
 
     // Get active challenge if any
     let active_challenge = session_state.active_challenge().read().clone();
+
+    // Get roll status for result popup (Phase D)
+    let roll_status = session_state.roll_status().read().clone();
 
     // Check if connected
     let is_connected = session_state.connection_status().read().is_connected();
@@ -285,8 +288,8 @@ pub fn PCView() -> Element {
                 }
             }
 
-            // Challenge roll modal
-            if let Some(challenge) = active_challenge {
+            // Challenge roll modal (for active challenges you're rolling)
+            if let Some(ref challenge) = active_challenge {
                 ChallengeRollModal {
                     challenge_id: challenge.challenge_id.clone(),
                     challenge_name: challenge.challenge_name.clone(),
@@ -309,6 +312,125 @@ pub fn PCView() -> Element {
                             session_state.clear_active_challenge();
                         }
                     },
+                }
+            }
+
+            // Challenge result popup (for received results without active challenge - Phase D)
+            if let RollSubmissionStatus::ResultReady(result) = roll_status {
+                if active_challenge.is_none() {
+                    ChallengeResultPopup {
+                        result: result.clone(),
+                        on_dismiss: {
+                            let mut session_state = session_state.clone();
+                            move |_| {
+                                session_state.dismiss_result();
+                                session_state.clear_roll_status();
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Standalone challenge result popup (Phase D)
+/// Shown when a ChallengeResolved message is received without an active challenge modal.
+#[component]
+fn ChallengeResultPopup(
+    result: crate::presentation::state::challenge_state::ChallengeResultData,
+    on_dismiss: EventHandler<()>,
+) -> Element {
+    // Determine display colors and text based on outcome
+    let (outcome_text, outcome_class, border_class) = match result.outcome.as_str() {
+        "critical_success" => ("CRITICAL SUCCESS", "text-yellow-400", "border-yellow-400"),
+        "success" => ("SUCCESS", "text-green-500", "border-green-500"),
+        "failure" => ("FAILURE", "text-red-500", "border-red-500"),
+        "critical_failure" => ("CRITICAL FAILURE", "text-red-700", "border-red-700"),
+        _ => ("RESULT", "text-amber-500", "border-amber-500"),
+    };
+
+    rsx! {
+        // Modal overlay
+        div {
+            class: "fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]",
+            onclick: move |_| on_dismiss.call(()),
+
+            // Modal content
+            div {
+                class: "bg-gradient-to-br from-dark-surface to-dark-bg p-8 rounded-2xl max-w-[450px] w-[90%] border-2 {border_class}",
+                onclick: |e| e.stop_propagation(),
+
+                // Header
+                div {
+                    class: "text-center mb-6",
+
+                    h2 {
+                        class: "text-2xl font-bold {outcome_class} mb-2",
+                        "{outcome_text}"
+                    }
+
+                    p {
+                        class: "text-gray-400 text-sm",
+                        "{result.challenge_name}"
+                    }
+
+                    p {
+                        class: "text-gray-500 text-xs",
+                        "by {result.character_name}"
+                    }
+                }
+
+                // Roll breakdown
+                div {
+                    class: "bg-black/30 rounded-lg p-4 mb-4",
+
+                    div {
+                        class: "flex justify-between mb-2",
+                        span { class: "text-gray-400", "Roll" }
+                        span { class: "text-white font-bold", "{result.roll}" }
+                    }
+
+                    div {
+                        class: "flex justify-between mb-2",
+                        span { class: "text-gray-400", "Modifier" }
+                        span {
+                            class: "text-blue-500 font-bold",
+                            if result.modifier >= 0 { "+{result.modifier}" } else { "{result.modifier}" }
+                        }
+                    }
+
+                    div {
+                        class: "border-t border-white/10 pt-2 flex justify-between",
+                        span { class: "text-gray-400 font-bold", "Total" }
+                        span { class: "{outcome_class} font-bold text-xl", "{result.total}" }
+                    }
+                }
+
+                // Optional roll breakdown string
+                if let Some(breakdown) = &result.roll_breakdown {
+                    p {
+                        class: "text-gray-500 text-xs text-center mb-4 font-mono",
+                        "{breakdown}"
+                    }
+                }
+
+                // Outcome description
+                if !result.outcome_description.is_empty() {
+                    div {
+                        class: "bg-black/20 rounded-lg p-4 mb-4",
+                        p {
+                            class: "text-gray-300 text-sm leading-relaxed italic",
+                            "{result.outcome_description}"
+                        }
+                    }
+                }
+
+                // Dismiss button
+                button {
+                    onclick: move |_| on_dismiss.call(()),
+                    class: "w-full p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-none rounded-lg cursor-pointer font-semibold",
+                    "Continue"
                 }
             }
         }

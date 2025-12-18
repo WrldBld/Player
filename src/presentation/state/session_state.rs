@@ -284,6 +284,16 @@ impl SessionState {
         self.approval.update_challenge_suggestions(resolution_id, suggestions);
     }
 
+    /// Update branches for a pending challenge outcome (Phase 22C)
+    pub fn update_challenge_branches(
+        &mut self,
+        resolution_id: &str,
+        outcome_type: String,
+        branches: Vec<crate::application::dto::OutcomeBranchData>,
+    ) {
+        self.approval.update_challenge_branches(resolution_id, outcome_type, branches);
+    }
+
     /// Mark a challenge outcome as generating suggestions
     pub fn set_challenge_generating_suggestions(&mut self, resolution_id: &str, generating: bool) {
         self.approval.set_challenge_generating_suggestions(resolution_id, generating);

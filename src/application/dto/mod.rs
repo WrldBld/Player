@@ -20,7 +20,7 @@ pub use websocket_messages::*;
 // Re-export Engine snapshot contracts (application-owned).
 pub use world_snapshot::{
     // Rule system types
-    RuleSystemConfig, RuleSystemType, RuleSystemVariant,
+    RuleSystemConfig, RuleSystemPresetDetails, RuleSystemType, RuleSystemVariant,
     StatDefinition, DiceSystem, SuccessComparison,
     // Skill types
     SkillData, SkillCategory,
@@ -38,6 +38,6 @@ pub use world_snapshot::{
 };
 
 // Re-export settings DTOs
-pub use settings::AppSettings;
+pub use settings::{AppSettings, ContextBudgetConfig, SettingsFieldMetadata, SettingsMetadataResponse};
 
 // NOTE: Infrastructure asset loader now depends inward on these DTOs.

@@ -100,15 +100,18 @@ pub fn CreatorMode(props: CreatorModeProps) -> Element {
     let generation_service = use_generation_service();
     let mut generation_state = use_generation_state();
     let session_state = use_session_state();
+    let world_id_for_hydrate = props.world_id.clone();
     use_effect(move || {
         let platform_clone = platform.clone();
         let gen_svc = generation_service.clone();
         let user_id = session_state.user_id().read().clone();
+        let world_id = world_id_for_hydrate.clone();
         spawn(async move {
             if let Err(e) = crate::presentation::services::hydrate_generation_queue(
                 &gen_svc,
                 &mut generation_state,
                 user_id.as_deref(),
+                &world_id,
                 &platform_clone,
             )
             .await

@@ -15,7 +15,7 @@ const ASSET_TYPES: &[(&str, &str)] = &[
 
 /// Asset gallery for an entity
 #[component]
-pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
+pub fn AssetGallery(world_id: String, entity_type: String, entity_id: String) -> Element {
     let asset_service = use_asset_service();
     let mut selected_asset_type = use_signal(|| "portrait".to_string());
     let mut show_generate_modal = use_signal(|| false);
@@ -177,6 +177,7 @@ pub fn AssetGallery(entity_type: String, entity_id: String) -> Element {
             // Generation modal
             if *show_generate_modal.read() {
                 GenerateAssetModal {
+                    world_id: world_id.clone(),
                     entity_type: entity_type.clone(),
                     entity_id: entity_id.clone(),
                     asset_type: selected_asset_type.read().clone(),
@@ -318,6 +319,7 @@ fn AssetThumbnail(props: AssetThumbnailProps) -> Element {
 /// Modal for generating new assets
 #[component]
 fn GenerateAssetModal(
+    world_id: String,
     entity_type: String,
     entity_id: String,
     asset_type: String,
@@ -504,12 +506,14 @@ fn GenerateAssetModal(
                     }
                     button {
                         onclick: {
+                            let world_id = world_id.clone();
                             let entity_type = entity_type.clone();
                             let entity_id = entity_id.clone();
                             let asset_type = asset_type.clone();
                             move |_| {
                                 is_generating.set(true);
                                 on_generate.call(GenerateRequest {
+                                    world_id: world_id.clone(),
                                     entity_type: entity_type.clone(),
                                     entity_id: entity_id.clone(),
                                     asset_type: asset_type.clone(),

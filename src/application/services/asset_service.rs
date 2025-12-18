@@ -28,6 +28,8 @@ pub struct GalleryResponse {
 /// Request to generate new assets
 #[derive(Clone, Debug, Serialize)]
 pub struct GenerateRequest {
+    /// World this asset belongs to
+    pub world_id: String,
     pub entity_type: String,
     pub entity_id: String,
     pub asset_type: String,

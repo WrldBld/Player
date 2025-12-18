@@ -215,6 +215,13 @@ impl Default for RuleSystemConfig {
     }
 }
 
+/// Response wrapper for rule system preset details (matches Engine's RuleSystemPresetDetailsDto)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleSystemPresetDetails {
+    pub variant: RuleSystemVariant,
+    pub config: RuleSystemConfig,
+}
+
 /// The type of rule system (how dice mechanics work)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuleSystemType {

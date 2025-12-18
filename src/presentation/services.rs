@@ -179,13 +179,15 @@ use anyhow::Result;
 /// * `generation_state` - The mutable state to populate
 /// * `user_id` - Optional user ID to filter queue items
 /// * `platform` - The platform adapter for storage access
+/// * `world_id` - World ID to scope the queue to
 pub async fn hydrate_generation_queue<A: ApiPort>(
     generation_service: &GenerationService<A>,
     generation_state: &mut GenerationState,
     user_id: Option<&str>,
+    world_id: &str,
     platform: &Platform,
 ) -> Result<()> {
-    let snapshot = generation_service.fetch_queue(user_id).await?;
+    let snapshot = generation_service.fetch_queue(user_id, world_id).await?;
 
     // Clear existing state and repopulate from snapshot
     generation_state.clear();

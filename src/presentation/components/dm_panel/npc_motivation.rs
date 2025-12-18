@@ -19,6 +19,8 @@ pub struct Motivation {
 /// Props for the NPCMotivation component
 #[derive(Props, Clone, PartialEq)]
 pub struct NPCMotivationProps {
+    /// World ID for asset generation
+    pub world_id: String,
     /// The character being tracked
     pub character: CharacterData,
     /// Current motivation state
@@ -148,6 +150,7 @@ pub fn NPCMotivation(props: NPCMotivationProps) -> Element {
         // Generate modal
         if *show_generate_modal.read() {
             DirectorGenerateModal {
+                world_id: props.world_id.clone(),
                 entity_type: "character".to_string(),
                 entity_id: char_id.clone(),
                 asset_type: generate_asset_type.read().clone(),

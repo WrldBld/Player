@@ -8,8 +8,8 @@
 use dioxus::prelude::*;
 
 use crate::application::dto::{
-    DiceSystem, RuleSystemConfig, RuleSystemType, RuleSystemVariant, StatDefinition,
-    SuccessComparison, SessionWorldSnapshot,
+    DiceSystem, RuleSystemConfig, RuleSystemPresetDetails, RuleSystemType, RuleSystemVariant,
+    StatDefinition, SuccessComparison, SessionWorldSnapshot,
 };
 use crate::application::services::world_service::{WorldSummary, SessionInfo};
 use crate::application::ports::outbound::Platform;
@@ -380,9 +380,10 @@ fn CreateWorldForm(on_created: EventHandler<String>, on_cancel: EventHandler<()>
 
                 match svc.get_rule_system_preset(system_type, &variant_str).await {
                     Ok(config_json) => {
-                        match serde_json::from_value::<RuleSystemConfig>(config_json) {
-                            Ok(config) => {
-                                rule_config.set(Some(config));
+                        // Engine returns RuleSystemPresetDetails { variant, config }
+                        match serde_json::from_value::<RuleSystemPresetDetails>(config_json) {
+                            Ok(preset_details) => {
+                                rule_config.set(Some(preset_details.config));
                             }
                             Err(e) => {
                                 error.set(Some(format!("Failed to parse preset: {}", e)));

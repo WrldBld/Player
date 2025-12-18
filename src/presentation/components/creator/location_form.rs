@@ -337,6 +337,7 @@ pub fn LocationForm(
                         h3 { class: "text-gray-400 text-sm uppercase mb-3", "Assets" }
 
                         AssetGallery {
+                            world_id: world_id.clone(),
                             entity_type: "location".to_string(),
                             entity_id: location_id.clone(),
                         }

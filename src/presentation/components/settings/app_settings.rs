@@ -274,6 +274,120 @@ pub fn AppSettingsPanel() -> Element {
                             }
                         }
                     }
+
+                    // Challenge Settings
+                    SettingsSection {
+                        title: "Challenge Settings",
+                        description: "Configuration for challenge resolution and outcome branches",
+
+                        BoundedNumberField {
+                            label: "Outcome Branch Count",
+                            description: "Number of outcome options to generate per challenge result",
+                            value: settings.read().outcome_branch_count,
+                            min: settings.read().outcome_branch_min,
+                            max: settings.read().outcome_branch_max,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.outcome_branch_count = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Suggestion Tokens per Branch",
+                            description: "Max tokens per outcome branch when generating LLM suggestions",
+                            value: settings.read().suggestion_tokens_per_branch as usize,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.suggestion_tokens_per_branch = val as u32);
+                                success_message.set(None);
+                            }
+                        }
+                    }
+
+                    // LLM Context Budget Settings
+                    SettingsSection {
+                        title: "LLM Context Budget",
+                        description: "Token allocation for different context categories in LLM prompts",
+
+                        NumberField {
+                            label: "Conversation History Turns",
+                            description: "Number of conversation turns to include in LLM context",
+                            value: settings.read().conversation_history_turns,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.conversation_history_turns = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Total Token Budget",
+                            description: "Maximum total tokens for LLM system prompt",
+                            value: settings.read().context_budget.total_budget_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.total_budget_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Scene Context Tokens",
+                            description: "Token budget for scene/location context",
+                            value: settings.read().context_budget.scene_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.scene_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Character Context Tokens",
+                            description: "Token budget for NPC personality and motivations",
+                            value: settings.read().context_budget.character_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.character_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Conversation History Tokens",
+                            description: "Token budget for recent conversation history",
+                            value: settings.read().context_budget.conversation_history_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.conversation_history_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Challenges Tokens",
+                            description: "Token budget for active challenges",
+                            value: settings.read().context_budget.challenges_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.challenges_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        NumberField {
+                            label: "Narrative Events Tokens",
+                            description: "Token budget for active story events",
+                            value: settings.read().context_budget.narrative_events_tokens,
+                            onchange: move |val: usize| {
+                                settings.with_mut(|s| s.context_budget.narrative_events_tokens = val);
+                                success_message.set(None);
+                            }
+                        }
+
+                        BooleanField {
+                            label: "Enable Auto-Summarization",
+                            description: "Automatically summarize context when over budget",
+                            value: settings.read().context_budget.enable_summarization,
+                            onchange: move |val: bool| {
+                                settings.with_mut(|s| s.context_budget.enable_summarization = val);
+                                success_message.set(None);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -359,6 +473,118 @@ fn NumberField(props: NumberFieldProps) -> Element {
                         if let Ok(val) = evt.value().parse::<usize>() {
                             props.onchange.call(val);
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Bounded number input field component with min/max constraints
+#[derive(Props, Clone, PartialEq)]
+struct BoundedNumberFieldProps {
+    label: &'static str,
+    description: &'static str,
+    value: usize,
+    min: usize,
+    max: usize,
+    onchange: EventHandler<usize>,
+}
+
+#[component]
+fn BoundedNumberField(props: BoundedNumberFieldProps) -> Element {
+    let value_str = format!("{}", props.value);
+    let min_str = format!("{}", props.min);
+    let max_str = format!("{}", props.max);
+
+    rsx! {
+        div {
+            class: "number-field",
+
+            label {
+                class: "block",
+
+                div {
+                    class: "flex justify-between items-baseline mb-1",
+
+                    span {
+                        class: "text-gray-300 text-sm font-medium",
+                        "{props.label}"
+                    }
+
+                    span {
+                        class: "text-gray-500 text-xs",
+                        "{props.description} ({props.min}-{props.max})"
+                    }
+                }
+
+                input {
+                    r#type: "number",
+                    class: "w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500",
+                    value: "{value_str}",
+                    min: "{min_str}",
+                    max: "{max_str}",
+                    oninput: move |evt| {
+                        if let Ok(val) = evt.value().parse::<usize>() {
+                            // Clamp value to bounds
+                            let clamped = val.clamp(props.min, props.max);
+                            props.onchange.call(clamped);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Boolean toggle field component
+#[derive(Props, Clone, PartialEq)]
+struct BooleanFieldProps {
+    label: &'static str,
+    description: &'static str,
+    value: bool,
+    onchange: EventHandler<bool>,
+}
+
+#[component]
+fn BooleanField(props: BooleanFieldProps) -> Element {
+    rsx! {
+        div {
+            class: "boolean-field",
+
+            label {
+                class: "flex items-center gap-3 cursor-pointer",
+
+                // Toggle switch
+                div {
+                    class: "relative",
+
+                    input {
+                        r#type: "checkbox",
+                        class: "sr-only peer",
+                        checked: props.value,
+                        onchange: move |evt| {
+                            props.onchange.call(evt.checked());
+                        }
+                    }
+
+                    div {
+                        class: "w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"
+                    }
+                }
+
+                // Label and description
+                div {
+                    class: "flex flex-col",
+
+                    span {
+                        class: "text-gray-300 text-sm font-medium",
+                        "{props.label}"
+                    }
+
+                    span {
+                        class: "text-gray-500 text-xs",
+                        "{props.description}"
                     }
                 }
             }

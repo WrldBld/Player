@@ -358,6 +358,7 @@ pub fn CharacterForm(
                         h3 { class: "text-gray-400 text-sm uppercase mb-3", "Assets" }
 
                         AssetGallery {
+                            world_id: world_id.clone(),
                             entity_type: "character".to_string(),
                             entity_id: character_id.clone(),
                         }

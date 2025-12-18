@@ -70,14 +70,16 @@ impl<A: ApiPort> GenerationService<A> {
     ///
     /// # Arguments
     /// * `user_id` - Optional user ID to filter queue items by user
+    /// * `world_id` - World ID to scope the queue to
     pub async fn fetch_queue(
         &self,
         user_id: Option<&str>,
+        world_id: &str,
     ) -> Result<GenerationQueueSnapshot, ApiError> {
         let path = if let Some(uid) = user_id {
-            format!("/api/generation/queue?user_id={}", uid)
+            format!("/api/generation/queue?user_id={}&world_id={}", uid, world_id)
         } else {
-            "/api/generation/queue".to_string()
+            format!("/api/generation/queue?world_id={}", world_id)
         };
         self.api.get(&path).await
     }
