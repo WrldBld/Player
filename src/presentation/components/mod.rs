@@ -5,6 +5,7 @@ pub mod character_sheet_viewer;
 pub mod common;
 pub mod creator;
 pub mod dm_panel;
+pub mod navigation_panel;
 pub mod pc;
 pub mod settings;
 pub mod shared;

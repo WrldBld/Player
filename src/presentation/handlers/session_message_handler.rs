@@ -653,15 +653,23 @@ pub fn handle_server_message(
             navigation,
         } => {
             tracing::info!(
-                "Scene changed for PC {}: {} in {} ({} NPCs, {} exits)",
+                "Scene changed for PC {}: {} in {} ({} NPCs, {} regions, {} exits)",
                 pc_id,
                 region.name,
                 region.location_name,
                 npcs_present.len(),
+                navigation.connected_regions.len(),
                 navigation.exits.len()
             );
-            // TODO (Phase 23 Player UI): Update visual novel scene with new region data
-            // For now, log the scene change
+            
+            // Update game state with navigation data
+            game_state.apply_scene_changed(
+                pc_id.clone(),
+                region.clone(),
+                npcs_present,
+                navigation,
+            );
+            
             session_state.add_log_entry(
                 "System".to_string(),
                 format!("Entered {} ({})", region.name, region.location_name),
@@ -695,7 +703,14 @@ pub fn handle_server_message(
                 time_of_day,
                 is_paused
             );
-            // TODO (Phase 23 UI): Update game time display in UI
+            
+            // Update game state with time data
+            game_state.apply_game_time_update(
+                time_display.clone(),
+                time_of_day,
+                is_paused,
+            );
+            
             session_state.add_log_entry(
                 "System".to_string(),
                 format!("Time is now: {}", time_display),

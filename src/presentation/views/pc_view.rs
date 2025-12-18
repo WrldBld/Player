@@ -10,6 +10,7 @@ use crate::domain::entities::PlayerAction;
 use crate::application::dto::{FieldValue, SheetTemplate, InteractionData, DiceInputType};
 use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
+use crate::presentation::components::navigation_panel::NavigationPanel;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
 use crate::presentation::services::{use_character_service, use_world_service};
@@ -37,6 +38,9 @@ pub fn PCView() -> Element {
     let mut selected_character_id: Signal<Option<String>> = use_signal(|| None);
     let mut is_loading_sheet = use_signal(|| false);
 
+    // Navigation panel state
+    let mut show_navigation_panel = use_signal(|| false);
+
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
 
@@ -63,6 +67,11 @@ pub fn PCView() -> Element {
     // Check if connected
     let is_connected = session_state.connection_status().read().is_connected();
 
+    // Get navigation data from game state
+    let current_region = game_state.current_region.read().clone();
+    let navigation = game_state.navigation.read().clone();
+    let selected_pc_id = game_state.selected_pc_id.read().clone();
+
     rsx! {
         div {
             class: "pc-view h-full flex flex-col relative",
@@ -71,8 +80,17 @@ pub fn PCView() -> Element {
             div {
                 class: "absolute top-4 right-4 z-[100] flex flex-col gap-2 items-end",
 
-                // Location name
-                if let Some(scene) = game_state.current_scene.read().as_ref() {
+                // Location/Region name - prefer region data if available
+                if let Some(ref region) = current_region {
+                    div {
+                        class: "px-4 py-2 bg-black/70 text-white rounded-lg text-sm font-medium",
+                        "📍 {region.name}"
+                    }
+                    div {
+                        class: "px-3 py-1 bg-black/50 text-gray-300 rounded-lg text-xs",
+                        "{region.location_name}"
+                    }
+                } else if let Some(scene) = game_state.current_scene.read().as_ref() {
                     div {
                         class: "px-4 py-2 bg-black/70 text-white rounded-lg text-sm font-medium",
                         "📍 {scene.location_name}"
@@ -212,7 +230,8 @@ pub fn PCView() -> Element {
                     }
                 })),
                 on_map: Some(EventHandler::new(move |_| {
-                    tracing::info!("Open map");
+                    tracing::info!("Open navigation panel");
+                    show_navigation_panel.set(true);
                 })),
                 on_log: Some(EventHandler::new(move |_| {
                     tracing::info!("Open log");
@@ -326,6 +345,45 @@ pub fn PCView() -> Element {
                                 session_state.dismiss_result();
                                 session_state.clear_roll_status();
                             }
+                        },
+                    }
+                }
+            }
+
+            // Navigation panel modal
+            if *show_navigation_panel.read() {
+                if let Some(ref nav) = navigation {
+                    NavigationPanel {
+                        navigation: nav.clone(),
+                        current_region_name: current_region.as_ref().map(|r| r.name.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                        current_location_name: current_region.as_ref().map(|r| r.location_name.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                        disabled: is_llm_processing,
+                        on_move_to_region: {
+                            let session_state = session_state.clone();
+                            let pc_id = selected_pc_id.clone();
+                            move |region_id: String| {
+                                if let Some(ref pc) = pc_id {
+                                    send_move_to_region(&session_state, pc, &region_id);
+                                    show_navigation_panel.set(false);
+                                } else {
+                                    tracing::warn!("Cannot move: no PC selected");
+                                }
+                            }
+                        },
+                        on_exit_to_location: {
+                            let session_state = session_state.clone();
+                            let pc_id = selected_pc_id.clone();
+                            move |(location_id, arrival_region_id): (String, String)| {
+                                if let Some(ref pc) = pc_id {
+                                    send_exit_to_location(&session_state, pc, &location_id, Some(&arrival_region_id));
+                                    show_navigation_panel.set(false);
+                                } else {
+                                    tracing::warn!("Cannot exit: no PC selected");
+                                }
+                            }
+                        },
+                        on_close: move |_| {
+                            show_navigation_panel.set(false);
                         },
                     }
                 }
@@ -543,5 +601,40 @@ fn send_challenge_roll_input(
         }
     } else {
         tracing::warn!("Cannot send challenge roll: not connected to server");
+    }
+}
+
+/// Send a move to region command via WebSocket
+fn send_move_to_region(
+    session_state: &crate::presentation::state::SessionState,
+    pc_id: &str,
+    region_id: &str,
+) {
+    let engine_client_signal = session_state.engine_client();
+    let client_binding = engine_client_signal.read();
+    if let Some(ref client) = *client_binding {
+        if let Err(e) = client.move_to_region(pc_id, region_id) {
+            tracing::error!("Failed to send move to region: {}", e);
+        }
+    } else {
+        tracing::warn!("Cannot move: not connected to server");
+    }
+}
+
+/// Send an exit to location command via WebSocket
+fn send_exit_to_location(
+    session_state: &crate::presentation::state::SessionState,
+    pc_id: &str,
+    location_id: &str,
+    arrival_region_id: Option<&str>,
+) {
+    let engine_client_signal = session_state.engine_client();
+    let client_binding = engine_client_signal.read();
+    if let Some(ref client) = *client_binding {
+        if let Err(e) = client.exit_to_location(pc_id, location_id, arrival_region_id) {
+            tracing::error!("Failed to send exit to location: {}", e);
+        }
+    } else {
+        tracing::warn!("Cannot exit: not connected to server");
     }
 }

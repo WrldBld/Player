@@ -371,6 +371,49 @@ impl GameConnectionPort for EngineGameConnection {
         }
     }
 
+    fn move_to_region(&self, pc_id: &str, region_id: &str) -> Result<()> {
+        let msg = ClientMessage::MoveToRegion {
+            pc_id: pc_id.to_string(),
+            region_id: region_id.to_string(),
+        };
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.client.send(msg)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.send(msg).await {
+                    tracing::error!("Failed to send move to region: {}", e);
+                }
+            });
+            Ok(())
+        }
+    }
+
+    fn exit_to_location(&self, pc_id: &str, location_id: &str, arrival_region_id: Option<&str>) -> Result<()> {
+        let msg = ClientMessage::ExitToLocation {
+            pc_id: pc_id.to_string(),
+            location_id: location_id.to_string(),
+            arrival_region_id: arrival_region_id.map(|s| s.to_string()),
+        };
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.client.send(msg)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client.send(msg).await {
+                    tracing::error!("Failed to send exit to location: {}", e);
+                }
+            });
+            Ok(())
+        }
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     fn on_state_change(&self, callback: Box<dyn FnMut(PortConnectionState) + Send + 'static>) {
         let state_slot = Arc::clone(&self.state);

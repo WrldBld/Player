@@ -5,7 +5,21 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
-use crate::application::dto::{SessionWorldSnapshot, CharacterData, InteractionData, SceneData};
+use crate::application::dto::{
+    SessionWorldSnapshot, CharacterData, InteractionData, SceneData,
+    RegionData, NavigationData, NpcPresenceData,
+};
+
+/// Game time display data
+#[derive(Clone, Debug, PartialEq)]
+pub struct GameTimeData {
+    /// Display string (e.g., "Day 3, 2:30 PM")
+    pub display: String,
+    /// Time of day (Morning, Afternoon, Evening, Night)
+    pub time_of_day: String,
+    /// Whether time is paused
+    pub is_paused: bool,
+}
 
 /// Central game state stored as Dioxus signals
 #[derive(Clone)]
@@ -18,6 +32,16 @@ pub struct GameState {
     pub scene_characters: Signal<Vec<CharacterData>>,
     /// Available interactions in the scene
     pub interactions: Signal<Vec<InteractionData>>,
+    /// Current region data (from SceneChanged)
+    pub current_region: Signal<Option<RegionData>>,
+    /// Navigation options from current region
+    pub navigation: Signal<Option<NavigationData>>,
+    /// NPCs present in the current region
+    pub npcs_present: Signal<Vec<NpcPresenceData>>,
+    /// Currently selected PC ID
+    pub selected_pc_id: Signal<Option<String>>,
+    /// Current game time
+    pub game_time: Signal<Option<GameTimeData>>,
 }
 
 impl GameState {
@@ -28,6 +52,11 @@ impl GameState {
             current_scene: Signal::new(None),
             scene_characters: Signal::new(Vec::new()),
             interactions: Signal::new(Vec::new()),
+            current_region: Signal::new(None),
+            navigation: Signal::new(None),
+            npcs_present: Signal::new(Vec::new()),
+            selected_pc_id: Signal::new(None),
+            game_time: Signal::new(None),
         }
     }
 
@@ -46,6 +75,34 @@ impl GameState {
         self.current_scene.set(Some(scene));
         self.scene_characters.set(characters);
         self.interactions.set(interactions);
+    }
+
+    /// Update from ServerMessage::SceneChanged (navigation)
+    pub fn apply_scene_changed(
+        &mut self,
+        pc_id: String,
+        region: RegionData,
+        npcs_present: Vec<NpcPresenceData>,
+        navigation: NavigationData,
+    ) {
+        self.selected_pc_id.set(Some(pc_id));
+        self.current_region.set(Some(region));
+        self.npcs_present.set(npcs_present);
+        self.navigation.set(Some(navigation));
+    }
+
+    /// Update from ServerMessage::GameTimeUpdated
+    pub fn apply_game_time_update(
+        &mut self,
+        display: String,
+        time_of_day: String,
+        is_paused: bool,
+    ) {
+        self.game_time.set(Some(GameTimeData {
+            display,
+            time_of_day,
+            is_paused,
+        }));
     }
 
     /// Get the backdrop URL for the current scene
@@ -74,6 +131,10 @@ impl GameState {
         self.current_scene.set(None);
         self.scene_characters.set(Vec::new());
         self.interactions.set(Vec::new());
+        self.current_region.set(None);
+        self.navigation.set(None);
+        self.npcs_present.set(Vec::new());
+        self.game_time.set(None);
     }
 
     /// Clear all state

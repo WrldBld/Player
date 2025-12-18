@@ -138,6 +138,12 @@ pub trait GameConnectionPort: Send + Sync {
     /// Send a heartbeat ping
     fn heartbeat(&self) -> anyhow::Result<()>;
 
+    /// Move PC to a different region within the same location
+    fn move_to_region(&self, pc_id: &str, region_id: &str) -> anyhow::Result<()>;
+
+    /// Exit to a different location
+    fn exit_to_location(&self, pc_id: &str, location_id: &str, arrival_region_id: Option<&str>) -> anyhow::Result<()>;
+
     /// Register a callback for state changes
     fn on_state_change(&self, callback: Box<dyn FnMut(ConnectionState) + Send + 'static>);
 
@@ -211,6 +217,12 @@ pub trait GameConnectionPort {
 
     /// Send a heartbeat ping
     fn heartbeat(&self) -> anyhow::Result<()>;
+
+    /// Move PC to a different region within the same location
+    fn move_to_region(&self, pc_id: &str, region_id: &str) -> anyhow::Result<()>;
+
+    /// Exit to a different location
+    fn exit_to_location(&self, pc_id: &str, location_id: &str, arrival_region_id: Option<&str>) -> anyhow::Result<()>;
 
     /// Register a callback for state changes
     ///
