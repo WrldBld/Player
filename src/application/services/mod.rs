@@ -11,6 +11,7 @@ pub mod character_service;
 pub mod generation_service;
 pub mod location_service;
 pub mod narrative_event_service;
+pub mod observation_service;
 pub mod player_character_service;
 pub mod session_service;
 pub mod session_command_service;
@@ -87,3 +88,6 @@ pub use generation_service::GenerationService;
 
 // Re-export settings service types
 pub use settings_service::SettingsService;
+
+// Re-export observation service types
+pub use observation_service::{ObservationService, ObservationSummary};

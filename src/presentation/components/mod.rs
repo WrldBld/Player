@@ -7,6 +7,7 @@ pub mod creator;
 pub mod dm_panel;
 pub mod event_overlays;
 pub mod inventory_panel;
+pub mod known_npcs_panel;
 pub mod navigation_panel;
 pub mod pc;
 pub mod settings;
