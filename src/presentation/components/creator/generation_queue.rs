@@ -761,16 +761,17 @@ fn SuggestionQueueRow(
                                 let request_id = suggestion.request_id.clone();
                                 let field_type = suggestion.field_type.clone();
                                 let context = suggestion.context.clone();
+                                let world_id = suggestion.world_id.clone();
                                 let suggestion_service = use_suggestion_service();
                                 let state = use_generation_state();
                                 move |_| {
-                                    if let Some(ctx) = context.clone() {
+                                    if let (Some(ctx), Some(wid)) = (context.clone(), world_id.clone()) {
                                         let req_id = request_id.clone();
                                         let field = field_type.clone();
                                         let svc = suggestion_service.clone();
                                         let mut gen_state = state;
                                         spawn(async move {
-                                            match svc.enqueue_suggestion(&field, &ctx).await {
+                                            match svc.enqueue_suggestion(&field, &wid, &ctx).await {
                                                 Ok(new_request_id) => {
                                                     tracing::info!("Retried suggestion {} -> {}", req_id, new_request_id);
                                                     // Remove old failed suggestion
@@ -781,6 +782,7 @@ fn SuggestionQueueRow(
                                                         field,
                                                         None,
                                                         Some(ctx),
+                                                        Some(wid),
                                                     );
                                                 }
                                                 Err(e) => {
@@ -789,7 +791,7 @@ fn SuggestionQueueRow(
                                             }
                                         });
                                     } else {
-                                        tracing::warn!("Cannot retry suggestion {}: context not available", request_id);
+                                        tracing::warn!("Cannot retry suggestion {}: context or world_id not available", request_id);
                                     }
                                 }
                             },

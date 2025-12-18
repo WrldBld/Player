@@ -166,6 +166,7 @@ pub fn LocationForm(
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::LocationName,
+                                world_id: world_id.clone(),
                                 context: SuggestionContext {
                                     entity_type: Some(location_type.read().clone()),
                                     ..Default::default()
@@ -208,6 +209,7 @@ pub fn LocationForm(
                             div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationDescription,
+                                    world_id: world_id.clone(),
                                     context: SuggestionContext {
                                         entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                         entity_type: Some(location_type.read().clone()),
@@ -235,6 +237,7 @@ pub fn LocationForm(
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::LocationAtmosphere,
+                                world_id: world_id.clone(),
                                 context: SuggestionContext {
                                     entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                     entity_type: Some(location_type.read().clone()),
@@ -262,6 +265,7 @@ pub fn LocationForm(
                             div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationFeatures,
+                                    world_id: world_id.clone(),
                                     context: SuggestionContext {
                                         entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                         entity_type: Some(location_type.read().clone()),
@@ -290,6 +294,7 @@ pub fn LocationForm(
                             div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::LocationSecrets,
+                                    world_id: world_id.clone(),
                                     context: SuggestionContext {
                                         entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                         entity_type: Some(location_type.read().clone()),

@@ -52,6 +52,8 @@ pub struct SuggestionTask {
     pub is_read: bool,
     /// Original context for retry (stored when task is created)
     pub context: Option<crate::application::services::suggestion_service::SuggestionContext>,
+    /// World ID for routing (needed for retries)
+    pub world_id: Option<String>,
 }
 
 /// State for managing asset generation and suggestions
@@ -206,6 +208,7 @@ impl GenerationState {
         field_type: String,
         entity_id: Option<String>,
         context: Option<crate::application::services::suggestion_service::SuggestionContext>,
+        world_id: Option<String>,
     ) {
         let task = SuggestionTask {
             request_id,
@@ -214,6 +217,7 @@ impl GenerationState {
             status: SuggestionStatus::Queued,
             is_read: false,
             context,
+            world_id,
         };
         self.suggestions.write().push(task);
         self.update_ready_flag();
@@ -240,6 +244,7 @@ impl GenerationState {
                     status: SuggestionStatus::Queued,
                     is_read: false,
                     context: None,
+                    world_id: None, // Not available when receiving queued event from server
                 });
                 true
             }

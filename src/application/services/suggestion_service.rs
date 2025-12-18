@@ -180,21 +180,27 @@ impl<A: ApiPort> SuggestionService<A> {
     /// 
     /// This method queues the suggestion request instead of waiting for results.
     /// Results will be delivered via WebSocket events.
+    /// 
+    /// The `world_id` is required for routing the response back to the correct
+    /// clients (all sessions viewing this world).
     pub async fn enqueue_suggestion(
         &self,
         field_type: &str,
+        world_id: &str,
         context: &SuggestionContext,
     ) -> Result<String, ApiError> {
         #[derive(Serialize)]
         struct UnifiedRequest {
             #[serde(rename = "suggestion_type")]
             suggestion_type: String,
+            world_id: String,
             #[serde(flatten)]
             context: SuggestionContext,
         }
         
         let request = UnifiedRequest {
             suggestion_type: field_type.to_string(),
+            world_id: world_id.to_string(),
             context: context.clone(),
         };
         

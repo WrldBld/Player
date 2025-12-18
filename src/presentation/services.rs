@@ -246,6 +246,7 @@ pub async fn hydrate_generation_queue<A: ApiPort>(
             s.field_type,
             s.entity_id,
             None, // Context not available from snapshot
+            None, // World ID not available from snapshot (but not needed - only original requester can retry)
         );
         // Override status if needed using the same request_id
         let req_id = s.request_id;

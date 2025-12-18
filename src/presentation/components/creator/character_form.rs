@@ -178,6 +178,7 @@ pub fn CharacterForm(
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterName,
+                                world_id: world_id.clone(),
                                 context: SuggestionContext {
                                     hints: Some(archetype.read().clone()),
                                     ..Default::default()
@@ -220,6 +221,7 @@ pub fn CharacterForm(
                             div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::CharacterDescription,
+                                    world_id: world_id.clone(),
                                     context: SuggestionContext {
                                         entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                         hints: Some(archetype.read().clone()),
@@ -247,6 +249,7 @@ pub fn CharacterForm(
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterWants,
+                                world_id: world_id.clone(),
                                 context: SuggestionContext {
                                     entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                     hints: Some(archetype.read().clone()),
@@ -274,6 +277,7 @@ pub fn CharacterForm(
                             }
                             SuggestionButton {
                                 suggestion_type: SuggestionType::CharacterFears,
+                                world_id: world_id.clone(),
                                 context: SuggestionContext {
                                     entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                     hints: Some(archetype.read().clone()),
@@ -301,6 +305,7 @@ pub fn CharacterForm(
                             div { class: "flex justify-end",
                                 SuggestionButton {
                                     suggestion_type: SuggestionType::CharacterBackstory,
+                                    world_id: world_id.clone(),
                                     context: SuggestionContext {
                                         entity_name: if name.read().is_empty() { None } else { Some(name.read().clone()) },
                                         hints: Some(archetype.read().clone()),

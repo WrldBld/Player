@@ -50,6 +50,8 @@ impl SuggestionType {
 #[component]
 pub fn SuggestionButton(
     suggestion_type: SuggestionType,
+    /// World ID for routing - required to receive WebSocket response
+    world_id: String,
     context: SuggestionContext,
     on_select: EventHandler<String>,
 ) -> Element {
@@ -98,11 +100,13 @@ pub fn SuggestionButton(
         let svc = suggestion_service.clone();
         let plat = platform.clone();
         let field_type_str = field_type.to_string();
+        let world_id = world_id.clone();
         move |_| {
             let context = context.clone();
             let field_type = field_type_str.clone();
             let service = svc.clone();
             let platform = plat.clone();
+            let world_id = world_id.clone();
 
             spawn(async move {
                 loading.set(true);
@@ -112,7 +116,7 @@ pub fn SuggestionButton(
                 platform.log_info(&format!("Enqueueing suggestion request for {}", field_type));
 
                 // Enqueue the suggestion request
-                match service.enqueue_suggestion(&field_type, &context).await {
+                match service.enqueue_suggestion(&field_type, &world_id, &context).await {
                     Ok(req_id) => {
                         platform.log_info(&format!("Suggestion request queued: {}", req_id));
                         request_id.set(Some(req_id.clone()));
@@ -123,6 +127,7 @@ pub fn SuggestionButton(
                             field_type,
                             None, // entity_id not available here
                             Some(context.clone()), // Store context for retry
+                            Some(world_id.clone()), // Store world_id for retry
                         );
                     }
                     Err(e) => {
@@ -211,6 +216,8 @@ fn SuggestionItem(text: String, on_click: EventHandler<()>) -> Element {
 #[component]
 pub fn SuggestIcon(
     suggestion_type: SuggestionType,
+    /// World ID for routing - required to receive WebSocket response
+    world_id: String,
     context: SuggestionContext,
     on_select: EventHandler<String>,
 ) -> Element {
@@ -218,6 +225,7 @@ pub fn SuggestIcon(
     rsx! {
         SuggestionButton {
             suggestion_type,
+            world_id,
             context,
             on_select,
         }
