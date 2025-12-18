@@ -12,11 +12,12 @@ use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
 use crate::presentation::components::event_overlays::{ApproachEventOverlay, LocationEventBanner};
 use crate::presentation::components::inventory_panel::InventoryPanel;
+use crate::presentation::components::known_npcs_panel::{KnownNpcsPanel, NpcObservationData};
 use crate::presentation::components::navigation_panel::NavigationPanel;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
 use crate::application::dto::InventoryItemData;
-use crate::presentation::services::{use_character_service, use_world_service};
+use crate::presentation::services::{use_character_service, use_observation_service, use_world_service};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect, RollSubmissionStatus};
 
 /// Player Character View - visual novel gameplay interface
@@ -32,6 +33,7 @@ pub fn PCView() -> Element {
     // Get services
     let world_service = use_world_service();
     let character_service = use_character_service();
+    let observation_service = use_observation_service();
 
     // Character sheet viewer state
     let mut show_character_sheet = use_signal(|| false);
@@ -48,6 +50,11 @@ pub fn PCView() -> Element {
     let mut show_inventory_panel = use_signal(|| false);
     let mut inventory_items: Signal<Vec<InventoryItemData>> = use_signal(Vec::new);
     let mut is_loading_inventory = use_signal(|| false);
+
+    // Known NPCs panel state
+    let mut show_known_npcs_panel = use_signal(|| false);
+    let mut known_npcs: Signal<Vec<NpcObservationData>> = use_signal(Vec::new);
+    let mut is_loading_npcs = use_signal(|| false);
 
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
@@ -277,6 +284,51 @@ pub fn PCView() -> Element {
                     tracing::info!("Open navigation panel");
                     show_navigation_panel.set(true);
                 })),
+                on_people: Some(EventHandler::new({
+                    let game_state = game_state.clone();
+                    let observation_service = observation_service.clone();
+                    move |_| {
+                        tracing::info!("Open known NPCs panel");
+                        show_known_npcs_panel.set(true);
+                        is_loading_npcs.set(true);
+
+                        // Get the selected PC ID
+                        let pc_id = game_state.selected_pc_id.read().clone();
+
+                        if let Some(pid) = pc_id {
+                            let obs_svc = observation_service.clone();
+                            spawn(async move {
+                                match obs_svc.list_observations(&pid).await {
+                                    Ok(observations) => {
+                                        // Convert to component data type
+                                        let npc_data: Vec<NpcObservationData> = observations
+                                            .into_iter()
+                                            .map(|o| NpcObservationData {
+                                                npc_id: o.npc_id,
+                                                npc_name: o.npc_name,
+                                                npc_portrait: o.npc_portrait,
+                                                location_name: o.location_name,
+                                                region_name: o.region_name,
+                                                game_time: o.game_time,
+                                                observation_type: o.observation_type,
+                                                observation_type_icon: o.observation_type_icon,
+                                                notes: o.notes,
+                                            })
+                                            .collect();
+                                        known_npcs.set(npc_data);
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!("Failed to load observations: {}", e);
+                                        known_npcs.set(Vec::new());
+                                    }
+                                }
+                                is_loading_npcs.set(false);
+                            });
+                        } else {
+                            is_loading_npcs.set(false);
+                        }
+                    }
+                })),
                 on_log: Some(EventHandler::new(move |_| {
                     tracing::info!("Open log");
                 })),
@@ -454,6 +506,29 @@ pub fn PCView() -> Element {
                     })),
                     on_toggle_equip: None, // TODO: Implement equip toggle
                     on_drop_item: None, // TODO: Implement drop item
+                }
+            }
+
+            // Known NPCs panel modal
+            if *show_known_npcs_panel.read() {
+                KnownNpcsPanel {
+                    observations: known_npcs.read().clone(),
+                    is_loading: *is_loading_npcs.read(),
+                    on_close: move |_| {
+                        show_known_npcs_panel.set(false);
+                    },
+                    on_npc_click: Some(EventHandler::new({
+                        let session_state = session_state.clone();
+                        move |npc_id: String| {
+                            tracing::info!("Clicked NPC: {}", npc_id);
+                            // Could open NPC details or start a talk action
+                            send_player_action(
+                                &session_state,
+                                PlayerAction::talk(&npc_id, None),
+                            );
+                            show_known_npcs_panel.set(false);
+                        }
+                    })),
                 }
             }
 

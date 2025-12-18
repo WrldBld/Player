@@ -23,6 +23,9 @@ pub struct ActionPanelProps {
     /// Handler for map button
     #[props(default)]
     pub on_map: Option<EventHandler<()>>,
+    /// Handler for people/known NPCs button
+    #[props(default)]
+    pub on_people: Option<EventHandler<()>>,
     /// Handler for log button
     #[props(default)]
     pub on_log: Option<EventHandler<()>>,
@@ -67,6 +70,15 @@ pub fn ActionPanel(props: ActionPanelProps) -> Element {
                 SystemButton {
                     label: "Map",
                     icon: "map",
+                    on_click: handler.clone(),
+                    disabled: props.disabled,
+                }
+            }
+
+            if let Some(ref handler) = props.on_people {
+                SystemButton {
+                    label: "People",
+                    icon: "people",
                     on_click: handler.clone(),
                     disabled: props.disabled,
                 }
@@ -122,6 +134,7 @@ pub fn SystemButton(props: SystemButtonProps) -> Element {
         "bag" => "🎒",
         "person" => "📋",
         "map" => "🗺️",
+        "people" => "👥",
         "scroll" => "📜",
         _ => "⚙️",
     };
