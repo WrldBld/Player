@@ -1068,3 +1068,56 @@ pub struct ChainedEventData {
     pub completed_at: Option<String>,
 }
 
+// =============================================================================
+// Inventory Types (Phase 23B - US-CHAR-009)
+// =============================================================================
+
+/// Item data for display in inventory
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ItemData {
+    pub id: String,
+    pub world_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub item_type: Option<String>,
+    pub is_unique: bool,
+    pub properties: Option<String>,
+}
+
+/// Inventory item - item with possession metadata
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InventoryItemData {
+    pub item: ItemData,
+    pub quantity: u32,
+    pub equipped: bool,
+    pub acquired_at: String,
+    pub acquisition_method: Option<String>,
+}
+
+impl InventoryItemData {
+    /// Get the display name for the item type
+    pub fn type_display(&self) -> &str {
+        self.item.item_type.as_deref().unwrap_or("Misc")
+    }
+
+    /// Check if this is a weapon
+    pub fn is_weapon(&self) -> bool {
+        self.item.item_type.as_deref() == Some("Weapon")
+    }
+
+    /// Check if this is a consumable
+    pub fn is_consumable(&self) -> bool {
+        self.item.item_type.as_deref() == Some("Consumable")
+    }
+
+    /// Check if this is a key item
+    pub fn is_key(&self) -> bool {
+        self.item.item_type.as_deref() == Some("Key")
+    }
+
+    /// Check if this is a quest item
+    pub fn is_quest(&self) -> bool {
+        self.item.item_type.as_deref() == Some("Quest")
+    }
+}
+

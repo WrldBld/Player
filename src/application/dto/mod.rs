@@ -35,6 +35,8 @@ pub use world_snapshot::{
     NarrativeEventData, CreateNarrativeEventRequest,
     // Session snapshot types (simplified format from Engine)
     SessionWorldSnapshot,
+    // Inventory types (Phase 23B)
+    ItemData, InventoryItemData,
 };
 
 // Re-export settings DTOs

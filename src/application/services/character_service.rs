@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::application::dto::FieldValue;
+use crate::application::dto::{FieldValue, InventoryItemData};
 use crate::application::ports::outbound::{ApiError, ApiPort};
 
 /// Character summary for list views
@@ -125,6 +125,15 @@ impl<A: ApiPort> CharacterService<A> {
             reason: reason.to_string(),
         };
         self.api.post_no_response(&path, &request).await
+    }
+
+    /// Get a character's inventory
+    pub async fn get_inventory(
+        &self,
+        character_id: &str,
+    ) -> Result<Vec<InventoryItemData>, ApiError> {
+        let path = format!("/api/characters/{}/inventory", character_id);
+        self.api.get(&path).await
     }
 }
 

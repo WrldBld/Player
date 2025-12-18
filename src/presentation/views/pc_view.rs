@@ -11,9 +11,11 @@ use crate::application::dto::{FieldValue, SheetTemplate, InteractionData, DiceIn
 use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
 use crate::presentation::components::event_overlays::{ApproachEventOverlay, LocationEventBanner};
+use crate::presentation::components::inventory_panel::InventoryPanel;
 use crate::presentation::components::navigation_panel::NavigationPanel;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
+use crate::application::dto::InventoryItemData;
 use crate::presentation::services::{use_character_service, use_world_service};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect, RollSubmissionStatus};
 
@@ -41,6 +43,11 @@ pub fn PCView() -> Element {
 
     // Navigation panel state
     let mut show_navigation_panel = use_signal(|| false);
+
+    // Inventory panel state
+    let mut show_inventory_panel = use_signal(|| false);
+    let mut inventory_items: Signal<Vec<InventoryItemData>> = use_signal(Vec::new);
+    let mut is_loading_inventory = use_signal(|| false);
 
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
@@ -179,8 +186,40 @@ pub fn PCView() -> Element {
                         handle_interaction(&session_state, &interaction);
                     }
                 },
-                on_inventory: Some(EventHandler::new(move |_| {
-                    tracing::info!("Open inventory");
+                on_inventory: Some(EventHandler::new({
+                    let game_state = game_state.clone();
+                    let character_service = character_service.clone();
+                    move |_| {
+                        tracing::info!("Open inventory");
+                        show_inventory_panel.set(true);
+                        is_loading_inventory.set(true);
+
+                        // Get the selected PC or first character
+                        let characters = game_state.world.read().as_ref()
+                            .map(|w| w.characters.clone())
+                            .unwrap_or_default();
+                        let char_id = selected_character_id.read().clone()
+                            .or_else(|| characters.first().map(|c| c.id.clone()));
+
+                        if let Some(cid) = char_id {
+                            selected_character_id.set(Some(cid.clone()));
+                            let char_svc = character_service.clone();
+                            spawn(async move {
+                                match char_svc.get_inventory(&cid).await {
+                                    Ok(items) => {
+                                        inventory_items.set(items);
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!("Failed to load inventory: {}", e);
+                                        inventory_items.set(Vec::new());
+                                    }
+                                }
+                                is_loading_inventory.set(false);
+                            });
+                        } else {
+                            is_loading_inventory.set(false);
+                        }
+                    }
                 })),
                 on_character: Some(EventHandler::new({
                     let game_state = game_state.clone();
@@ -391,6 +430,30 @@ pub fn PCView() -> Element {
                             show_navigation_panel.set(false);
                         },
                     }
+                }
+            }
+
+            // Inventory panel modal
+            if *show_inventory_panel.read() {
+                InventoryPanel {
+                    character_name: player_character_name.read().clone(),
+                    items: inventory_items.read().clone(),
+                    is_loading: *is_loading_inventory.read(),
+                    on_close: move |_| {
+                        show_inventory_panel.set(false);
+                    },
+                    on_use_item: Some(EventHandler::new({
+                        let session_state = session_state.clone();
+                        move |item_id: String| {
+                            tracing::info!("Use item: {}", item_id);
+                            send_player_action(
+                                &session_state,
+                                PlayerAction::use_item(&item_id, None),
+                            );
+                        }
+                    })),
+                    on_toggle_equip: None, // TODO: Implement equip toggle
+                    on_drop_item: None, // TODO: Implement drop item
                 }
             }
 
