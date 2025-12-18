@@ -4,7 +4,8 @@
 //! The DM specifies all challenge details including outcomes.
 
 use dioxus::prelude::*;
-use crate::application::dto::{CharacterData, AdHocOutcomes};
+use crate::application::dto::AdHocOutcomes;
+use crate::application::dto::websocket_messages::SceneCharacterState;
 
 /// Data for an ad-hoc challenge creation
 #[derive(Debug, Clone, PartialEq)]
@@ -20,7 +21,7 @@ pub struct AdHocChallengeData {
 #[derive(Props, Clone, PartialEq)]
 pub struct AdHocChallengeModalProps {
     /// List of PCs that can be targeted
-    pub player_characters: Vec<CharacterData>,
+    pub player_characters: Vec<SceneCharacterState>,
     /// Called when the challenge is created
     pub on_create: EventHandler<AdHocChallengeData>,
     /// Called when modal should close

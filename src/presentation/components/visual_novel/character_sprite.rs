@@ -4,13 +4,13 @@
 
 use dioxus::prelude::*;
 
-use crate::application::dto::{CharacterData, CharacterPosition};
+use crate::application::dto::websocket_messages::{SceneCharacterState, CharacterPosition};
 
 /// Props for the CharacterSprite component
 #[derive(Props, Clone, PartialEq)]
 pub struct CharacterSpriteProps {
     /// Character data including position and sprite asset
-    pub character: CharacterData,
+    pub character: SceneCharacterState,
     /// Optional click handler
     #[props(default)]
     pub on_click: Option<EventHandler<String>>,
@@ -108,7 +108,7 @@ fn PlaceholderSprite(name: String, is_speaking: bool) -> Element {
 #[derive(Props, Clone, PartialEq)]
 pub struct CharacterLayerProps {
     /// Characters to display
-    pub characters: Vec<CharacterData>,
+    pub characters: Vec<SceneCharacterState>,
     /// Optional click handler for characters
     #[props(default)]
     pub on_character_click: Option<EventHandler<String>>,

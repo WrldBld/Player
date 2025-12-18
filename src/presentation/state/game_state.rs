@@ -6,8 +6,10 @@ use dioxus::prelude::*;
 use std::sync::Arc;
 
 use crate::application::dto::{
-    SessionWorldSnapshot, CharacterData, InteractionData, SceneData,
-    RegionData, NavigationData, NpcPresenceData,
+    SessionWorldSnapshot, InteractionData, NavigationData, NpcPresenceData,
+};
+use crate::application::dto::websocket_messages::{
+    SceneCharacterState, SceneSnapshot, SceneRegionInfo,
 };
 
 /// Game time display data
@@ -49,13 +51,13 @@ pub struct GameState {
     /// Loaded world data (from session snapshot)
     pub world: Signal<Option<Arc<SessionWorldSnapshot>>>,
     /// Current scene data (from server SceneUpdate)
-    pub current_scene: Signal<Option<SceneData>>,
+    pub current_scene: Signal<Option<SceneSnapshot>>,
     /// Characters in the current scene
-    pub scene_characters: Signal<Vec<CharacterData>>,
+    pub scene_characters: Signal<Vec<SceneCharacterState>>,
     /// Available interactions in the scene
     pub interactions: Signal<Vec<InteractionData>>,
     /// Current region data (from SceneChanged)
-    pub current_region: Signal<Option<RegionData>>,
+    pub current_region: Signal<Option<SceneRegionInfo>>,
     /// Navigation options from current region
     pub navigation: Signal<Option<NavigationData>>,
     /// NPCs present in the current region
@@ -96,8 +98,8 @@ impl GameState {
     /// Update from ServerMessage::SceneUpdate
     pub fn apply_scene_update(
         &mut self,
-        scene: SceneData,
-        characters: Vec<CharacterData>,
+        scene: SceneSnapshot,
+        characters: Vec<SceneCharacterState>,
         interactions: Vec<InteractionData>,
     ) {
         self.current_scene.set(Some(scene));
@@ -109,7 +111,7 @@ impl GameState {
     pub fn apply_scene_changed(
         &mut self,
         pc_id: String,
-        region: RegionData,
+        region: SceneRegionInfo,
         npcs_present: Vec<NpcPresenceData>,
         navigation: NavigationData,
     ) {

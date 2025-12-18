@@ -16,9 +16,9 @@ pub struct LocationSummary {
     pub location_type: Option<String>,
 }
 
-/// Full location data for editing
+/// Full location data for create/edit forms via API
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LocationData {
+pub struct LocationFormData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub name: String,
@@ -111,7 +111,7 @@ impl<A: ApiPort> LocationService<A> {
         &self,
         _world_id: &str, // Not used in API endpoint, but kept for API compatibility
         location_id: &str,
-    ) -> Result<LocationData, ApiError> {
+    ) -> Result<LocationFormData, ApiError> {
         let path = format!("/api/locations/{}", location_id);
         self.api.get(&path).await
     }
@@ -120,8 +120,8 @@ impl<A: ApiPort> LocationService<A> {
     pub async fn create_location(
         &self,
         world_id: &str,
-        location: &LocationData,
-    ) -> Result<LocationData, ApiError> {
+        location: &LocationFormData,
+    ) -> Result<LocationFormData, ApiError> {
         let path = format!("/api/worlds/{}/locations", world_id);
         self.api.post(&path, location).await
     }
@@ -130,8 +130,8 @@ impl<A: ApiPort> LocationService<A> {
     pub async fn update_location(
         &self,
         location_id: &str,
-        location: &LocationData,
-    ) -> Result<LocationData, ApiError> {
+        location: &LocationFormData,
+    ) -> Result<LocationFormData, ApiError> {
         let path = format!("/api/locations/{}", location_id);
         self.api.put(&path, location).await
     }

@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 
-use crate::application::dto::websocket_messages::CharacterData;
+use crate::application::dto::websocket_messages::SceneCharacterState;
 use crate::presentation::components::dm_panel::director_generate_modal::DirectorGenerateModal;
 
 /// NPC motivation state
@@ -22,7 +22,7 @@ pub struct NPCMotivationProps {
     /// World ID for asset generation
     pub world_id: String,
     /// The character being tracked
-    pub character: CharacterData,
+    pub character: SceneCharacterState,
     /// Current motivation state
     pub motivation: Motivation,
     /// Handler called when motivation is updated

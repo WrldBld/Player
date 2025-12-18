@@ -236,8 +236,8 @@ pub enum ServerMessage {
     },
     /// Scene update
     SceneUpdate {
-        scene: SceneData,
-        characters: Vec<CharacterData>,
+        scene: SceneSnapshot,
+        characters: Vec<SceneCharacterState>,
         interactions: Vec<InteractionData>,
     },
     /// NPC dialogue response
@@ -478,7 +478,7 @@ pub enum ServerMessage {
         /// The PC that moved
         pc_id: String,
         /// New region info
-        region: RegionData,
+        region: SceneRegionInfo,
         /// NPCs present in the new region
         npcs_present: Vec<NpcPresenceData>,
         /// Navigation options from this region
@@ -516,9 +516,9 @@ pub enum ParticipantRole {
     Spectator,
 }
 
-/// Scene data from server
+/// Scene snapshot from server (wire format for scene updates)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SceneData {
+pub struct SceneSnapshot {
     pub id: String,
     pub name: String,
     pub location_id: String,
@@ -528,9 +528,9 @@ pub struct SceneData {
     pub directorial_notes: String,
 }
 
-/// Character data for display
+/// Character display state for scene rendering (wire format)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CharacterData {
+pub struct SceneCharacterState {
     pub id: String,
     pub name: String,
     pub sprite_asset: Option<String>,
@@ -738,9 +738,9 @@ pub struct OutcomeBranchData {
 // Phase 23C: Navigation Data Structures
 // =============================================================================
 
-/// Region data for scene display
+/// Region info for scene display (wire format)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RegionData {
+pub struct SceneRegionInfo {
     /// Region ID
     pub id: String,
     /// Region name

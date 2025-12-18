@@ -3,7 +3,7 @@
 //! Shows a smaller version of what players see including backdrop and character sprites.
 
 use dioxus::prelude::*;
-use crate::application::dto::websocket_messages::{CharacterData, CharacterPosition};
+use crate::application::dto::websocket_messages::{SceneCharacterState, CharacterPosition};
 
 impl CharacterPosition {
     fn as_tailwind_classes(&self) -> &'static str {
@@ -16,9 +16,9 @@ impl CharacterPosition {
     }
 }
 
-/// Scene data for preview
+/// Scene preview state for UI display (view model)
 #[derive(Clone, PartialEq)]
-pub struct SceneData {
+pub struct ScenePreviewState {
     /// Scene name/title
     pub name: String,
     /// Backdrop image URL
@@ -34,10 +34,10 @@ pub struct SceneData {
 pub struct ScenePreviewProps {
     /// Optional scene data to display
     #[props(default)]
-    pub scene: Option<SceneData>,
+    pub scene: Option<ScenePreviewState>,
     /// Characters currently visible in the scene
     #[props(default)]
-    pub characters: Vec<CharacterData>,
+    pub characters: Vec<SceneCharacterState>,
 }
 
 /// ScenePreview component - Shows smaller version of PC view
@@ -126,7 +126,7 @@ pub fn ScenePreview(props: ScenePreviewProps) -> Element {
 
 /// Character sprite preview component
 #[component]
-fn CharacterSpritePreview(character: CharacterData) -> Element {
+fn CharacterSpritePreview(character: SceneCharacterState) -> Element {
     let position_classes = character.position.as_tailwind_classes();
 
     let sprite_content = match &character.sprite_asset {

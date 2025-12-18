@@ -55,7 +55,7 @@ pub fn handle_server_message(
                                 .and_then(|l| l.backdrop_asset.clone()));
 
                         // Build scene data
-                        let initial_scene = crate::application::dto::SceneData {
+                        let initial_scene = crate::application::dto::websocket_messages::SceneSnapshot {
                             id: first_scene.id.clone(),
                             name: first_scene.name.clone(),
                             location_id: first_scene.location_id.clone(),
@@ -66,15 +66,15 @@ pub fn handle_server_message(
                         };
 
                         // Get characters featured in the scene
-                        let scene_characters: Vec<crate::application::dto::CharacterData> = first_scene.featured_characters.iter()
+                        let scene_characters: Vec<crate::application::dto::websocket_messages::SceneCharacterState> = first_scene.featured_characters.iter()
                             .filter_map(|char_id| {
                                 snapshot.characters.iter().find(|c| &c.id == char_id).map(|c| {
-                                    crate::application::dto::CharacterData {
+                                    crate::application::dto::websocket_messages::SceneCharacterState {
                                         id: c.id.clone(),
                                         name: c.name.clone(),
                                         sprite_asset: c.sprite_asset.clone(),
                                         portrait_asset: c.portrait_asset.clone(),
-                                        position: crate::application::dto::CharacterPosition::Center,
+                                        position: crate::application::dto::websocket_messages::CharacterPosition::Center,
                                         is_speaking: false,
                                         emotion: String::new(),
                                     }

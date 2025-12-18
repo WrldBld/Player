@@ -38,7 +38,7 @@ pub use session_service::{SessionEvent, SessionService};
 pub use world_service::WorldService;
 
 // Re-export character service types
-pub use character_service::{CharacterData, CharacterService, CharacterSheetDataApi, CharacterSummary};
+pub use character_service::{CharacterFormData, CharacterService, CharacterSheetDataApi, CharacterSummary};
 
 // Re-export player character service types
 pub use player_character_service::{
@@ -46,7 +46,7 @@ pub use player_character_service::{
 };
 
 // Re-export location service types
-pub use location_service::{LocationData, LocationService, LocationSummary, MapBoundsData, RegionData};
+pub use location_service::{LocationFormData, LocationService, LocationSummary, MapBoundsData, RegionData};
 
 // Re-export skill service types
 pub use skill_service::{CreateSkillRequest, SkillService, UpdateSkillRequest};

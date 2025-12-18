@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use super::asset_gallery::AssetGallery;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
-use crate::application::services::LocationData;
+use crate::application::services::LocationFormData;
 use crate::presentation::components::common::FormField;
 use crate::presentation::services::use_location_service;
 
@@ -43,7 +43,7 @@ pub fn LocationForm(
     let mut notable_features = use_signal(|| String::new());
     let mut hidden_secrets = use_signal(|| String::new());
     let mut parent_location_id: Signal<Option<String>> = use_signal(|| None);
-    let mut parent_locations: Signal<Vec<LocationData>> = use_signal(Vec::new);
+    let mut parent_locations: Signal<Vec<LocationFormData>> = use_signal(Vec::new);
     let mut is_loading = use_signal(|| !is_new);
     let mut is_saving = use_signal(|| false);
     let mut success_message: Signal<Option<String>> = use_signal(|| None);
@@ -63,9 +63,9 @@ pub fn LocationForm(
             spawn(async move {
                     // Load parent locations list
                 if let Ok(parents) = svc.list_locations(&world_id_clone).await {
-                        // Convert LocationSummary to LocationData for the dropdown
-                        let parent_data: Vec<LocationData> = parents.iter().map(|summary| {
-                            LocationData {
+                        // Convert LocationSummary to LocationFormData for the dropdown
+                        let parent_data: Vec<LocationFormData> = parents.iter().map(|summary| {
+                            LocationFormData {
                                 id: Some(summary.id.clone()),
                                 name: summary.name.clone(),
                                 description: None,
@@ -386,7 +386,7 @@ pub fn LocationForm(
                             let world_id_clone = world_id.clone();
 
                             spawn(async move {
-                                    let loc_data = LocationData {
+                                    let loc_data = LocationFormData {
                                         id: if is_new { None } else { Some(loc_id.clone()) },
                                         name: name.read().clone(),
                                         description: {

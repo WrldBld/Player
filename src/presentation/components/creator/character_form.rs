@@ -8,7 +8,7 @@ use super::sheet_field_input::CharacterSheetForm;
 use super::suggestion_button::{SuggestionButton, SuggestionContext, SuggestionType};
 use crate::application::dto::{FieldValue, SheetTemplate};
 use crate::application::ports::outbound::Platform;
-use crate::application::services::{CharacterData, CharacterSheetDataApi};
+use crate::application::services::{CharacterFormData, CharacterSheetDataApi};
 use crate::presentation::components::common::FormField;
 use crate::presentation::services::{use_character_service, use_world_service};
 
@@ -417,7 +417,7 @@ pub fn CharacterForm(
                                         }
                                     };
 
-                                    let char_data = CharacterData {
+                                    let char_data = CharacterFormData {
                                         id: if is_new { None } else { Some(char_id.clone()) },
                                         name: name.read().clone(),
                                         description: {

@@ -25,9 +25,9 @@ pub struct CharacterSheetDataApi {
     pub values: HashMap<String, FieldValue>,
 }
 
-/// Full character data for editing
+/// Full character data for create/edit forms via API
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct CharacterData {
+pub struct CharacterFormData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub name: String,
@@ -74,7 +74,7 @@ impl<A: ApiPort> CharacterService<A> {
     pub async fn get_character(
         &self,
         character_id: &str,
-    ) -> Result<CharacterData, ApiError> {
+    ) -> Result<CharacterFormData, ApiError> {
         // Engine exposes GET /api/characters/{id} for single-character fetch
         let path = format!("/api/characters/{}", character_id);
         self.api.get(&path).await
@@ -84,8 +84,8 @@ impl<A: ApiPort> CharacterService<A> {
     pub async fn create_character(
         &self,
         world_id: &str,
-        character: &CharacterData,
-    ) -> Result<CharacterData, ApiError> {
+        character: &CharacterFormData,
+    ) -> Result<CharacterFormData, ApiError> {
         let path = format!("/api/worlds/{}/characters", world_id);
         self.api.post(&path, character).await
     }
@@ -94,8 +94,8 @@ impl<A: ApiPort> CharacterService<A> {
     pub async fn update_character(
         &self,
         character_id: &str,
-        character: &CharacterData,
-    ) -> Result<CharacterData, ApiError> {
+        character: &CharacterFormData,
+    ) -> Result<CharacterFormData, ApiError> {
         let path = format!("/api/characters/{}", character_id);
         self.api.put(&path, character).await
     }

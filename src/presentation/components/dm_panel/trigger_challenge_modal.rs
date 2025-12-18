@@ -3,7 +3,8 @@
 //! Allows DM to select and trigger a challenge for a specific character.
 
 use dioxus::prelude::*;
-use crate::application::dto::{ChallengeData, CharacterData};
+use crate::application::dto::ChallengeData;
+use crate::application::dto::websocket_messages::SceneCharacterState;
 
 /// Props for TriggerChallengeModal
 #[derive(Props, Clone, PartialEq)]
@@ -11,7 +12,7 @@ pub struct TriggerChallengeModalProps {
     /// List of available challenges
     pub challenges: Vec<ChallengeData>,
     /// List of characters in the current scene to target
-    pub scene_characters: Vec<CharacterData>,
+    pub scene_characters: Vec<SceneCharacterState>,
     /// Called when a challenge is triggered
     pub on_trigger: EventHandler<(String, String)>, // (challenge_id, character_id)
     /// Called when modal should close
