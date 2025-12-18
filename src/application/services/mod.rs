@@ -46,7 +46,7 @@ pub use player_character_service::{
 };
 
 // Re-export location service types
-pub use location_service::{LocationData, LocationService, LocationSummary};
+pub use location_service::{LocationData, LocationService, LocationSummary, MapBoundsData, RegionData};
 
 // Re-export skill service types
 pub use skill_service::{CreateSkillRequest, SkillService, UpdateSkillRequest};

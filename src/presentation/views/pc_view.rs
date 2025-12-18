@@ -13,11 +13,12 @@ use crate::presentation::components::character_sheet_viewer::CharacterSheetViewe
 use crate::presentation::components::event_overlays::{ApproachEventOverlay, LocationEventBanner};
 use crate::presentation::components::inventory_panel::InventoryPanel;
 use crate::presentation::components::known_npcs_panel::{KnownNpcsPanel, NpcObservationData};
+use crate::presentation::components::mini_map::{MiniMap, MapRegionData, MapBounds};
 use crate::presentation::components::navigation_panel::NavigationPanel;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
 use crate::application::dto::InventoryItemData;
-use crate::presentation::services::{use_character_service, use_observation_service, use_world_service};
+use crate::presentation::services::{use_character_service, use_location_service, use_observation_service, use_world_service};
 use crate::presentation::state::{use_dialogue_state, use_game_state, use_session_state, use_typewriter_effect, RollSubmissionStatus};
 
 /// Player Character View - visual novel gameplay interface
@@ -34,6 +35,7 @@ pub fn PCView() -> Element {
     let world_service = use_world_service();
     let character_service = use_character_service();
     let observation_service = use_observation_service();
+    let location_service = use_location_service();
 
     // Character sheet viewer state
     let mut show_character_sheet = use_signal(|| false);
@@ -55,6 +57,11 @@ pub fn PCView() -> Element {
     let mut show_known_npcs_panel = use_signal(|| false);
     let mut known_npcs: Signal<Vec<NpcObservationData>> = use_signal(Vec::new);
     let mut is_loading_npcs = use_signal(|| false);
+
+    // Mini-map state
+    let mut show_mini_map = use_signal(|| false);
+    let mut map_regions: Signal<Vec<MapRegionData>> = use_signal(Vec::new);
+    let mut is_loading_map = use_signal(|| false);
 
     // Run typewriter effect
     use_typewriter_effect(&mut dialogue_state);
@@ -280,9 +287,56 @@ pub fn PCView() -> Element {
                         }
                     }
                 })),
-                on_map: Some(EventHandler::new(move |_| {
-                    tracing::info!("Open navigation panel");
-                    show_navigation_panel.set(true);
+                on_map: Some(EventHandler::new({
+                    let game_state = game_state.clone();
+                    let location_service = location_service.clone();
+                    move |_| {
+                        tracing::info!("Open mini-map");
+                        show_mini_map.set(true);
+                        is_loading_map.set(true);
+
+                        // Get current region to find location ID
+                        let current_region = game_state.current_region.read().clone();
+
+                        if let Some(region) = current_region {
+                            let loc_svc = location_service.clone();
+                            let location_id = region.location_id.clone();
+                            spawn(async move {
+                                match loc_svc.get_regions(&location_id).await {
+                                    Ok(regions) => {
+                                        // Convert to component data type
+                                        let map_data: Vec<MapRegionData> = regions
+                                            .into_iter()
+                                            .map(|r| MapRegionData {
+                                                id: r.id,
+                                                name: r.name,
+                                                description: r.description,
+                                                backdrop_asset: r.backdrop_asset,
+                                                bounds: r.map_bounds.map(|b| MapBounds {
+                                                    x: b.x,
+                                                    y: b.y,
+                                                    width: b.width,
+                                                    height: b.height,
+                                                }),
+                                                is_spawn_point: r.is_spawn_point,
+                                            })
+                                            .collect();
+                                        map_regions.set(map_data);
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!("Failed to load regions for map: {}", e);
+                                        map_regions.set(Vec::new());
+                                    }
+                                }
+                                is_loading_map.set(false);
+                            });
+                        } else {
+                            // No current region - fall back to navigation panel
+                            show_mini_map.set(false);
+                            show_navigation_panel.set(true);
+                            is_loading_map.set(false);
+                        }
+                    }
                 })),
                 on_people: Some(EventHandler::new({
                     let game_state = game_state.clone();
@@ -529,6 +583,42 @@ pub fn PCView() -> Element {
                             show_known_npcs_panel.set(false);
                         }
                     })),
+                }
+            }
+
+            // Mini-map modal
+            if *show_mini_map.read() {
+                MiniMap {
+                    location_name: current_region.as_ref().map(|r| r.location_name.clone()).unwrap_or_default(),
+                    map_image: None, // TODO: Get from location data when available
+                    regions: map_regions.read().clone(),
+                    current_region_id: current_region.as_ref().map(|r| r.id.clone()),
+                    navigable_region_ids: navigation.as_ref()
+                        .map(|n| n.connected_regions.iter()
+                            .filter(|r| !r.is_locked)
+                            .map(|r| r.region_id.clone())
+                            .collect())
+                        .unwrap_or_default(),
+                    locked_region_ids: navigation.as_ref()
+                        .map(|n| n.connected_regions.iter()
+                            .filter(|r| r.is_locked)
+                            .map(|r| r.region_id.clone())
+                            .collect())
+                        .unwrap_or_default(),
+                    is_loading: *is_loading_map.read(),
+                    on_region_click: {
+                        let session_state = session_state.clone();
+                        let selected_pc_id = selected_pc_id.clone();
+                        move |region_id: String| {
+                            if let Some(ref pc) = selected_pc_id {
+                                send_move_to_region(&session_state, pc, &region_id);
+                                show_mini_map.set(false);
+                            } else {
+                                tracing::warn!("Cannot move: no PC selected");
+                            }
+                        }
+                    },
+                    on_close: move |_| show_mini_map.set(false),
                 }
             }
 

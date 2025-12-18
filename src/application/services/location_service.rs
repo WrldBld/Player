@@ -59,6 +59,32 @@ fn default_bidirectional() -> bool {
     true
 }
 
+/// Region data with map bounds (for mini-map)
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RegionData {
+    pub id: String,
+    pub location_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub backdrop_asset: Option<String>,
+    pub atmosphere: Option<String>,
+    pub map_bounds: Option<MapBoundsData>,
+    #[serde(default)]
+    pub is_spawn_point: bool,
+    #[serde(default)]
+    pub order: u32,
+}
+
+/// Map bounds for positioning regions
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MapBoundsData {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
 /// Location service for managing locations
 ///
 /// This service provides methods for location-related operations
@@ -130,6 +156,12 @@ impl<A: ApiPort> LocationService<A> {
         self.api
             .post_no_response("/api/connections", connection)
             .await
+    }
+
+    /// Get all regions for a location (with map bounds)
+    pub async fn get_regions(&self, location_id: &str) -> Result<Vec<RegionData>, ApiError> {
+        let path = format!("/api/locations/{}/regions", location_id);
+        self.api.get(&path).await
     }
 }
 
