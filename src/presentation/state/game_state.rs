@@ -21,6 +21,28 @@ pub struct GameTimeData {
     pub is_paused: bool,
 }
 
+/// Approach event data (NPC approaching player)
+#[derive(Clone, Debug, PartialEq)]
+pub struct ApproachEventData {
+    /// The NPC's ID
+    pub npc_id: String,
+    /// The NPC's name
+    pub npc_name: String,
+    /// The NPC's sprite asset URL (if any)
+    pub npc_sprite: Option<String>,
+    /// Narrative description of the approach
+    pub description: String,
+}
+
+/// Location event data (location-wide event)
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocationEventData {
+    /// The region where the event occurred
+    pub region_id: String,
+    /// Narrative description of the event
+    pub description: String,
+}
+
 /// Central game state stored as Dioxus signals
 #[derive(Clone)]
 pub struct GameState {
@@ -42,6 +64,10 @@ pub struct GameState {
     pub selected_pc_id: Signal<Option<String>>,
     /// Current game time
     pub game_time: Signal<Option<GameTimeData>>,
+    /// Active approach event (NPC approaching player)
+    pub approach_event: Signal<Option<ApproachEventData>>,
+    /// Active location event (location-wide event)
+    pub location_event: Signal<Option<LocationEventData>>,
 }
 
 impl GameState {
@@ -57,6 +83,8 @@ impl GameState {
             npcs_present: Signal::new(Vec::new()),
             selected_pc_id: Signal::new(None),
             game_time: Signal::new(None),
+            approach_event: Signal::new(None),
+            location_event: Signal::new(None),
         }
     }
 
@@ -105,6 +133,40 @@ impl GameState {
         }));
     }
 
+    /// Set an approach event (NPC approaching player)
+    pub fn set_approach_event(
+        &mut self,
+        npc_id: String,
+        npc_name: String,
+        npc_sprite: Option<String>,
+        description: String,
+    ) {
+        self.approach_event.set(Some(ApproachEventData {
+            npc_id,
+            npc_name,
+            npc_sprite,
+            description,
+        }));
+    }
+
+    /// Clear the approach event (player dismissed it)
+    pub fn clear_approach_event(&mut self) {
+        self.approach_event.set(None);
+    }
+
+    /// Set a location event
+    pub fn set_location_event(&mut self, region_id: String, description: String) {
+        self.location_event.set(Some(LocationEventData {
+            region_id,
+            description,
+        }));
+    }
+
+    /// Clear the location event (player dismissed it or timeout)
+    pub fn clear_location_event(&mut self) {
+        self.location_event.set(None);
+    }
+
     /// Get the backdrop URL for the current scene
     pub fn backdrop_url(&self) -> Option<String> {
         // First check scene override, then location backdrop
@@ -135,6 +197,8 @@ impl GameState {
         self.navigation.set(None);
         self.npcs_present.set(Vec::new());
         self.game_time.set(None);
+        self.approach_event.set(None);
+        self.location_event.set(None);
     }
 
     /// Clear all state

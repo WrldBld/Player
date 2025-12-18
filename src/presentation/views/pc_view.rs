@@ -10,6 +10,7 @@ use crate::domain::entities::PlayerAction;
 use crate::application::dto::{FieldValue, SheetTemplate, InteractionData, DiceInputType};
 use crate::presentation::components::action_panel::ActionPanel;
 use crate::presentation::components::character_sheet_viewer::CharacterSheetViewer;
+use crate::presentation::components::event_overlays::{ApproachEventOverlay, LocationEventBanner};
 use crate::presentation::components::navigation_panel::NavigationPanel;
 use crate::presentation::components::tactical::ChallengeRollModal;
 use crate::presentation::components::visual_novel::{Backdrop, CharacterLayer, DialogueBox, EmptyDialogueBox};
@@ -71,6 +72,10 @@ pub fn PCView() -> Element {
     let current_region = game_state.current_region.read().clone();
     let navigation = game_state.navigation.read().clone();
     let selected_pc_id = game_state.selected_pc_id.read().clone();
+
+    // Get event data from game state
+    let approach_event = game_state.approach_event.read().clone();
+    let location_event = game_state.location_event.read().clone();
 
     rsx! {
         div {
@@ -386,6 +391,32 @@ pub fn PCView() -> Element {
                             show_navigation_panel.set(false);
                         },
                     }
+                }
+            }
+
+            // Approach event overlay (NPC approaching player)
+            if let Some(ref event) = approach_event {
+                ApproachEventOverlay {
+                    event: event.clone(),
+                    on_dismiss: {
+                        let mut game_state = game_state.clone();
+                        move |_| {
+                            game_state.clear_approach_event();
+                        }
+                    },
+                }
+            }
+
+            // Location event banner
+            if let Some(ref event) = location_event {
+                LocationEventBanner {
+                    event: event.clone(),
+                    on_dismiss: {
+                        let mut game_state = game_state.clone();
+                        move |_| {
+                            game_state.clear_location_event();
+                        }
+                    },
                 }
             }
         }

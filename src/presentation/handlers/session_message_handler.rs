@@ -577,17 +577,26 @@ pub fn handle_server_message(
         ServerMessage::ApproachEvent {
             npc_id,
             npc_name,
-            npc_sprite: _,
+            npc_sprite,
             description,
         } => {
             tracing::info!("NPC approach event: {} ({})", npc_name, npc_id);
+            
+            // Add to log
             session_state.add_log_entry(
                 npc_name.clone(),
                 format!("[APPROACH] {}", description),
                 false,
                 platform,
             );
-            // TODO (Phase 23 Player UI): Show approach event in visual novel view
+            
+            // Set the approach event for visual overlay
+            game_state.set_approach_event(
+                npc_id,
+                npc_name,
+                npc_sprite,
+                description,
+            );
         }
 
         ServerMessage::LocationEvent {
@@ -595,13 +604,17 @@ pub fn handle_server_message(
             description,
         } => {
             tracing::info!("Location event in region {}: {}", region_id, description);
+            
+            // Add to log
             session_state.add_log_entry(
                 "Narrator".to_string(),
                 format!("[EVENT] {}", description),
                 true,
                 platform,
             );
-            // TODO (Phase 23 Player UI): Show location event in visual novel view
+            
+            // Set the location event for visual banner
+            game_state.set_location_event(region_id, description);
         }
 
         ServerMessage::NpcLocationShared {
